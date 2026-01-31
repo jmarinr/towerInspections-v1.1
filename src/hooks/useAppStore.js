@@ -48,6 +48,7 @@ export const useAppStore = create(
       maintenanceData: {
         siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', coordenadas: '', direccion: '', fecha: new Date().toISOString().split('T')[0], hora: new Date().toTimeString().slice(0, 5), tipoSitio: 'rawland' },
         activities: {},
+        photos: {},
       },
 
       updateMaintenanceSiteInfo: (field, value) => set((state) => ({
@@ -56,9 +57,31 @@ export const useAppStore = create(
 
       updateActivityStatus: (actId, status) => {
         set((state) => ({
-          maintenanceData: { ...state.maintenanceData, activities: { ...state.maintenanceData.activities, [actId]: { status } } }
+          maintenanceData: { ...state.maintenanceData, activities: { ...state.maintenanceData.activities, [actId]: { ...state.maintenanceData.activities[actId], status } } }
         }))
         get().triggerAutosave()
+      },
+
+      updateActivityPhoto: (actId, photoType, photoData) => {
+        set((state) => ({
+          maintenanceData: { ...state.maintenanceData, photos: { ...state.maintenanceData.photos, [`${actId}-${photoType}`]: photoData } }
+        }))
+        get().triggerAutosave()
+      },
+
+      toggleActivityPhotos: (actId) => {
+        set((state) => ({
+          maintenanceData: { 
+            ...state.maintenanceData, 
+            activities: { 
+              ...state.maintenanceData.activities, 
+              [actId]: { 
+                ...state.maintenanceData.activities[actId], 
+                showPhotos: !state.maintenanceData.activities[actId]?.showPhotos 
+              } 
+            } 
+          }
+        }))
       },
     }),
     { name: 'pti-inspect-storage' }
