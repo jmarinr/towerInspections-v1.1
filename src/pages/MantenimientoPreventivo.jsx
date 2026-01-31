@@ -31,7 +31,7 @@ export default function MantenimientoPreventivo() {
           ))}
         </div>
       </div>
-      <main className="flex-1 px-4 pb-44 pt-4">
+      <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden">
         {currentStep === 'info' ? (
           <>
             <div className="mb-4">

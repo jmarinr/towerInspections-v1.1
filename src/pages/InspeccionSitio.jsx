@@ -48,7 +48,7 @@ export default function InspeccionSitio() {
       <AutosaveIndicator />
       <AppHeader title="Inspección de Sitio" subtitle={inspectionData.siteInfo.idSitio || 'Nuevo'} badge="En progreso" progress={progress} onMenuClick={() => showToast('Menú de opciones')} />
       <StepPills steps={steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={goToStep} />
-      <main className="flex-1 px-4 pb-44 pt-4">
+      <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden">
         <div className="mb-4">
           <div className="text-3xl mb-2">{currentSection.icon}</div>
           <h2 className="text-xl font-extrabold text-gray-900">{currentSection.title}</h2>
