@@ -13,7 +13,7 @@ import EquipmentInventorySiteInfoForm from '../components/forms/EquipmentInvento
 import TowerInventoryTable from '../components/forms/TowerInventoryTable'
 import FloorInventoryClients from '../components/forms/FloorInventoryClients'
 import DistributionBuilder from '../components/equipment/DistributionBuilder'
-import DrawingCanvas from '../components/drawing/DrawingCanvas'
+import FullscreenDrawingModal from '../components/drawing/FullscreenDrawingModal'
 import Input from '../components/ui/Input'
 
 import templateCroquis from '../assets/equipment/template_croquis_esquematico.png'
@@ -41,6 +41,8 @@ export default function InventarioEquipos() {
   const currentStep = equipmentInventorySteps[currentStepIndex]
 
   const [completedSteps, setCompletedSteps] = useState([])
+  const [openCroquis, setOpenCroquis] = useState(false)
+  const [openPlano, setOpenPlano] = useState(false)
 
   useEffect(() => {
     // Marca como completado el paso anterior al avanzar (simple UX, sin validación dura)
@@ -93,36 +95,77 @@ export default function InventarioEquipos() {
               </div>
             </div>
 
-            <DrawingCanvas
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2">
+                <div className="font-extrabold text-gray-900">Croquis esquemático</div>
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => setOpenCroquis(true)}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95"
+                >
+                  Abrir editor
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Se recomienda editar en pantalla completa. El dibujo se guarda automáticamente.
+              </div>
+              <div className="mt-3">
+                <img
+                  src={equipmentInventoryData?.croquisEsquematico?.pngDataUrl || templateCroquis}
+                  alt="Croquis esquemático"
+                  className="w-full rounded-xl border border-gray-200 bg-white"
+                />
+              </div>
+            </div>
+
+            <FullscreenDrawingModal
+              open={openCroquis}
+              title="Croquis esquemático"
               backgroundImage={templateCroquis}
               initialDrawing={equipmentInventoryData?.croquisEsquematico?.drawing}
               onChange={(drawing, png) => setCroquisEsquematico(drawing, png)}
-              height={650}
+              onClose={() => setOpenCroquis(false)}
             />
-
-            {equipmentInventoryData?.croquisEsquematico?.pngDataUrl && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-3">
-                <div className="text-sm font-extrabold text-gray-900 mb-2">Vista guardada</div>
-                <img src={equipmentInventoryData.croquisEsquematico.pngDataUrl} alt="Croquis esquemático" className="w-full rounded-xl border border-gray-200" />
-              </div>
-            )}
           </div>
         )
       case 'drawing-blank':
         return (
           <div className="space-y-4">
-            <DrawingCanvas
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2">
+                <div className="font-extrabold text-gray-900">Plano de planta y equipos</div>
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => setOpenPlano(true)}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95"
+                >
+                  Abrir editor
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Pantalla blanca para dibujar. Si quieres más espacio, gira el teléfono a horizontal.
+              </div>
+              <div className="mt-3">
+                {equipmentInventoryData?.planoPlanta?.pngDataUrl ? (
+                  <img src={equipmentInventoryData.planoPlanta.pngDataUrl} alt="Plano de planta" className="w-full rounded-xl border border-gray-200 bg-white" />
+                ) : (
+                  <div className="w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500">
+                    Aún no hay dibujo guardado.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <FullscreenDrawingModal
+              open={openPlano}
+              title="Plano de planta y equipos"
               backgroundImage={null}
               initialDrawing={equipmentInventoryData?.planoPlanta?.drawing}
               onChange={(drawing, png) => setPlanoPlanta(drawing, png)}
-              height={700}
+              onClose={() => setOpenPlano(false)}
             />
-            {equipmentInventoryData?.planoPlanta?.pngDataUrl && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-3">
-                <div className="text-sm font-extrabold text-gray-900 mb-2">Vista guardada</div>
-                <img src={equipmentInventoryData.planoPlanta.pngDataUrl} alt="Plano de planta" className="w-full rounded-xl border border-gray-200" />
-              </div>
-            )}
           </div>
         )
       default:

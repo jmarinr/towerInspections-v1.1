@@ -14,7 +14,16 @@ import { Eraser, Pencil, Undo2, Redo2, Trash2 } from 'lucide-react'
  *  - onChange: (drawingObject, pngDataUrl) => void
  *  - height: number (px)
  */
-export default function DrawingCanvas({ backgroundImage = null, initialDrawing = null, onChange, height = 620 }) {
+export default function DrawingCanvas({
+  backgroundImage = null,
+  initialDrawing = null,
+  onChange,
+  height = 620,
+  maxWidth = 980,
+  variant = 'card', // 'card' | 'fullscreen'
+  hideFooter = false,
+  rightControls = null,
+}) {
   const canvasRef = useRef(null)
   const wrapRef = useRef(null)
   const bgRef = useRef(null)
@@ -27,6 +36,8 @@ export default function DrawingCanvas({ backgroundImage = null, initialDrawing =
   const [redoStack, setRedoStack] = useState(() => initialDrawing?.redoStack || [])
   const [isDrawing, setIsDrawing] = useState(false)
   const [activeStroke, setActiveStroke] = useState(null)
+
+  const isFullscreen = variant === 'fullscreen'
 
   const loadBackground = async () => {
     if (!backgroundImage) {
@@ -113,9 +124,10 @@ export default function DrawingCanvas({ backgroundImage = null, initialDrawing =
     if (!canvas || !wrap) return
 
     const resize = async () => {
-      const width = Math.min(980, wrap.clientWidth)
+      const width = Math.min(maxWidth, wrap.clientWidth)
       canvas.width = width
-      canvas.height = height
+      const targetHeight = isFullscreen ? Math.max(260, wrap.clientHeight - 4) : height
+      canvas.height = targetHeight
       await loadBackground()
       renderAll()
     }
@@ -176,8 +188,8 @@ export default function DrawingCanvas({ backgroundImage = null, initialDrawing =
   const clear = () => commit([], [])
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-100">
+    <div className={isFullscreen ? 'bg-white h-full flex flex-col' : 'bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'}>
+      <div className={isFullscreen ? 'flex flex-wrap items-center gap-2 px-3 py-2 border-b border-gray-100 sticky top-0 z-20 bg-white' : 'flex flex-wrap items-center gap-2 p-3 border-b border-gray-100'}>
         <button type="button" onClick={() => setTool('pen')} className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 active:scale-95 ${tool==='pen' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600 bg-white'}`}>
           <Pencil size={18} /> Lápiz
         </button>
@@ -196,22 +208,26 @@ export default function DrawingCanvas({ backgroundImage = null, initialDrawing =
         <button type="button" onClick={clear} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95">
           <Trash2 size={18} /> Limpiar
         </button>
+
+        {rightControls}
       </div>
 
-      <div ref={wrapRef} className="p-3 bg-gray-50">
-        <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div ref={wrapRef} className={isFullscreen ? 'flex-1 bg-gray-50 p-2' : 'p-3 bg-gray-50'}>
+        <div className={isFullscreen ? 'w-full h-full overflow-hidden rounded-xl border border-gray-200 bg-white' : 'w-full overflow-hidden rounded-xl border border-gray-200 bg-white'}>
           <canvas
             ref={canvasRef}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
-            className="touch-none"
+            className={isFullscreen ? 'touch-none w-full h-full' : 'touch-none'}
           />
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          El dibujo se guarda automáticamente en el dispositivo.
-        </p>
+        {!hideFooter && !isFullscreen && (
+          <p className="text-xs text-gray-500 mt-2">
+            El dibujo se guarda automáticamente en el dispositivo.
+          </p>
+        )}
       </div>
     </div>
   )

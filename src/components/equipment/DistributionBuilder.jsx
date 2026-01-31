@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { RotateCcw, RotateCw, Trash2, Image as ImageIcon, Download } from 'lucide-react'
+import { RotateCcw, RotateCw, Trash2, Image as ImageIcon, Download, X, HelpCircle, Hand } from 'lucide-react'
 import PhotoUpload from '../ui/PhotoUpload'
 
 import templateDistribucion from '../../assets/equipment/template_distribucion_torre.png'
@@ -39,11 +39,23 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
   const stageRef = useRef(null)
   const [objects, setObjects] = useState(() => scene?.objects || [])
   const [selectedId, setSelectedId] = useState(null)
+  const [placingType, setPlacingType] = useState(null)
+  const [showHelp, setShowHelp] = useState(true)
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false)
   const dragRef = useRef({ id: null, startX: 0, startY: 0, ox: 0, oy: 0 })
 
   useEffect(() => {
     setObjects(scene?.objects || [])
   }, [scene])
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(pointer: coarse)')
+    const set = () => setIsCoarsePointer(!!mq?.matches)
+    set()
+    if (!mq?.addEventListener) return
+    mq.addEventListener('change', set)
+    return () => mq.removeEventListener('change', set)
+  }, [])
 
   const selected = useMemo(() => objects.find(o => o.id === selectedId), [objects, selectedId])
 
@@ -64,6 +76,22 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
   }
 
   const onDragOver = (e) => e.preventDefault()
+
+  const onStagePointerDown = (e) => {
+    // En móvil (pointer coarse) usamos “tocar para colocar”, porque HTML5 drag&drop no es confiable.
+    if (placingType) {
+      const rect = stageRef.current.getBoundingClientRect()
+      const p = getPaletteByType(placingType)
+      if (!p) return
+      const x = e.clientX - rect.left - p.w / 2
+      const y = e.clientY - rect.top - p.h / 2
+      addAt(placingType, x, y)
+      setShowHelp(false)
+      return
+    }
+    // Si no estamos colocando, un toque en el fondo deselecciona.
+    if (e.target === stageRef.current) setSelectedId(null)
+  }
 
   const beginDrag = (e, id) => {
     e.preventDefault()
@@ -160,6 +188,14 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
           <div className="flex items-center gap-2 p-3 border-b border-gray-100">
             <div className="font-extrabold text-gray-900">Distribución de equipos en torre</div>
             <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setShowHelp(s => !s)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center gap-2"
+              aria-label="Ayuda"
+            >
+              <HelpCircle size={18} /> Ayuda
+            </button>
             <button type="button" onClick={save} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-2">
               <Download size={18} /> Guardar croquis
             </button>
@@ -168,11 +204,32 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
             </button>
           </div>
 
+          {showHelp && (
+            <div className="p-3 bg-gray-50 border-b border-gray-100">
+              <div className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+                <Hand size={16} /> Cómo usarlo
+              </div>
+              {isCoarsePointer ? (
+                <ul className="mt-2 text-xs text-gray-600 space-y-1">
+                  <li>1) Toca una pieza abajo para activar <span className="font-bold">modo colocar</span>.</li>
+                  <li>2) Toca el croquis para <span className="font-bold">colocar</span> la pieza.</li>
+                  <li>3) Para <span className="font-bold">mover</span>: arrastra la pieza en el croquis.</li>
+                  <li>4) Para <span className="font-bold">rotar / quitar</span>: selecciona la pieza y usa los botones.</li>
+                </ul>
+              ) : (
+                <ul className="mt-2 text-xs text-gray-600 space-y-1">
+                  <li>1) Arrastra una pieza desde el panel derecho hacia el croquis.</li>
+                  <li>2) Para mover: arrastra la pieza. Para rotar / quitar: selecciónala y usa los botones.</li>
+                </ul>
+              )}
+            </div>
+          )}
+
           <div
             ref={stageRef}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            onClick={() => setSelectedId(null)}
+            onPointerDown={onStagePointerDown}
             className="relative w-full aspect-[3/4] bg-white"
             style={{
               backgroundImage: `url(${templateDistribucion})`,
@@ -218,7 +275,7 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
 
             <div className="flex-1" />
             <div className="text-xs text-gray-500 flex items-center gap-2">
-              <ImageIcon size={14} /> Arrastra piezas desde el panel derecho.
+              <ImageIcon size={14} /> {isCoarsePointer ? 'Toca una pieza y luego toca el croquis.' : 'Arrastra piezas desde el panel derecho.'}
             </div>
           </div>
         </div>
@@ -234,19 +291,56 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
       {/* Palette + photo */}
       <div className="lg:col-span-4 space-y-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
-          <div className="font-extrabold text-gray-900 mb-3">Piezas</div>
-          <div className="grid grid-cols-2 gap-3">
-            {PALETTE.map((p) => (
-              <div
-                key={p.type}
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData('application/x-pti-piece', p.type)}
-                className="border-2 border-gray-200 rounded-2xl p-3 bg-white hover:border-primary transition-all cursor-grab active:scale-95"
+          <div className="flex items-center gap-2 mb-3">
+            <div className="font-extrabold text-gray-900">Piezas</div>
+            <div className="flex-1" />
+            {placingType && (
+              <button
+                type="button"
+                onClick={() => setPlacingType(null)}
+                className="px-3 py-2 rounded-xl text-xs font-extrabold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-2"
               >
-                <img src={p.src} alt={p.label} className="w-full h-20 object-contain" />
-                <div className="text-[11px] font-bold text-gray-700 mt-2 leading-tight">{p.label}</div>
-              </div>
-            ))}
+                <X size={14} /> Colocando: {getPaletteByType(placingType)?.label}
+              </button>
+            )}
+          </div>
+
+          {/* Mobile: tap-to-place (no HTML5 drag) */}
+          <div className="block lg:hidden">
+            <div className="text-xs text-gray-500 mb-2">Toca una pieza para seleccionarla. Luego toca el croquis para colocarla.</div>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {PALETTE.map((p) => {
+                const active = placingType === p.type
+                return (
+                  <button
+                    key={p.type}
+                    type="button"
+                    onClick={() => setPlacingType(active ? null : p.type)}
+                    className={`min-w-[150px] border-2 rounded-2xl p-3 bg-white transition-all active:scale-95 ${active ? 'border-primary ring-4 ring-primary/10' : 'border-gray-200'}`}
+                  >
+                    <img src={p.src} alt={p.label} className="w-full h-16 object-contain" />
+                    <div className="text-[11px] font-bold text-gray-700 mt-2 leading-tight text-left">{p.label}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Desktop: drag-and-drop */}
+          <div className="hidden lg:block">
+            <div className="grid grid-cols-2 gap-3">
+              {PALETTE.map((p) => (
+                <div
+                  key={p.type}
+                  draggable
+                  onDragStart={(e) => e.dataTransfer.setData('application/x-pti-piece', p.type)}
+                  className="border-2 border-gray-200 rounded-2xl p-3 bg-white hover:border-primary transition-all cursor-grab active:scale-95"
+                >
+                  <img src={p.src} alt={p.label} className="w-full h-20 object-contain" />
+                  <div className="text-[11px] font-bold text-gray-700 mt-2 leading-tight">{p.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Settings, User } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, Wrench, Settings, User, Package } from 'lucide-react'
 import Toast from '../components/ui/Toast'
 
 export default function Home() {
@@ -23,13 +23,15 @@ export default function Home() {
       iconBg: 'bg-orange-500',
       stats: '92 ítems / 17 pasos',
       route: '/mantenimiento',
-    },,
+    },
     {
       id: 'equipment',
       title: 'Inventario de Equipos',
-      description: 'Formulario 3 · Captura completa del XLSX (Torre + Piso + Croquis)',
-      icon: '🧰',
-      route: '/inventario-equipos'
+      description: 'Inventario de equipos (Torre + Piso) con croquis y plano',
+      icon: Package,
+      iconBg: 'bg-emerald-500',
+      stats: '28 ítems / 6 pasos',
+      route: '/inventario-equipos',
     }
   ]
 
@@ -80,7 +82,7 @@ export default function Home() {
                     <p className="text-gray-500 text-sm mt-0.5 line-clamp-2">{form.description}</p>
                     <div className="flex items-center gap-1 mt-2">
                       <span className={`w-4 h-4 ${form.iconBg} rounded flex items-center justify-center`}>
-                        <ClipboardCheck size={10} className="text-white" />
+                        <IconComponent size={10} className="text-white" />
                       </span>
                       <span className="text-xs font-semibold text-gray-600">{form.stats}</span>
                     </div>

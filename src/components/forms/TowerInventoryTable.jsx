@@ -1,6 +1,7 @@
 
 import { Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '../../hooks/useAppStore'
+import Input from '../ui/Input'
 
 const cellClass = "w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
 
@@ -21,7 +22,46 @@ export default function TowerInventoryTable() {
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile cards */}
+      <div className="block md:hidden p-4 space-y-4">
+        {items.length === 0 && (
+          <div className="text-sm text-gray-500">Aún no hay filas. Toca “Agregar fila”.</div>
+        )}
+
+        {items.map((row, idx) => (
+          <div key={idx} className="rounded-2xl border-2 border-gray-200 p-4 bg-white">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-sm font-extrabold text-gray-900">Fila {idx + 1}</div>
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => removeTowerItem(idx)}
+                className="w-10 h-10 rounded-xl border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center justify-center"
+                aria-label={`Eliminar fila ${idx + 1}`}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Altura (Mts)" value={row.alturaMts || ''} onChange={(e) => updateTowerItemField(idx, 'alturaMts', e.target.value)} placeholder="Ej: 32.0" className="mb-0" />
+                <Input label="Orientación" value={row.orientacion || ''} onChange={(e) => updateTowerItemField(idx, 'orientacion', e.target.value)} placeholder="Ej: N" className="mb-0" />
+              </div>
+              <Input label="Tipo de equipo" value={row.tipoEquipo || ''} onChange={(e) => updateTowerItemField(idx, 'tipoEquipo', e.target.value)} placeholder="Ej: Antena RF" className="mb-0" />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Cantidad" value={row.cantidad || ''} onChange={(e) => updateTowerItemField(idx, 'cantidad', e.target.value)} placeholder="Ej: 2" className="mb-0" />
+                <Input label="Área (m²)" value={row.areaM2 || ''} onChange={(e) => updateTowerItemField(idx, 'areaM2', e.target.value)} placeholder="Ej: 0.50" className="mb-0" />
+              </div>
+              <Input label="Dimensiones (mts)" value={row.dimensionesMts || ''} onChange={(e) => updateTowerItemField(idx, 'dimensionesMts', e.target.value)} placeholder="L x A x H" className="mb-0" />
+              <Input label="Carrier" value={row.carrier || ''} onChange={(e) => updateTowerItemField(idx, 'carrier', e.target.value)} placeholder="Ej: Claro" className="mb-0" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop/tablet table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-[980px] w-full">
           <thead className="bg-gray-50">
             <tr className="text-left text-xs font-extrabold text-gray-700">
