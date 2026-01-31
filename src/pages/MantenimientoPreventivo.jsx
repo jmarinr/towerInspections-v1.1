@@ -20,7 +20,13 @@ export default function MantenimientoPreventivo() {
     showToast 
   } = useAppStore()
 
-  const { currentStep, completedSteps, formData, checklistData, photos } = maintenanceData
+  // Asegurar que tenemos datos válidos con valores por defecto
+  const currentStep = maintenanceData?.currentStep || 1
+  const completedSteps = maintenanceData?.completedSteps || []
+  const formData = maintenanceData?.formData || {}
+  const checklistData = maintenanceData?.checklistData || {}
+  const photos = maintenanceData?.photos || {}
+  
   const currentStepData = getStepById(currentStep)
   const totalSteps = maintenanceFormConfig.steps.length
 
@@ -31,7 +37,7 @@ export default function MantenimientoPreventivo() {
     let pendingPhotos = 0
 
     maintenanceFormConfig.steps.forEach(step => {
-      if (step.type === 'checklist') {
+      if (step.type === 'checklist' && step.items) {
         step.items.forEach(item => {
           // Verificar si el item debería mostrarse
           if (item.showIf) {
@@ -76,7 +82,6 @@ export default function MantenimientoPreventivo() {
   // Navegación
   const handlePrev = () => {
     if (currentStep > 1) {
-      // Buscar step anterior válido
       let prevStep = currentStep - 1
       let prevStepData = getStepById(prevStep)
       
@@ -97,13 +102,11 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleNext = () => {
-    // Marcar step actual como completado
     if (!completedSteps.includes(currentStep)) {
       completeMaintenanceStep(currentStep)
     }
 
     if (currentStep < totalSteps) {
-      // Buscar siguiente step válido
       let nextStep = currentStep + 1
       let nextStepData = getStepById(nextStep)
       
@@ -140,14 +143,25 @@ export default function MantenimientoPreventivo() {
   }
 
   if (!currentStepData) {
-    return <div className="min-h-screen flex items-center justify-center">Error: Step no encontrado</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center p-4">
+          <p className="text-gray-500 mb-4">Cargando formulario...</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-white rounded-lg"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <AutosaveIndicator />
       
-      {/* Header */}
       <AppHeader 
         title="Mantenimiento Preventivo" 
         subtitle={formData.idSitio || 'Nuevo'} 
@@ -156,23 +170,19 @@ export default function MantenimientoPreventivo() {
         onMenuClick={() => showToast('Menú de opciones')} 
       />
       
-      {/* Category Tabs */}
       <CategoryTabs 
         currentStep={currentStep}
         completedSteps={completedSteps}
         onCategoryChange={handleStepChange}
       />
 
-      {/* Step Indicator */}
       <StepIndicator
         currentStep={currentStep}
         completedSteps={completedSteps}
         onStepChange={handleStepChange}
       />
 
-      {/* Main Content */}
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
-        {/* Step Header */}
         <div className="mb-4">
           <div className="flex items-start justify-between">
             <div>
@@ -189,7 +199,6 @@ export default function MantenimientoPreventivo() {
           </div>
         </div>
 
-        {/* Form or Checklist Content */}
         <div className="bg-white rounded-2xl p-4 border border-gray-200">
           {currentStepData.type === 'form' ? (
             <DynamicForm
@@ -210,7 +219,6 @@ export default function MantenimientoPreventivo() {
         </div>
       </main>
 
-      {/* Bottom Navigation */}
       <BottomNav 
         onPrev={handlePrev} 
         onNext={handleNext} 

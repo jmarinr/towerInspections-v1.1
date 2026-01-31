@@ -1,6 +1,11 @@
 import { MapPin, Camera, X } from 'lucide-react'
 
-export default function DynamicForm({ step, formData, onFieldChange }) {
+export default function DynamicForm({ step, formData = {}, onFieldChange }) {
+  // Guard against undefined step or fields
+  if (!step || !step.fields) {
+    return <div className="text-gray-500 text-center py-4">No hay campos para mostrar</div>
+  }
+
   const { fields } = step
 
   const shouldShowField = (field) => {

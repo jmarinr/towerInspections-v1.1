@@ -1,10 +1,11 @@
 import { maintenanceFormConfig } from '../../data/maintenanceFormConfig'
 
-export default function CategoryTabs({ currentStep, onCategoryChange, completedSteps = [] }) {
+export default function CategoryTabs({ currentStep = 1, onCategoryChange, completedSteps = [] }) {
   const { categories, steps } = maintenanceFormConfig
   
   // Encontrar categoría actual basada en el step
-  const currentCategory = steps.find(s => s.id === currentStep)?.category || 'info'
+  const currentStepData = steps.find(s => s.id === currentStep)
+  const currentCategory = currentStepData?.category || 'info'
   
   // Calcular progreso por categoría
   const getCategoryProgress = (categoryId) => {

@@ -1,6 +1,6 @@
 import { maintenanceFormConfig } from '../../data/maintenanceFormConfig'
 
-export default function StepIndicator({ currentStep, completedSteps = [], onStepChange }) {
+export default function StepIndicator({ currentStep = 1, completedSteps = [], onStepChange }) {
   const { steps } = maintenanceFormConfig
   
   // Encontrar categoría actual
@@ -9,6 +9,10 @@ export default function StepIndicator({ currentStep, completedSteps = [], onStep
   
   // Obtener steps de la categoría actual
   const categorySteps = steps.filter(s => s.category === currentCategory)
+
+  if (categorySteps.length === 0) {
+    return null
+  }
 
   return (
     <div className="px-3 py-2 bg-gray-100 border-b border-gray-200">

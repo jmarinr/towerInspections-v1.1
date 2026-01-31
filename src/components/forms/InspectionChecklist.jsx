@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
 
-export default function InspectionChecklist({ step, checklistData, photos, onItemChange, onPhotoChange, formData }) {
+export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {} }) {
   const [expandedItems, setExpandedItems] = useState({})
+
+  // Guard against undefined step or items
+  if (!step || !step.items) {
+    return <div className="text-gray-500 text-center py-4">No hay ítems para mostrar</div>
+  }
 
   const shouldShowItem = (item) => {
     if (!item.showIf) return true
