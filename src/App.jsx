@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Home from './pages/Home'
 import InspeccionSitio from './pages/InspeccionSitio'
 import MantenimientoPreventivo from './pages/MantenimientoPreventivo'
+import InventarioEquipos from './pages/InventarioEquipos'
 import SplashScreen from './components/ui/SplashScreen'
 import Toast from './components/ui/Toast'
 import { useAppStore } from './hooks/useAppStore'
@@ -24,6 +25,7 @@ function App() {
         <Route path="/inspeccion-sitio" element={<InspeccionSitio />} />
         <Route path="/inspeccion-sitio/:step" element={<InspeccionSitio />} />
         <Route path="/mantenimiento" element={<MantenimientoPreventivo />} />
+              <Route path="/inventario-equipos/:step?" element={<InventarioEquipos />} />
       </Routes>
       <Toast message={toast.message} type={toast.type} show={toast.show} onClose={hideToast} />
     </>

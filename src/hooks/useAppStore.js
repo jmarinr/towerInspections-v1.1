@@ -61,6 +61,58 @@ const getDefaultMaintenanceData = () => ({
   photos: {},
 })
 
+// Datos por defecto para Inventario de Equipos (Formulario 3)
+const getDefaultEquipmentInventoryData = () => ({
+  siteInfo: {
+    proveedor: '',
+    tipoVisita: '', // RoofTop | RawLand
+    idSitio: '',
+    nombreSitio: '',
+    fechaInicio: getDefaultDate(),
+    fechaTermino: getDefaultDate(),
+    direccion: '',
+    alturaMts: '',
+    tipoSitio: '',
+    tipoEstructura: '',
+    latitud: '',
+    longitud: '',
+  },
+  torre: {
+    items: [
+      { alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', dimensionesMts: '', areaM2: '', carrier: '' },
+    ],
+  },
+  piso: {
+    clientes: [
+      {
+        tipoCliente: 'ancla', // ancla | colo
+        nombreCliente: '',
+        areaArrendada: '',
+        areaEnUso: '',
+        placaEquipos: '',
+        gabinetes: [
+          { gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' },
+        ],
+      },
+    ],
+  },
+  distribucionTorre: {
+    // JSON editable + evidencia PNG
+    scene: { objects: [] },
+    pngDataUrl: '',
+    fotoTorreDataUrl: '',
+  },
+  croquisEsquematico: {
+    drawing: null,
+    pngDataUrl: '',
+    niveles: { nivel1: '', nivel2: '', nivel3: '', banqueta: '' },
+  },
+  planoPlanta: {
+    drawing: null,
+    pngDataUrl: '',
+  },
+})
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
@@ -110,6 +162,184 @@ export const useAppStore = create(
 
       // ============ MAINTENANCE DATA v1.1.4 ============
       maintenanceData: getDefaultMaintenanceData(),
+
+      // ============ EQUIPMENT INVENTORY (Formulario 3) ============
+      equipmentInventoryData: getDefaultEquipmentInventoryData(),
+
+      updateEquipmentSiteField: (field, value) => {
+        set((state) => ({
+          equipmentInventoryData: {
+            ...(state.equipmentInventoryData || getDefaultEquipmentInventoryData()),
+            siteInfo: {
+              ...((state.equipmentInventoryData || getDefaultEquipmentInventoryData()).siteInfo || {}),
+              [field]: value,
+            },
+          },
+        }))
+        get().triggerAutosave()
+      },
+
+      // --- TORRE: tabla repetible ---
+      addTowerItem: () => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const items = current.torre?.items || []
+          return {
+            equipmentInventoryData: {
+              ...current,
+              torre: {
+                ...(current.torre || {}),
+                items: [...items, { alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', dimensionesMts: '', areaM2: '', carrier: '' }],
+              },
+            },
+          }
+        })
+        get().triggerAutosave()
+      },
+
+      removeTowerItem: (index) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const items = (current.torre?.items || []).slice()
+          items.splice(index, 1)
+          return { equipmentInventoryData: { ...current, torre: { ...(current.torre || {}), items: items.length ? items : [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', dimensionesMts: '', areaM2: '', carrier: '' }] } } }
+        })
+        get().triggerAutosave()
+      },
+
+      updateTowerItemField: (index, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const items = (current.torre?.items || []).map((it, i) => (i === index ? { ...it, [field]: value } : it))
+          return { equipmentInventoryData: { ...current, torre: { ...(current.torre || {}), items } } }
+        })
+        get().triggerAutosave()
+      },
+
+      // --- PISO: clientes + gabinetes ---
+      addFloorClient: (tipoCliente = 'colo') => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = current.piso?.clientes || []
+          return {
+            equipmentInventoryData: {
+              ...current,
+              piso: {
+                ...(current.piso || {}),
+                clientes: [
+                  ...clientes,
+                  { tipoCliente, nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] },
+                ],
+              },
+            },
+          }
+        })
+        get().triggerAutosave()
+      },
+
+      removeFloorClient: (index) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = (current.piso?.clientes || []).slice()
+          clientes.splice(index, 1)
+          return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes: clientes.length ? clientes : [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] } } }
+        })
+        get().triggerAutosave()
+      },
+
+      updateFloorClientField: (index, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = (current.piso?.clientes || []).map((c, i) => (i === index ? { ...c, [field]: value } : c))
+          return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave()
+      },
+
+      addCabinet: (clientIndex) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            const gabinetes = c.gabinetes || []
+            return { ...c, gabinetes: [...gabinetes, { gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }
+          })
+          return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave()
+      },
+
+      removeCabinet: (clientIndex, cabinetIndex) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            const gabinetes = (c.gabinetes || []).slice()
+            gabinetes.splice(cabinetIndex, 1)
+            return { ...c, gabinetes: gabinetes.length ? gabinetes : [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }
+          })
+          return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave()
+      },
+
+      updateCabinetField: (clientIndex, cabinetIndex, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            const gabinetes = (c.gabinetes || []).map((g, j) => (j === cabinetIndex ? { ...g, [field]: value } : g))
+            return { ...c, gabinetes }
+          })
+          return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave()
+      },
+
+      // --- DISTRIBUCIÓN / CROQUIS / PLANO ---
+      setDistribucionTorre: (scene, pngDataUrl) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), scene, pngDataUrl } } }
+        })
+        get().triggerAutosave()
+      },
+
+      setDistribucionFotoTorre: (fotoTorreDataUrl) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), fotoTorreDataUrl } } }
+        })
+        get().triggerAutosave()
+      },
+
+      setCroquisEsquematico: (drawing, pngDataUrl) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          return { equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), drawing, pngDataUrl } } }
+        })
+        get().triggerAutosave()
+      },
+
+      setCroquisNiveles: (field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          const niveles = current.croquisEsquematico?.niveles || { nivel1: '', nivel2: '', nivel3: '', banqueta: '' }
+          return { equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), niveles: { ...niveles, [field]: value } } } }
+        })
+        get().triggerAutosave()
+      },
+
+      setPlanoPlanta: (drawing, pngDataUrl) => {
+        set((state) => {
+          const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
+          return { equipmentInventoryData: { ...current, planoPlanta: { ...(current.planoPlanta || {}), drawing, pngDataUrl } } }
+        })
+        get().triggerAutosave()
+      },
+
+      resetEquipmentInventoryData: () => set({ equipmentInventoryData: getDefaultEquipmentInventoryData() }),
+
 
       // Actualizar campo de formulario
       updateMaintenanceField: (field, value) => {
@@ -204,16 +434,20 @@ export const useAppStore = create(
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 2, // Incrementar versión para forzar migración
+      version: 3, // Incrementar versión para forzar migración
       migrate: (persistedState, version) => {
+        // Migraciones simples para mantener compatibilidad
+        let state = { ...persistedState }
         if (version < 2) {
-          // Migrar de versión vieja a nueva
-          return {
-            ...persistedState,
-            maintenanceData: getDefaultMaintenanceData()
-          }
+          state = { ...state, maintenanceData: getDefaultMaintenanceData() }
         }
-        return persistedState
+        if (version < 3) {
+          state = { ...state, equipmentInventoryData: getDefaultEquipmentInventoryData() }
+        } else {
+          // Asegurar que exista aunque venga de localStorage incompleto
+          state = { ...state, equipmentInventoryData: state.equipmentInventoryData || getDefaultEquipmentInventoryData() }
+        }
+        return state
       }
     }
   )

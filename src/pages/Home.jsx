@@ -23,7 +23,14 @@ export default function Home() {
       iconBg: 'bg-orange-500',
       stats: '92 ítems / 17 pasos',
       route: '/mantenimiento',
-    },
+    },,
+    {
+      id: 'equipment',
+      title: 'Inventario de Equipos',
+      description: 'Formulario 3 · Captura completa del XLSX (Torre + Piso + Croquis)',
+      icon: '🧰',
+      route: '/inventario-equipos'
+    }
   ]
 
   return (
