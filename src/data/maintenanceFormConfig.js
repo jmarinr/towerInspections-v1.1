@@ -58,12 +58,7 @@ export const maintenanceFormConfig = {
         { id: 'alturaTorre', label: 'Altura de la Torre (m)', type: 'number', required: true, placeholder: 'Ej: 45' },
         { id: 'alturaEdificio', label: 'Altura del Edificio (m)', type: 'number', required: false, placeholder: 'Solo Rooftop', showIf: { field: 'tipoSitio', value: 'rooftop' } },
         { id: 'alturaTotal', label: 'Altura Total (m)', type: 'calculated', formula: 'alturaTorre + alturaEdificio' },
-        { id: 'condicionTorre', label: 'Condición General de la Torre', type: 'select', required: true, options: [
-          { value: '', label: 'Seleccione...' },
-          { value: 'buena', label: 'Buena' },
-          { value: 'regular', label: 'Regular' },
-          { value: 'mala', label: 'Mala' },
-        ]},
+        { id: 'condicionTorre', label: 'Condición General de la Torre', type: 'status', required: true },
         { id: 'numSecciones', label: 'Número de Secciones', type: 'number', placeholder: 'Ej: 5' },
         { id: 'tipoSeccion', label: 'Tipo de Sección', type: 'select', showIf: { field: 'tipoTorre', values: ['autosoportada', 'arriostrada'] }, options: [
           { value: '', label: 'Seleccione...' },

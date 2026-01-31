@@ -4,6 +4,63 @@ import { persist } from 'zustand/middleware'
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
+// Datos por defecto para mantenimiento v1.1.4
+const getDefaultMaintenanceData = () => ({
+  currentStep: 1,
+  completedSteps: [],
+  formData: {
+    proveedor: '',
+    tipoVisita: '',
+    nombreSitio: '',
+    idSitio: '',
+    coordenadas: '',
+    tipoSitio: '',
+    fechaInicio: getDefaultDate(),
+    fechaTermino: getDefaultDate(),
+    horaEntrada: getDefaultTime(),
+    horaSalida: '',
+    tipoTorre: '',
+    alturaTorre: '',
+    alturaEdificio: '',
+    condicionTorre: '',
+    numSecciones: '',
+    tipoSeccion: '',
+    tipoPierna: '',
+    tieneCamuflaje: '',
+    tipoCamuflaje: '',
+    fotoTorre: '',
+    calle: '',
+    numero: '',
+    colonia: '',
+    ciudad: '',
+    estado: '',
+    codigoPostal: '',
+    pais: '',
+    descripcionSitio: '',
+    restriccionHorario: '',
+    descripcionAcceso: '',
+    propietarioLocalizable: '',
+    tipoLlave: '',
+    claveCombinacion: '',
+    memorandumRequerido: '',
+    problemasAcceso: '',
+    fotoCandado: '',
+    ubicacionMedidores: '',
+    tipoConexion: '',
+    capacidadTransformador: '',
+    numMedidores: '',
+    medidorSeparadoLuces: '',
+    fibraOptica: '',
+    vandalismo: '',
+    descripcionVandalismo: '',
+    equiposFaltantes: '',
+    defectosOperacion: '',
+    observacionesGenerales: '',
+  },
+  checklistData: {},
+  photos: {},
+})
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
@@ -52,119 +109,73 @@ export const useAppStore = create(
       },
 
       // ============ MAINTENANCE DATA v1.1.4 ============
-      maintenanceData: {
-        currentStep: 1,
-        completedSteps: [],
-        formData: {
-          // Paso 1: Info General
-          proveedor: '',
-          tipoVisita: '',
-          nombreSitio: '',
-          idSitio: '',
-          coordenadas: '',
-          tipoSitio: '',
-          fechaInicio: getDefaultDate(),
-          fechaTermino: getDefaultDate(),
-          horaEntrada: getDefaultTime(),
-          horaSalida: '',
-          // Paso 2: Info Torre
-          tipoTorre: '',
-          alturaTorre: '',
-          alturaEdificio: '',
-          condicionTorre: '',
-          numSecciones: '',
-          tipoSeccion: '',
-          tipoPierna: '',
-          tieneCamuflaje: '',
-          tipoCamuflaje: '',
-          fotoTorre: '',
-          // Paso 3: Dirección
-          calle: '',
-          numero: '',
-          colonia: '',
-          ciudad: '',
-          estado: '',
-          codigoPostal: '',
-          pais: '',
-          // Paso 4: Acceso
-          descripcionSitio: '',
-          restriccionHorario: '',
-          descripcionAcceso: '',
-          propietarioLocalizable: '',
-          tipoLlave: '',
-          claveCombinacion: '',
-          memorandumRequerido: '',
-          problemasAcceso: '',
-          fotoCandado: '',
-          // Paso 5: Eléctrico
-          ubicacionMedidores: '',
-          tipoConexion: '',
-          capacidadTransformador: '',
-          numMedidores: '',
-          medidorSeparadoLuces: '',
-          fibraOptica: '',
-          // Paso 17: Cierre
-          vandalismo: '',
-          descripcionVandalismo: '',
-          equiposFaltantes: '',
-          defectosOperacion: '',
-          observacionesGenerales: '',
-        },
-        checklistData: {},  // { '1.1': { status: 'bueno', observation: '', value: '' }, ... }
-        photos: {},         // { '1.1-before': 'base64...', '1.1-after': 'base64...', ... }
-      },
+      maintenanceData: getDefaultMaintenanceData(),
 
       // Actualizar campo de formulario
       updateMaintenanceField: (field, value) => {
-        set((state) => ({
-          maintenanceData: {
-            ...state.maintenanceData,
-            formData: { ...state.maintenanceData.formData, [field]: value }
+        set((state) => {
+          const currentData = state.maintenanceData || getDefaultMaintenanceData()
+          return {
+            maintenanceData: {
+              ...currentData,
+              formData: { ...(currentData.formData || {}), [field]: value }
+            }
           }
-        }))
+        })
         get().triggerAutosave()
       },
 
       // Actualizar item de checklist
       updateChecklistItem: (itemId, field, value) => {
-        set((state) => ({
-          maintenanceData: {
-            ...state.maintenanceData,
-            checklistData: {
-              ...state.maintenanceData.checklistData,
-              [itemId]: { ...state.maintenanceData.checklistData[itemId], [field]: value }
+        set((state) => {
+          const currentData = state.maintenanceData || getDefaultMaintenanceData()
+          const currentChecklist = currentData.checklistData || {}
+          return {
+            maintenanceData: {
+              ...currentData,
+              checklistData: {
+                ...currentChecklist,
+                [itemId]: { ...(currentChecklist[itemId] || {}), [field]: value }
+              }
             }
           }
-        }))
+        })
         get().triggerAutosave()
       },
 
       // Actualizar foto de checklist
       updateChecklistPhoto: (itemId, photoType, photoData) => {
-        set((state) => ({
-          maintenanceData: {
-            ...state.maintenanceData,
-            photos: { ...state.maintenanceData.photos, [`${itemId}-${photoType}`]: photoData }
+        set((state) => {
+          const currentData = state.maintenanceData || getDefaultMaintenanceData()
+          return {
+            maintenanceData: {
+              ...currentData,
+              photos: { ...(currentData.photos || {}), [`${itemId}-${photoType}`]: photoData }
+            }
           }
-        }))
+        })
         get().triggerAutosave()
       },
 
       // Navegar a step
       setMaintenanceStep: (step) => {
-        set((state) => ({
-          maintenanceData: { ...state.maintenanceData, currentStep: step }
-        }))
+        set((state) => {
+          const currentData = state.maintenanceData || getDefaultMaintenanceData()
+          return {
+            maintenanceData: { ...currentData, currentStep: step }
+          }
+        })
       },
 
       // Marcar step como completado
       completeMaintenanceStep: (stepId) => {
         set((state) => {
-          const completed = state.maintenanceData.completedSteps
+          const currentData = state.maintenanceData || getDefaultMaintenanceData()
+          const completed = currentData.completedSteps || []
           if (!completed.includes(stepId)) {
             return {
               maintenanceData: {
-                ...state.maintenanceData,
+                ...currentData,
                 completedSteps: [...completed, stepId]
               }
             }
@@ -175,63 +186,7 @@ export const useAppStore = create(
 
       // Reset maintenance data
       resetMaintenanceData: () => {
-        set((state) => ({
-          maintenanceData: {
-            currentStep: 1,
-            completedSteps: [],
-            formData: {
-              proveedor: '',
-              tipoVisita: '',
-              nombreSitio: '',
-              idSitio: '',
-              coordenadas: '',
-              tipoSitio: '',
-              fechaInicio: getDefaultDate(),
-              fechaTermino: getDefaultDate(),
-              horaEntrada: getDefaultTime(),
-              horaSalida: '',
-              tipoTorre: '',
-              alturaTorre: '',
-              alturaEdificio: '',
-              condicionTorre: '',
-              numSecciones: '',
-              tipoSeccion: '',
-              tipoPierna: '',
-              tieneCamuflaje: '',
-              tipoCamuflaje: '',
-              fotoTorre: '',
-              calle: '',
-              numero: '',
-              colonia: '',
-              ciudad: '',
-              estado: '',
-              codigoPostal: '',
-              pais: '',
-              descripcionSitio: '',
-              restriccionHorario: '',
-              descripcionAcceso: '',
-              propietarioLocalizable: '',
-              tipoLlave: '',
-              claveCombinacion: '',
-              memorandumRequerido: '',
-              problemasAcceso: '',
-              fotoCandado: '',
-              ubicacionMedidores: '',
-              tipoConexion: '',
-              capacidadTransformador: '',
-              numMedidores: '',
-              medidorSeparadoLuces: '',
-              fibraOptica: '',
-              vandalismo: '',
-              descripcionVandalismo: '',
-              equiposFaltantes: '',
-              defectosOperacion: '',
-              observacionesGenerales: '',
-            },
-            checklistData: {},
-            photos: {},
-          }
-        }))
+        set({ maintenanceData: getDefaultMaintenanceData() })
       },
 
       // ============ LEGACY: Para compatibilidad ============
@@ -247,6 +202,19 @@ export const useAppStore = create(
         get().updateChecklistPhoto(actId, photoType, photoData)
       },
     }),
-    { name: 'pti-inspect-storage' }
+    { 
+      name: 'pti-inspect-storage',
+      version: 2, // Incrementar versión para forzar migración
+      migrate: (persistedState, version) => {
+        if (version < 2) {
+          // Migrar de versión vieja a nueva
+          return {
+            ...persistedState,
+            maintenanceData: getDefaultMaintenanceData()
+          }
+        }
+        return persistedState
+      }
+    }
   )
 )

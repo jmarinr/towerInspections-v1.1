@@ -79,52 +79,19 @@ export default function MantenimientoPreventivo() {
     }
   }, [checklistData, photos, formData, currentStep, totalSteps])
 
-  // Navegación
+  // Navegación simplificada
   const handlePrev = () => {
     if (currentStep > 1) {
-      let prevStep = currentStep - 1
-      let prevStepData = getStepById(prevStep)
-      
-      while (prevStepData?.showIf && prevStep > 0) {
-        const { field, value } = prevStepData.showIf
-        if (formData[field] !== value) {
-          prevStep--
-          prevStepData = getStepById(prevStep)
-        } else {
-          break
-        }
-      }
-      
-      if (prevStep >= 1) {
-        setMaintenanceStep(prevStep)
-      }
+      setMaintenanceStep(currentStep - 1)
     }
   }
 
   const handleNext = () => {
-    if (!completedSteps.includes(currentStep)) {
-      completeMaintenanceStep(currentStep)
-    }
+    // Marcar step actual como completado
+    completeMaintenanceStep(currentStep)
 
     if (currentStep < totalSteps) {
-      let nextStep = currentStep + 1
-      let nextStepData = getStepById(nextStep)
-      
-      while (nextStepData?.showIf && nextStep <= totalSteps) {
-        const { field, value } = nextStepData.showIf
-        if (formData[field] !== value) {
-          nextStep++
-          nextStepData = getStepById(nextStep)
-        } else {
-          break
-        }
-      }
-
-      if (nextStep <= totalSteps) {
-        setMaintenanceStep(nextStep)
-      } else {
-        handleFinish()
-      }
+      setMaintenanceStep(currentStep + 1)
     } else {
       handleFinish()
     }

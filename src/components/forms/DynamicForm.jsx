@@ -120,6 +120,33 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
           </div>
         )
 
+      case 'status':
+        // Botones estilo inspección: Bueno/Regular/Malo/N/A
+        const statusOptions = [
+          { value: 'bueno', label: 'Bueno', color: 'bg-green-500' },
+          { value: 'regular', label: 'Regular', color: 'bg-amber-500' },
+          { value: 'malo', label: 'Malo', color: 'bg-red-500' },
+          { value: 'na', label: 'N/A', color: 'bg-gray-500' },
+        ]
+        return (
+          <div className="flex gap-2">
+            {statusOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onFieldChange(field.id, opt.value)}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 ${
+                  value === opt.value
+                    ? `${opt.color} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )
+
       case 'textarea':
         return (
           <textarea
