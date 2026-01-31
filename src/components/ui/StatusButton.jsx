@@ -1,68 +1,16 @@
-const statusConfig = {
-  bueno: {
-    icon: '✓',
-    label: 'Bueno',
-    selectedClass: 'border-success bg-success-light',
-    iconClass: 'bg-success border-success text-white',
-    labelClass: 'text-success',
-  },
-  regular: {
-    icon: '!',
-    label: 'Regular',
-    selectedClass: 'border-warning bg-warning-light',
-    iconClass: 'bg-warning border-warning text-white',
-    labelClass: 'text-amber-700',
-  },
-  malo: {
-    icon: '✕',
-    label: 'Malo',
-    selectedClass: 'border-danger bg-danger-light',
-    iconClass: 'bg-danger border-danger text-white',
-    labelClass: 'text-danger',
-  },
-  na: {
-    icon: '—',
-    label: 'N/A',
-    selectedClass: 'border-gray-400 bg-gray-100',
-    iconClass: 'bg-gray-400 border-gray-400 text-white',
-    labelClass: 'text-gray-600',
-  },
+const config = {
+  bueno: { icon: '✓', label: 'Bueno', sel: 'border-green-500 bg-green-50', iconSel: 'bg-green-500 text-white', lblSel: 'text-green-600' },
+  regular: { icon: '!', label: 'Regular', sel: 'border-yellow-500 bg-yellow-50', iconSel: 'bg-yellow-500 text-white', lblSel: 'text-yellow-700' },
+  malo: { icon: '✕', label: 'Malo', sel: 'border-red-500 bg-red-50', iconSel: 'bg-red-500 text-white', lblSel: 'text-red-600' },
+  na: { icon: '—', label: 'N/A', sel: 'border-gray-400 bg-gray-100', iconSel: 'bg-gray-400 text-white', lblSel: 'text-gray-600' },
 }
 
 export default function StatusButton({ status, selected, onClick }) {
-  const config = statusConfig[status]
-
+  const c = config[status]
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-        flex flex-col items-center justify-center gap-1
-        p-3 rounded-xl border-2 bg-white
-        transition-all duration-150 active:scale-95
-        min-h-[72px]
-        ${selected ? config.selectedClass : 'border-gray-200'}
-      `}
-    >
-      <div
-        className={`
-          w-7 h-7 rounded-full border-2 
-          flex items-center justify-center
-          text-sm font-bold
-          transition-all duration-150
-          ${selected ? config.iconClass : 'border-gray-300 text-gray-400'}
-        `}
-      >
-        {config.icon}
-      </div>
-      <div
-        className={`
-          text-[11px] font-semibold
-          ${selected ? config.labelClass : 'text-gray-600'}
-        `}
-      >
-        {config.label}
-      </div>
+    <button type="button" onClick={onClick} className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 bg-white transition-all active:scale-95 min-h-[72px] ${selected ? c.sel : 'border-gray-200'}`}>
+      <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${selected ? c.iconSel : 'border-gray-300 text-gray-400'}`}>{c.icon}</div>
+      <div className={`text-[11px] font-semibold ${selected ? c.lblSel : 'text-gray-600'}`}>{c.label}</div>
     </button>
   )
 }

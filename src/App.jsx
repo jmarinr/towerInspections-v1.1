@@ -19,21 +19,13 @@ function App() {
   return (
     <>
       {showSplash && <SplashScreen />}
-      
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/inspeccion-sitio" element={<InspeccionSitio />} />
         <Route path="/inspeccion-sitio/:step" element={<InspeccionSitio />} />
         <Route path="/mantenimiento" element={<MantenimientoPreventivo />} />
-        <Route path="/mantenimiento/:step" element={<MantenimientoPreventivo />} />
       </Routes>
-
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        show={toast.show} 
-        onClose={hideToast} 
-      />
+      <Toast message={toast.message} type={toast.type} show={toast.show} onClose={hideToast} />
     </>
   )
 }
