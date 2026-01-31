@@ -1,18 +1,13 @@
-
-import { useEffect, useRef, useState } from 'react'
-import { Eraser, Pencil, Undo2, Redo2, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Eraser, Hand, Maximize2, Pencil, Redo2, Trash2, Undo2 } from 'lucide-react'
 
 /**
- * DrawingCanvas (simple)
- * - Dibujo libre con lápiz y borrador sobre un canvas.
- * - Undo/Redo por lista de strokes (incluye borrador como tool='erase').
- * - Si backgroundImage existe, se pinta como fondo antes de los strokes.
- *
- * Props:
- *  - backgroundImage: string | null
- *  - initialDrawing: object | null
- *  - onChange: (drawingObject, pngDataUrl) => void
- *  - height: number (px)
+ * DrawingCanvas (mobile-first)
+ * - Dibujo libre + borrador sobre canvas
+ * - Undo/Redo por lista de strokes (incluye borrador como tool='erase')
+ * - Fondo opcional (plantilla)
+ * - Modo "Dibujar" vs "Mover/Zoom" (pan + pinch)
+ * - Export PNG + objeto de dibujo
  */
 export default function DrawingCanvas({
   backgroundImage = null,
@@ -29,16 +24,41 @@ export default function DrawingCanvas({
   const wrapRef = useRef(null)
   const bgRef = useRef(null)
 
-  const [tool, setTool] = useState('pen') // pen | erase
-  const [penSize, setPenSize] = useState(3)
-  const [eraseSize, setEraseSize] = useState(14)
+  const isFullscreen = variant === 'fullscreen'
 
+  // Tools
+  const [mode, setMode] = useState(() => initialDrawing?.mode || 'draw') // draw | move
+  const [tool, setTool] = useState('pen') // pen | erase
+
+  // Sizes are screen-space targets; we convert to world-space depending on zoom.
+  const [penSizeScreen, setPenSizeScreen] = useState(3)
+  const [eraseSizeScreen, setEraseSizeScreen] = useState(14)
+
+  // Drawing history
   const [strokes, setStrokes] = useState(() => initialDrawing?.strokes || [])
   const [redoStack, setRedoStack] = useState(() => initialDrawing?.redoStack || [])
-  const [isDrawing, setIsDrawing] = useState(false)
   const [activeStroke, setActiveStroke] = useState(null)
+  const [isDrawing, setIsDrawing] = useState(false)
 
-  const isFullscreen = variant === 'fullscreen'
+  // Viewport (pan/zoom)
+  const [view, setView] = useState(() => initialDrawing?.view || { scale: 1, ox: 0, oy: 0 })
+  const didInitViewRef = useRef(!!initialDrawing?.view)
+
+  // World size: background image natural size, or a sensible default for blank
+  const [world, setWorld] = useState(() => {
+    if (initialDrawing?.world?.w && initialDrawing?.world?.h) return initialDrawing.world
+    return backgroundImage ? { w: 1275, h: 1650 } : { w: 1400, h: 1000 }
+  })
+
+  // Pointer gesture tracking
+  const pointersRef = useRef(new Map()) // pointerId -> {x,y}
+  const gestureRef = useRef({ mode: null, start: null }) // 'pan' | 'pinch'
+
+  const getCtx = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    return canvas.getContext('2d')
+  }
 
   const loadBackground = async () => {
     if (!backgroundImage) {
@@ -49,19 +69,77 @@ export default function DrawingCanvas({
       const img = new Image()
       img.onload = () => {
         bgRef.current = img
+        setWorld({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height })
         resolve()
       }
       img.src = backgroundImage
     })
   }
 
-  const getCtx = () => {
+  const fitToScreen = (padding = 0.94) => {
     const canvas = canvasRef.current
-    if (!canvas) return null
-    return canvas.getContext('2d')
+    if (!canvas) return
+    const scale = Math.min(
+      (canvas.width / Math.max(1, world.w)) * padding,
+      (canvas.height / Math.max(1, world.h)) * padding
+    )
+    const ox = (canvas.width - world.w * scale) / 2
+    const oy = (canvas.height - world.h * scale) / 2
+    setView({ scale, ox, oy })
   }
 
-  const drawStroke = (ctx, stroke) => {
+  const exportToPng = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return ''
+
+    // Export at world resolution (crisp), independent of current zoom
+    const out = document.createElement('canvas')
+    out.width = Math.floor(world.w)
+    out.height = Math.floor(world.h)
+    const ctx = out.getContext('2d')
+
+    // fondo blanco
+    ctx.clearRect(0, 0, out.width, out.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, out.width, out.height)
+
+    // fondo plantilla
+    if (bgRef.current) {
+      ctx.drawImage(bgRef.current, 0, 0, out.width, out.height)
+    }
+
+    const drawStroke = (stroke) => {
+      if (!stroke?.points?.length) return
+      ctx.save()
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.lineWidth = stroke.size
+      if (stroke.tool === 'erase') {
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.strokeStyle = 'rgba(0,0,0,1)'
+      } else {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.strokeStyle = '#111827'
+      }
+      ctx.beginPath()
+      const [p0, ...rest] = stroke.points
+      ctx.moveTo(p0.x, p0.y)
+      rest.forEach((p) => ctx.lineTo(p.x, p.y))
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    strokes.forEach(drawStroke)
+
+    return out.toDataURL('image/png')
+  }
+
+  const commit = (nextStrokes, nextRedo) => {
+    setStrokes(nextStrokes)
+    setRedoStack(nextRedo)
+  }
+
+  const drawStrokeOn = (ctx, stroke) => {
     if (!stroke?.points?.length) return
     ctx.save()
     ctx.lineJoin = 'round'
@@ -77,7 +155,7 @@ export default function DrawingCanvas({
     ctx.beginPath()
     const [p0, ...rest] = stroke.points
     ctx.moveTo(p0.x, p0.y)
-    rest.forEach(p => ctx.lineTo(p.x, p.y))
+    rest.forEach((p) => ctx.lineTo(p.x, p.y))
     ctx.stroke()
     ctx.restore()
   }
@@ -87,38 +165,57 @@ export default function DrawingCanvas({
     const canvas = canvasRef.current
     if (!ctx || !canvas) return
 
-    // fondo blanco
+    // reset + fondo
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // fondo plantilla
+    // Apply viewport transform
+    ctx.setTransform(view.scale, 0, 0, view.scale, view.ox, view.oy)
+
+    // plantilla
     if (bgRef.current) {
-      ctx.drawImage(bgRef.current, 0, 0, canvas.width, canvas.height)
+      ctx.drawImage(bgRef.current, 0, 0, world.w, world.h)
+    } else {
+      // Fondo blanco en modo blank (ya está), opcional: grid suave en fullscreen
+      if (isFullscreen) {
+        ctx.save()
+        ctx.globalAlpha = 0.05
+        ctx.strokeStyle = '#111827'
+        const step = 50
+        for (let x = 0; x <= world.w; x += step) {
+          ctx.beginPath()
+          ctx.moveTo(x, 0)
+          ctx.lineTo(x, world.h)
+          ctx.stroke()
+        }
+        for (let y = 0; y <= world.h; y += step) {
+          ctx.beginPath()
+          ctx.moveTo(0, y)
+          ctx.lineTo(world.w, y)
+          ctx.stroke()
+        }
+        ctx.restore()
+      }
     }
 
-    strokes.forEach(s => drawStroke(ctx, s))
-    if (activeStroke) drawStroke(ctx, activeStroke)
+    strokes.forEach((s) => drawStrokeOn(ctx, s))
+    if (activeStroke) drawStrokeOn(ctx, activeStroke)
+
+    // Reset transform so overlays (if any) could be drawn in screen coords later.
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
   }
 
-  const exportToPng = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return ''
-    return canvas.toDataURL('image/png')
-  }
-
-  const commit = (nextStrokes, nextRedo) => {
-    setStrokes(nextStrokes)
-    setRedoStack(nextRedo)
-  }
-
-  const toPoint = (e) => {
+  const toWorldPoint = (clientX, clientY) => {
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    const x = (clientX - rect.left - view.ox) / Math.max(0.0001, view.scale)
+    const y = (clientY - rect.top - view.oy) / Math.max(0.0001, view.scale)
+    return { x, y }
   }
 
-  // init / resize
+  // Initialize / resize
   useEffect(() => {
     const canvas = canvasRef.current
     const wrap = wrapRef.current
@@ -126,22 +223,27 @@ export default function DrawingCanvas({
 
     const resize = async () => {
       const width = Math.min(maxWidth, wrap.clientWidth)
-      canvas.width = width
-      // En pantalla completa, damos prioridad al espacio para dibujar.
+      canvas.width = Math.floor(width)
       const targetHeight = isFullscreen ? Math.max(320, wrap.clientHeight - 2) : height
-      canvas.height = targetHeight
+      canvas.height = Math.floor(targetHeight)
 
-      // Ajuste de grosor de lápiz/borra según tamaño (mejor para móvil).
-      // - Con plantilla (imagen), el trazo debe ser más fino.
-      // - En blanco, un poco más grueso.
+      // Ajuste de grosor (screen space) para móvil
       const base = Math.max(1.5, Math.min(4, canvas.width / 420))
-      const pen = backgroundImage ? (isFullscreen ? Math.max(1.5, base * 0.75) : Math.max(2, base * 0.9)) : (isFullscreen ? Math.max(2, base) : Math.max(2.5, base * 1.1))
-      setPenSize(pen)
-      setEraseSize(Math.max(10, pen * 5))
+      const pen = backgroundImage ? (isFullscreen ? Math.max(1.5, base * 0.7) : Math.max(2, base * 0.85)) : (isFullscreen ? Math.max(2, base) : Math.max(2.5, base * 1.1))
+      setPenSizeScreen(pen)
+      setEraseSizeScreen(Math.max(10, pen * 5))
 
       await loadBackground()
+
+      // Fit only the first time (or if we don't have a saved view)
+      if (!didInitViewRef.current) {
+        fitToScreen(0.96)
+        didInitViewRef.current = true
+      }
+
       renderAll()
     }
+
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(wrap)
@@ -149,40 +251,158 @@ export default function DrawingCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backgroundImage, height, maxWidth, variant])
 
-  // re-render on strokes
+  // Re-render when strokes/view changes
   useEffect(() => {
     renderAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strokes, activeStroke])
+  }, [strokes, activeStroke, view, world])
 
-  // emit changes
+  // Emit changes (autosave)
   useEffect(() => {
     if (!onChange) return
-    const drawingObject = { version: 1, strokes, redoStack }
+    const drawingObject = {
+      version: 2,
+      mode,
+      world,
+      view,
+      strokes,
+      redoStack,
+    }
     onChange(drawingObject, exportToPng())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strokes, redoStack])
+  }, [strokes, redoStack, view, mode, world])
+
+  const isMultiPointer = () => pointersRef.current.size >= 2
+
+  const setPointer = (e) => {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+  }
+
+  const getTwoPointers = () => {
+    const arr = Array.from(pointersRef.current.values())
+    if (arr.length < 2) return null
+    const [a, b] = arr
+    return { a, b }
+  }
 
   const onPointerDown = (e) => {
     e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setPointer(e)
+
+    if (mode === 'move') {
+      setIsDrawing(false)
+      setActiveStroke(null)
+
+      if (isMultiPointer()) {
+        const two = getTwoPointers()
+        if (!two) return
+        const dx = two.b.x - two.a.x
+        const dy = two.b.y - two.a.y
+        const dist = Math.hypot(dx, dy)
+        const cx = (two.a.x + two.b.x) / 2
+        const cy = (two.a.y + two.b.y) / 2
+        gestureRef.current = {
+          mode: 'pinch',
+          start: { dist, scale: view.scale, ox: view.ox, oy: view.oy, cx, cy },
+        }
+      } else {
+        gestureRef.current = {
+          mode: 'pan',
+          start: { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy },
+        }
+      }
+      return
+    }
+
+    // draw mode
+    if (isMultiPointer()) {
+      // ignore multi-touch in draw mode (user can switch to move/zoom)
+      return
+    }
+
     setIsDrawing(true)
     setRedoStack([])
-    const p = toPoint(e)
-    const size = tool === 'erase' ? eraseSize : penSize
-    setActiveStroke({ tool, size, points: [p] })
+    const p = toWorldPoint(e.clientX, e.clientY)
+    const sizeScreen = tool === 'erase' ? eraseSizeScreen : penSizeScreen
+    // Store size in world units so it stays consistent on screen under zoom
+    const sizeWorld = sizeScreen / Math.max(0.0001, view.scale)
+    setActiveStroke({ tool, size: sizeWorld, points: [p] })
   }
 
   const onPointerMove = (e) => {
-    if (!isDrawing || !activeStroke) return
+    if (!pointersRef.current.has(e.pointerId)) return
     e.preventDefault()
-    const p = toPoint(e)
+    setPointer(e)
+
+    if (mode === 'move') {
+      const g = gestureRef.current
+      if (!g?.mode) return
+
+      if (g.mode === 'pan') {
+        const dx = e.clientX - g.start.x
+        const dy = e.clientY - g.start.y
+        setView((v) => ({ ...v, ox: g.start.ox + dx, oy: g.start.oy + dy }))
+        return
+      }
+
+      if (g.mode === 'pinch') {
+        const two = getTwoPointers()
+        if (!two) return
+        const dx = two.b.x - two.a.x
+        const dy = two.b.y - two.a.y
+        const dist = Math.hypot(dx, dy)
+        const ratio = dist / Math.max(1, g.start.dist)
+        const nextScale = Math.max(0.35, Math.min(5.0, g.start.scale * ratio))
+
+        // Zoom around center point
+        const rect = canvasRef.current.getBoundingClientRect()
+        const cx = g.start.cx - rect.left
+        const cy = g.start.cy - rect.top
+
+        // Convert screen center to world before and after
+        const wx = (cx - g.start.ox) / Math.max(0.0001, g.start.scale)
+        const wy = (cy - g.start.oy) / Math.max(0.0001, g.start.scale)
+        const ox = cx - wx * nextScale
+        const oy = cy - wy * nextScale
+
+        setView({ scale: nextScale, ox, oy })
+      }
+      return
+    }
+
+    if (!isDrawing || !activeStroke) return
+    const p = toWorldPoint(e.clientX, e.clientY)
     setActiveStroke((s) => ({ ...s, points: [...s.points, p] }))
   }
 
-  const onPointerUp = () => {
+  const endPointer = (pointerId) => {
+    pointersRef.current.delete(pointerId)
+    if (pointersRef.current.size < 2 && gestureRef.current.mode === 'pinch') {
+      gestureRef.current.mode = null
+      gestureRef.current.start = null
+    }
+    if (pointersRef.current.size === 0) {
+      gestureRef.current.mode = null
+      gestureRef.current.start = null
+    }
+  }
+
+  const onPointerUp = (e) => {
+    e.preventDefault()
+    endPointer(e.pointerId)
+
+    if (mode === 'move') return
+
     if (!isDrawing || !activeStroke) return
     setIsDrawing(false)
     commit([...strokes, activeStroke], [])
+    setActiveStroke(null)
+  }
+
+  const onPointerCancel = (e) => {
+    endPointer(e.pointerId)
+    setIsDrawing(false)
     setActiveStroke(null)
   }
 
@@ -219,21 +439,56 @@ export default function DrawingCanvas({
 
   const clear = () => commit([], [])
 
+  const drawLabel = useMemo(() => (mode === 'draw' ? 'Dibujar' : 'Mover/Zoom'), [mode])
+
   return (
     <div className={isFullscreen ? 'bg-white h-full flex flex-col' : 'bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'}>
       <div className={isFullscreen ? 'flex flex-wrap items-center gap-2 px-3 py-2 border-b border-gray-100 sticky top-0 z-20 bg-white' : 'flex flex-wrap items-center gap-2 p-3 border-b border-gray-100'}>
-        <Btn active={tool==='pen'} onClick={() => setTool('pen')} icon={Pencil} label="Lápiz" />
-        <Btn active={tool==='erase'} onClick={() => setTool('erase')} icon={Eraser} label="Borrar" />
+        <Btn active={mode === 'draw'} onClick={() => setMode('draw')} icon={Pencil} label="Dibujar" />
+        <Btn active={mode === 'move'} onClick={() => setMode('move')} icon={Hand} label="Mover" />
+
+        <div className="w-px h-8 bg-gray-200 mx-1" />
+
+        <Btn active={tool === 'pen'} onClick={() => setTool('pen')} icon={Pencil} label="Lápiz" />
+        <Btn active={tool === 'erase'} onClick={() => setTool('erase')} icon={Eraser} label="Borrar" />
 
         <div className="flex-1" />
 
-        <button type="button" onClick={undo} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Undo" title="Undo">
-          <Undo2 size={18} />{!compactControls && ' Undo'}
+        <button
+          type="button"
+          onClick={() => fitToScreen(0.96)}
+          className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`}
+          aria-label="Ajustar"
+          title="Ajustar"
+        >
+          <Maximize2 size={18} />{!compactControls && ' Ajustar'}
         </button>
-        <button type="button" onClick={redo} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Redo" title="Redo">
-          <Redo2 size={18} />{!compactControls && ' Redo'}
+
+        <button
+          type="button"
+          onClick={undo}
+          className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`}
+          aria-label="Deshacer"
+          title="Deshacer"
+        >
+          <Undo2 size={18} />{!compactControls && ' Deshacer'}
         </button>
-        <button type="button" onClick={clear} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Limpiar" title="Limpiar">
+        <button
+          type="button"
+          onClick={redo}
+          className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`}
+          aria-label="Rehacer"
+          title="Rehacer"
+        >
+          <Redo2 size={18} />{!compactControls && ' Rehacer'}
+        </button>
+        <button
+          type="button"
+          onClick={clear}
+          className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`}
+          aria-label="Limpiar"
+          title="Limpiar"
+        >
           <Trash2 size={18} />{!compactControls && ' Limpiar'}
         </button>
 
@@ -247,13 +502,19 @@ export default function DrawingCanvas({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            onPointerLeave={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onPointerLeave={(e) => {
+              // pointerleave may fire while still captured; keep it safe
+              if (mode !== 'move') onPointerUp(e)
+            }}
             className={isFullscreen ? 'touch-none w-full h-full' : 'touch-none'}
+            style={{ touchAction: 'none' }}
           />
         </div>
+
         {!hideFooter && !isFullscreen && (
           <p className="text-xs text-gray-500 mt-2">
-            El dibujo se guarda automáticamente en el dispositivo.
+            {drawLabel}. El contenido se guarda automáticamente.
           </p>
         )}
       </div>

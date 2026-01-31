@@ -1,4 +1,4 @@
-// Configuración Formulario 3: Inventario de Equipos (XLSX: 8 Equipment inventory)
+// Configuración Formulario 3: Inventario de Equipos
 // Mantener coherencia con el estilo del proyecto (Steps + secciones)
 
 export const equipmentInventorySteps = [
@@ -33,7 +33,7 @@ export const equipmentInventorySteps = [
   {
     id: 'croquis-esquematico',
     title: 'Croquis',
-    description: 'Dibuja sobre la plantilla del XLSX (croquis esquemático del edificio en corte).',
+    description: 'Dibuja sobre la plantilla (croquis esquemático del edificio en corte).',
     icon: '✍️',
     type: 'drawing-template',
   },
