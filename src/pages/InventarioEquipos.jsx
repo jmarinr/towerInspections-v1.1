@@ -45,7 +45,7 @@ export default function InventarioEquipos() {
   const [openCroquis, setOpenCroquis] = useState(false)
   const [openPlano, setOpenPlano] = useState(false)
   const [openDistribucion, setOpenDistribucion] = useState(false)
-  const [openDistribucion, setOpenDistribucion] = useState(false)
+
 
   useEffect(() => {
     // Marca como completado el paso anterior al avanzar (simple UX, sin validación dura)
