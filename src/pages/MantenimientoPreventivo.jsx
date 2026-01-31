@@ -1,136 +1,221 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import AppHeader from '../components/layout/AppHeader'
 import BottomNav from '../components/layout/BottomNav'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
-import SiteInfoForm from '../components/forms/SiteInfoForm'
-import MaintenanceActivity from '../components/forms/MaintenanceActivity'
+import CategoryTabs from '../components/layout/CategoryTabs'
+import StepIndicator from '../components/layout/StepIndicator'
+import DynamicForm from '../components/forms/DynamicForm'
+import InspectionChecklist from '../components/forms/InspectionChecklist'
 import { useAppStore } from '../hooks/useAppStore'
-import { getActivitiesBySiteType } from '../data/maintenanceActivities'
+import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
 export default function MantenimientoPreventivo() {
-  const { maintenanceData, updateMaintenanceSiteInfo, showToast } = useAppStore()
-  const [currentStep, setCurrentStep] = useState('info')
-  const siteType = maintenanceData.siteInfo.tipoSitio || 'rawland'
-  const activities = getActivitiesBySiteType(siteType)
+  const { 
+    maintenanceData, 
+    updateMaintenanceField, 
+    updateChecklistItem,
+    updateChecklistPhoto,
+    setMaintenanceStep,
+    completeMaintenanceStep,
+    showToast 
+  } = useAppStore()
 
-  // Calcular progreso considerando: estado + fotos para completados
+  const { currentStep, completedSteps, formData, checklistData, photos } = maintenanceData
+  const currentStepData = getStepById(currentStep)
+  const totalSteps = maintenanceFormConfig.steps.length
+
+  // Calcular progreso general
   const { progress, stats } = useMemo(() => {
-    let fullyComplete = 0
-    let naCount = 0
+    let totalItems = 0
+    let completedItems = 0
     let pendingPhotos = 0
-    
-    activities.forEach(act => {
-      const state = maintenanceData.activities[act.id]
-      if (!state?.status) return
-      
-      if (state.status === 'na') {
-        naCount++
-        fullyComplete++ // N/A cuenta como completo
-      } else if (state.status === 'complete') {
-        const hasBeforePhoto = maintenanceData.photos?.[`${act.id}-before`]
-        const hasAfterPhoto = maintenanceData.photos?.[`${act.id}-after`]
-        if (hasBeforePhoto && hasAfterPhoto) {
-          fullyComplete++
-        } else {
-          pendingPhotos++
-        }
+
+    maintenanceFormConfig.steps.forEach(step => {
+      if (step.type === 'checklist') {
+        step.items.forEach(item => {
+          // Verificar si el item debería mostrarse
+          if (item.showIf) {
+            const { field, value, values } = item.showIf
+            const currentValue = formData[field]
+            if (values && !values.includes(currentValue)) return
+            if (value && currentValue !== value) return
+          }
+          
+          totalItems++
+          const itemData = checklistData[item.id]
+          if (itemData?.status) {
+            if (itemData.status === 'na') {
+              completedItems++
+            } else {
+              const hasBeforePhoto = photos[`${item.id}-before`]
+              const hasAfterPhoto = photos[`${item.id}-after`]
+              if (hasBeforePhoto && hasAfterPhoto) {
+                completedItems++
+              } else {
+                pendingPhotos++
+              }
+            }
+          }
+        })
       }
     })
-    
-    const progressValue = Math.round((fullyComplete / activities.length) * 100)
+
+    const progressValue = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
     return { 
       progress: progressValue, 
-      stats: { fullyComplete, naCount, pendingPhotos, total: activities.length }
+      stats: { 
+        completedItems, 
+        totalItems, 
+        pendingPhotos,
+        currentStep,
+        totalSteps
+      }
     }
-  }, [maintenanceData.activities, maintenanceData.photos, activities])
+  }, [checklistData, photos, formData, currentStep, totalSteps])
+
+  // Navegación
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      // Buscar step anterior válido
+      let prevStep = currentStep - 1
+      let prevStepData = getStepById(prevStep)
+      
+      while (prevStepData?.showIf && prevStep > 0) {
+        const { field, value } = prevStepData.showIf
+        if (formData[field] !== value) {
+          prevStep--
+          prevStepData = getStepById(prevStep)
+        } else {
+          break
+        }
+      }
+      
+      if (prevStep >= 1) {
+        setMaintenanceStep(prevStep)
+      }
+    }
+  }
+
+  const handleNext = () => {
+    // Marcar step actual como completado
+    if (!completedSteps.includes(currentStep)) {
+      completeMaintenanceStep(currentStep)
+    }
+
+    if (currentStep < totalSteps) {
+      // Buscar siguiente step válido
+      let nextStep = currentStep + 1
+      let nextStepData = getStepById(nextStep)
+      
+      while (nextStepData?.showIf && nextStep <= totalSteps) {
+        const { field, value } = nextStepData.showIf
+        if (formData[field] !== value) {
+          nextStep++
+          nextStepData = getStepById(nextStep)
+        } else {
+          break
+        }
+      }
+
+      if (nextStep <= totalSteps) {
+        setMaintenanceStep(nextStep)
+      } else {
+        handleFinish()
+      }
+    } else {
+      handleFinish()
+    }
+  }
 
   const handleFinish = () => {
     if (stats.pendingPhotos > 0) {
-      showToast(`Faltan fotos en ${stats.pendingPhotos} actividad(es)`, 'warning')
+      showToast(`Faltan fotos en ${stats.pendingPhotos} ítem(s)`, 'warning')
       return
     }
     showToast('¡Mantenimiento completado!', 'success')
   }
 
+  const handleStepChange = (stepId) => {
+    setMaintenanceStep(stepId)
+  }
+
+  if (!currentStepData) {
+    return <div className="min-h-screen flex items-center justify-center">Error: Step no encontrado</div>
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <AutosaveIndicator />
+      
+      {/* Header */}
       <AppHeader 
         title="Mantenimiento Preventivo" 
-        subtitle={maintenanceData.siteInfo.idSitio || 'Nuevo'} 
+        subtitle={formData.idSitio || 'Nuevo'} 
         badge="En progreso" 
         progress={progress} 
         onMenuClick={() => showToast('Menú de opciones')} 
       />
       
-      <div className="bg-primary px-4 pb-4">
-        <div className="flex gap-2">
-          {['rawland', 'rooftop'].map((type) => (
-            <button 
-              key={type} 
-              onClick={() => updateMaintenanceSiteInfo('tipoSitio', type)} 
-              className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 ${
-                siteType === type 
-                  ? 'bg-white text-primary' 
-                  : 'bg-white/10 text-white/70'
-              }`}
-            >
-              {type === 'rawland' ? '🏗️ Rawland' : '🏢 Rooftop'}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Category Tabs */}
+      <CategoryTabs 
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+        onCategoryChange={handleStepChange}
+      />
 
-      <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden">
-        {currentStep === 'info' ? (
-          <>
-            <div className="mb-4">
-              <div className="text-3xl mb-2">📋</div>
-              <h2 className="text-xl font-extrabold text-gray-900">Información del Sitio</h2>
-              <p className="text-sm text-gray-500">Datos generales</p>
+      {/* Step Indicator */}
+      <StepIndicator
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+        onStepChange={handleStepChange}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
+        {/* Step Header */}
+        <div className="mb-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-3xl mb-1">{currentStepData.icon}</div>
+              <h2 className="text-xl font-extrabold text-gray-900">{currentStepData.title}</h2>
+              <p className="text-sm text-gray-500">{currentStepData.subtitle}</p>
             </div>
-            <SiteInfoForm type="maintenance" />
-          </>
-        ) : (
-          <>
-            <div className="mb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-3xl mb-2">🔧</div>
-                  <h2 className="text-xl font-extrabold text-gray-900">Actividades</h2>
-                  <p className="text-sm text-gray-500">{activities.length} actividades</p>
-                </div>
-                {/* Mini resumen de estado */}
-                <div className="text-right">
-                  <div className="text-2xl font-extrabold text-primary">{stats.fullyComplete}/{stats.total}</div>
-                  <div className="text-[10px] text-gray-500">completadas</div>
-                  {stats.pendingPhotos > 0 && (
-                    <div className="text-[10px] text-amber-600 font-semibold mt-1">
-                      ⚠️ {stats.pendingPhotos} sin fotos
-                    </div>
-                  )}
-                </div>
+            <div className="text-right">
+              <div className="text-lg font-bold text-primary">
+                {currentStep}/{totalSteps}
               </div>
+              <div className="text-[10px] text-gray-500">paso</div>
             </div>
-            
-            <div className="space-y-3">
-              {activities.map((act, idx) => (
-                <MaintenanceActivity 
-                  key={act.id} 
-                  activity={act} 
-                  index={idx} 
-                />
-              ))}
-            </div>
-          </>
-        )}
+          </div>
+        </div>
+
+        {/* Form or Checklist Content */}
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
+          {currentStepData.type === 'form' ? (
+            <DynamicForm
+              step={currentStepData}
+              formData={formData}
+              onFieldChange={updateMaintenanceField}
+            />
+          ) : (
+            <InspectionChecklist
+              step={currentStepData}
+              checklistData={checklistData}
+              photos={photos}
+              formData={formData}
+              onItemChange={updateChecklistItem}
+              onPhotoChange={updateChecklistPhoto}
+            />
+          )}
+        </div>
       </main>
 
+      {/* Bottom Navigation */}
       <BottomNav 
-        onPrev={() => setCurrentStep('info')} 
-        onNext={() => currentStep === 'info' ? setCurrentStep('activities') : handleFinish()} 
-        showPrev={currentStep !== 'info'} 
-        nextLabel={currentStep === 'info' ? 'Continuar' : 'Finalizar'} 
+        onPrev={handlePrev} 
+        onNext={handleNext} 
+        showPrev={currentStep > 1} 
+        nextLabel={currentStep === totalSteps ? 'Finalizar' : 'Siguiente'} 
       />
     </div>
   )
