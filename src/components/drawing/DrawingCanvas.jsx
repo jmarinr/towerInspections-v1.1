@@ -23,14 +23,15 @@ export default function DrawingCanvas({
   variant = 'card', // 'card' | 'fullscreen'
   hideFooter = false,
   rightControls = null,
+  compactControls = false,
 }) {
   const canvasRef = useRef(null)
   const wrapRef = useRef(null)
   const bgRef = useRef(null)
 
   const [tool, setTool] = useState('pen') // pen | erase
-  const [penSize] = useState(4)
-  const [eraseSize] = useState(18)
+  const [penSize, setPenSize] = useState(3)
+  const [eraseSize, setEraseSize] = useState(14)
 
   const [strokes, setStrokes] = useState(() => initialDrawing?.strokes || [])
   const [redoStack, setRedoStack] = useState(() => initialDrawing?.redoStack || [])
@@ -126,8 +127,18 @@ export default function DrawingCanvas({
     const resize = async () => {
       const width = Math.min(maxWidth, wrap.clientWidth)
       canvas.width = width
-      const targetHeight = isFullscreen ? Math.max(260, wrap.clientHeight - 4) : height
+      // En pantalla completa, damos prioridad al espacio para dibujar.
+      const targetHeight = isFullscreen ? Math.max(320, wrap.clientHeight - 2) : height
       canvas.height = targetHeight
+
+      // Ajuste de grosor de lápiz/borra según tamaño (mejor para móvil).
+      // - Con plantilla (imagen), el trazo debe ser más fino.
+      // - En blanco, un poco más grueso.
+      const base = Math.max(1.5, Math.min(4, canvas.width / 420))
+      const pen = backgroundImage ? (isFullscreen ? Math.max(1.5, base * 0.75) : Math.max(2, base * 0.9)) : (isFullscreen ? Math.max(2, base) : Math.max(2.5, base * 1.1))
+      setPenSize(pen)
+      setEraseSize(Math.max(10, pen * 5))
+
       await loadBackground()
       renderAll()
     }
@@ -136,7 +147,7 @@ export default function DrawingCanvas({
     ro.observe(wrap)
     return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backgroundImage, height])
+  }, [backgroundImage, height, maxWidth, variant])
 
   // re-render on strokes
   useEffect(() => {
@@ -153,6 +164,7 @@ export default function DrawingCanvas({
   }, [strokes, redoStack])
 
   const onPointerDown = (e) => {
+    e.preventDefault()
     setIsDrawing(true)
     setRedoStack([])
     const p = toPoint(e)
@@ -162,6 +174,7 @@ export default function DrawingCanvas({
 
   const onPointerMove = (e) => {
     if (!isDrawing || !activeStroke) return
+    e.preventDefault()
     const p = toPoint(e)
     setActiveStroke((s) => ({ ...s, points: [...s.points, p] }))
   }
@@ -171,6 +184,25 @@ export default function DrawingCanvas({
     setIsDrawing(false)
     commit([...strokes, activeStroke], [])
     setActiveStroke(null)
+  }
+
+  const Btn = ({ active, onClick, icon: Icon, label }) => {
+    const base = compactControls
+      ? 'w-10 h-10 rounded-xl flex items-center justify-center'
+      : 'px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2'
+    const activeCls = active ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600 bg-white'
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${base} border-2 active:scale-95 ${activeCls}`}
+        aria-label={label}
+        title={label}
+      >
+        <Icon size={18} />
+        {!compactControls && <span>{label}</span>}
+      </button>
+    )
   }
 
   const undo = () => {
@@ -190,30 +222,26 @@ export default function DrawingCanvas({
   return (
     <div className={isFullscreen ? 'bg-white h-full flex flex-col' : 'bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'}>
       <div className={isFullscreen ? 'flex flex-wrap items-center gap-2 px-3 py-2 border-b border-gray-100 sticky top-0 z-20 bg-white' : 'flex flex-wrap items-center gap-2 p-3 border-b border-gray-100'}>
-        <button type="button" onClick={() => setTool('pen')} className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 active:scale-95 ${tool==='pen' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600 bg-white'}`}>
-          <Pencil size={18} /> Lápiz
-        </button>
-        <button type="button" onClick={() => setTool('erase')} className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 active:scale-95 ${tool==='erase' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600 bg-white'}`}>
-          <Eraser size={18} /> Borrar
-        </button>
+        <Btn active={tool==='pen'} onClick={() => setTool('pen')} icon={Pencil} label="Lápiz" />
+        <Btn active={tool==='erase'} onClick={() => setTool('erase')} icon={Eraser} label="Borrar" />
 
         <div className="flex-1" />
 
-        <button type="button" onClick={undo} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95">
-          <Undo2 size={18} /> Undo
+        <button type="button" onClick={undo} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Undo" title="Undo">
+          <Undo2 size={18} />{!compactControls && ' Undo'}
         </button>
-        <button type="button" onClick={redo} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95">
-          <Redo2 size={18} /> Redo
+        <button type="button" onClick={redo} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Redo" title="Redo">
+          <Redo2 size={18} />{!compactControls && ' Redo'}
         </button>
-        <button type="button" onClick={clear} className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95">
-          <Trash2 size={18} /> Limpiar
+        <button type="button" onClick={clear} className={`${compactControls ? 'w-10 h-10' : 'px-3 py-2'} rounded-xl ${compactControls ? '' : 'text-sm font-semibold'} flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-600 bg-white active:scale-95`} aria-label="Limpiar" title="Limpiar">
+          <Trash2 size={18} />{!compactControls && ' Limpiar'}
         </button>
 
         {rightControls}
       </div>
 
-      <div ref={wrapRef} className={isFullscreen ? 'flex-1 bg-gray-50 p-2' : 'p-3 bg-gray-50'}>
-        <div className={isFullscreen ? 'w-full h-full overflow-hidden rounded-xl border border-gray-200 bg-white' : 'w-full overflow-hidden rounded-xl border border-gray-200 bg-white'}>
+      <div ref={wrapRef} className={isFullscreen ? 'flex-1 bg-gray-50 p-0' : 'p-3 bg-gray-50'}>
+        <div className={isFullscreen ? 'w-full h-full overflow-hidden bg-white' : 'w-full overflow-hidden rounded-xl border border-gray-200 bg-white'}>
           <canvas
             ref={canvasRef}
             onPointerDown={onPointerDown}

@@ -37,6 +37,26 @@ body {
   display: none; 
 }
 
+/*
+  UX helpers (mobile):
+  - En editores a pantalla completa, cuando el teléfono está en horizontal,
+    queremos stage + panel lateral en filas.
+*/
+.pti-landscape-flex {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (orientation: landscape) and (max-width: 1024px) {
+  .pti-landscape-flex {
+    flex-direction: row;
+  }
+  .pti-landscape-side {
+    flex: 0 0 360px;
+    max-width: 360px;
+  }
+}
+
 /* Prevent horizontal overflow */
 main, section, article, div {
   max-width: 100%;

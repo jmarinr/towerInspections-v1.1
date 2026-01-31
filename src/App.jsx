@@ -22,10 +22,13 @@ function App() {
       {showSplash && <SplashScreen />}
       <Routes>
         <Route path="/" element={<Home />} />
+        {/* Compat: el menú principal usa /inspeccion */}
+        <Route path="/inspeccion" element={<InspeccionSitio />} />
+        <Route path="/inspeccion/:step" element={<InspeccionSitio />} />
         <Route path="/inspeccion-sitio" element={<InspeccionSitio />} />
         <Route path="/inspeccion-sitio/:step" element={<InspeccionSitio />} />
         <Route path="/mantenimiento" element={<MantenimientoPreventivo />} />
-              <Route path="/inventario-equipos/:step?" element={<InventarioEquipos />} />
+        <Route path="/inventario-equipos/:step?" element={<InventarioEquipos />} />
       </Routes>
       <Toast message={toast.message} type={toast.type} show={toast.show} onClose={hideToast} />
     </>

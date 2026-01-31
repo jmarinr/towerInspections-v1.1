@@ -35,14 +35,34 @@ const loadImage = (src) => new Promise((resolve) => {
   img.src = src
 })
 
-export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUrl, onSaveScene, onSaveFoto }) {
+export default function DistributionBuilder({
+  scene,
+  pngDataUrl,
+  fotoTorreDataUrl,
+  onSaveScene,
+  onSaveFoto,
+  variant = 'card', // 'card' | 'fullscreen'
+  onRequestFullscreen = null,
+}) {
   const stageRef = useRef(null)
+  const rafRef = useRef(null)
+  const pointersRef = useRef(new Map()) // pointerId -> {x,y}
+  const gestureRef = useRef({
+    mode: null, // 'drag' | 'pinch'
+    id: null,
+    start: null,
+  })
   const [objects, setObjects] = useState(() => scene?.objects || [])
   const [selectedId, setSelectedId] = useState(null)
   const [placingType, setPlacingType] = useState(null)
   const [showHelp, setShowHelp] = useState(true)
   const [isCoarsePointer, setIsCoarsePointer] = useState(false)
-  const dragRef = useRef({ id: null, startX: 0, startY: 0, ox: 0, oy: 0 })
+
+  const isFullscreen = variant === 'fullscreen'
+
+  useEffect(() => {
+    if (isFullscreen) setShowHelp(false)
+  }, [isFullscreen])
 
   useEffect(() => {
     setObjects(scene?.objects || [])
@@ -93,37 +113,122 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
     if (e.target === stageRef.current) setSelectedId(null)
   }
 
-  const beginDrag = (e, id) => {
+  // --- Gestos (móvil) ---
+  const scheduleUpdate = (updater) => {
+    // Throttle a ~60fps para mejorar sensibilidad en teléfonos
+    if (rafRef.current) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      setObjects(prev => updater(prev))
+    })
+  }
+
+  const setPointer = (e) => {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+  }
+
+  const getTwoPointers = () => {
+    const arr = Array.from(pointersRef.current.entries())
+    if (arr.length < 2) return null
+    return { a: arr[0], b: arr[1] }
+  }
+
+  const onPiecePointerDown = (e, id) => {
     e.preventDefault()
     e.stopPropagation()
     setSelectedId(id)
-    const o = objects.find(x => x.id === id)
-    if (!o) return
-    dragRef.current = { id, startX: e.clientX, startY: e.clientY, ox: o.x, oy: o.y }
-  }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setPointer(e)
 
-  const moveDrag = (e) => {
-    const id = dragRef.current.id
-    if (!id) return
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-    setObjects(prev => prev.map(o => (o.id === id ? { ...o, x: dragRef.current.ox + dx, y: dragRef.current.oy + dy } : o)))
-  }
+    const obj = objects.find(o => o.id === id)
+    if (!obj) return
 
-  const endDrag = () => {
-    if (!dragRef.current.id) return
-    dragRef.current.id = null
-  }
-
-  useEffect(() => {
-    window.addEventListener('pointermove', moveDrag)
-    window.addEventListener('pointerup', endDrag)
-    return () => {
-      window.removeEventListener('pointermove', moveDrag)
-      window.removeEventListener('pointerup', endDrag)
+    const two = getTwoPointers()
+    if (two) {
+      // Pinch to zoom (dos dedos)
+      const [p1, v1] = two.a
+      const [p2, v2] = two.b
+      const dx = v2.x - v1.x
+      const dy = v2.y - v1.y
+      const dist = Math.hypot(dx, dy)
+      gestureRef.current = {
+        mode: 'pinch',
+        id,
+        start: {
+          dist,
+          w: obj.w,
+          h: obj.h,
+          cx: obj.x + obj.w / 2,
+          cy: obj.y + obj.h / 2,
+        }
+      }
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+
+    // Drag (un dedo)
+    gestureRef.current = {
+      mode: 'drag',
+      id,
+      start: {
+        x: e.clientX,
+        y: e.clientY,
+        ox: obj.x,
+        oy: obj.y,
+      }
+    }
+  }
+
+  const onPiecePointerMove = (e, id) => {
+    const g = gestureRef.current
+    if (!g?.mode || g.id !== id) return
+    e.preventDefault()
+    e.stopPropagation()
+    setPointer(e)
+
+    if (g.mode === 'drag') {
+      const dx = e.clientX - g.start.x
+      const dy = e.clientY - g.start.y
+      scheduleUpdate(prev => prev.map(o => (o.id === id ? { ...o, x: g.start.ox + dx, y: g.start.oy + dy } : o)))
+      return
+    }
+
+    if (g.mode === 'pinch') {
+      const two = getTwoPointers()
+      if (!two) return
+      const v1 = two.a[1]
+      const v2 = two.b[1]
+      const dx = v2.x - v1.x
+      const dy = v2.y - v1.y
+      const dist = Math.hypot(dx, dy)
+      const ratio = Math.max(0.35, Math.min(2.8, dist / (g.start.dist || 1)))
+      scheduleUpdate(prev => prev.map(o => {
+        if (o.id !== id) return o
+        const w = Math.max(24, g.start.w * ratio)
+        const h = Math.max(24, g.start.h * ratio)
+        // mantenemos el centro para que “no se vaya” al escalar
+        const x = g.start.cx - w / 2
+        const y = g.start.cy - h / 2
+        return { ...o, w, h, x, y }
+      }))
+    }
+  }
+
+  const onPiecePointerUp = (e) => {
+    pointersRef.current.delete(e.pointerId)
+    if (pointersRef.current.size < 2 && gestureRef.current.mode === 'pinch') {
+      // si se levantó un dedo, pasamos a drag con el dedo restante (si aplica)
+      gestureRef.current.mode = null
+      gestureRef.current.id = null
+      gestureRef.current.start = null
+    }
+    if (pointersRef.current.size === 0) {
+      gestureRef.current.mode = null
+      gestureRef.current.id = null
+      gestureRef.current.start = null
+    }
+  }
+
+  // Nota: usamos Pointer Events para que el arrastre sea más sensible.
 
   const rotate = (dir) => {
     if (!selectedId) return
@@ -181,13 +286,22 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div className={isFullscreen ? 'pti-landscape-flex h-full gap-3 p-3' : 'grid grid-cols-1 lg:grid-cols-12 gap-4'}>
       {/* Stage */}
-      <div className="lg:col-span-8">
+      <div className={isFullscreen ? 'flex-1 min-h-0' : 'lg:col-span-8'}>
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <div className="flex items-center gap-2 p-3 border-b border-gray-100">
             <div className="font-extrabold text-gray-900">Distribución de equipos en torre</div>
             <div className="flex-1" />
+            {!isFullscreen && typeof onRequestFullscreen === 'function' && (
+              <button
+                type="button"
+                onClick={onRequestFullscreen}
+                className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center gap-2"
+              >
+                <ImageIcon size={18} /> Pantalla completa
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowHelp(s => !s)}
@@ -230,8 +344,9 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
             onDrop={onDrop}
             onDragOver={onDragOver}
             onPointerDown={onStagePointerDown}
-            className="relative w-full aspect-[3/4] bg-white"
+            className={isFullscreen ? 'relative w-full h-full bg-white' : 'relative w-full aspect-[3/4] bg-white'}
             style={{
+              touchAction: 'none',
               backgroundImage: `url(${templateDistribucion})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
@@ -246,7 +361,10 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
                   key={o.id}
                   src={p.src}
                   alt={p.label}
-                  onPointerDown={(e) => beginDrag(e, o.id)}
+                  onPointerDown={(e) => onPiecePointerDown(e, o.id)}
+                  onPointerMove={(e) => onPiecePointerMove(e, o.id)}
+                  onPointerUp={onPiecePointerUp}
+                  onPointerCancel={onPiecePointerUp}
                   className={`absolute select-none cursor-grab active:cursor-grabbing ${isSel ? 'ring-4 ring-primary/40 rounded-lg' : ''}`}
                   style={{
                     left: o.x,
@@ -254,6 +372,7 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
                     width: o.w,
                     height: o.h,
                     transform: `rotate(${o.rot || 0}deg)`,
+                    touchAction: 'none',
                   }}
                   draggable={false}
                 />
@@ -289,7 +408,7 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
       </div>
 
       {/* Palette + photo */}
-      <div className="lg:col-span-4 space-y-4">
+      <div className={isFullscreen ? 'pti-landscape-side w-full space-y-3' : 'lg:col-span-4 space-y-4'}>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="font-extrabold text-gray-900">Piezas</div>
@@ -308,7 +427,9 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
           {/* Mobile: tap-to-place (no HTML5 drag) */}
           <div className="block lg:hidden">
             <div className="text-xs text-gray-500 mb-2">Toca una pieza para seleccionarla. Luego toca el croquis para colocarla.</div>
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto pr-1 ${isFullscreen ? 'max-h-[55svh]' : 'max-h-72'}`}
+            >
               {PALETTE.map((p) => {
                 const active = placingType === p.type
                 return (
@@ -316,9 +437,9 @@ export default function DistributionBuilder({ scene, pngDataUrl, fotoTorreDataUr
                     key={p.type}
                     type="button"
                     onClick={() => setPlacingType(active ? null : p.type)}
-                    className={`min-w-[150px] border-2 rounded-2xl p-3 bg-white transition-all active:scale-95 ${active ? 'border-primary ring-4 ring-primary/10' : 'border-gray-200'}`}
+                    className={`border-2 rounded-2xl p-2 bg-white transition-all active:scale-95 ${active ? 'border-primary ring-4 ring-primary/10' : 'border-gray-200'}`}
                   >
-                    <img src={p.src} alt={p.label} className="w-full h-16 object-contain" />
+                    <img src={p.src} alt={p.label} className="w-full h-14 object-contain" />
                     <div className="text-[11px] font-bold text-gray-700 mt-2 leading-tight text-left">{p.label}</div>
                   </button>
                 )

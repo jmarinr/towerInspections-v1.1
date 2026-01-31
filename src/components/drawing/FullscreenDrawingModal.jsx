@@ -43,6 +43,7 @@ export default function FullscreenDrawingModal({
             backgroundImage={backgroundImage}
             initialDrawing={initialDrawing}
             onChange={onChange}
+            compactControls
             rightControls={null}
           />
         </div>

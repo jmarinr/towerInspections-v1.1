@@ -14,6 +14,7 @@ import TowerInventoryTable from '../components/forms/TowerInventoryTable'
 import FloorInventoryClients from '../components/forms/FloorInventoryClients'
 import DistributionBuilder from '../components/equipment/DistributionBuilder'
 import FullscreenDrawingModal from '../components/drawing/FullscreenDrawingModal'
+import FullscreenDistributionModal from '../components/equipment/FullscreenDistributionModal'
 import Input from '../components/ui/Input'
 
 import templateCroquis from '../assets/equipment/template_croquis_esquematico.png'
@@ -43,6 +44,8 @@ export default function InventarioEquipos() {
   const [completedSteps, setCompletedSteps] = useState([])
   const [openCroquis, setOpenCroquis] = useState(false)
   const [openPlano, setOpenPlano] = useState(false)
+  const [openDistribucion, setOpenDistribucion] = useState(false)
+  const [openDistribucion, setOpenDistribucion] = useState(false)
 
   useEffect(() => {
     // Marca como completado el paso anterior al avanzar (simple UX, sin validación dura)
@@ -73,13 +76,26 @@ export default function InventarioEquipos() {
         return <FloorInventoryClients />
       case 'builder':
         return (
-          <DistributionBuilder
-            scene={equipmentInventoryData?.distribucionTorre?.scene}
-            pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
-            fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
-            onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
-            onSaveFoto={(data) => setDistribucionFotoTorre(data)}
-          />
+          <>
+            <DistributionBuilder
+              scene={equipmentInventoryData?.distribucionTorre?.scene}
+              pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
+              fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
+              onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
+              onSaveFoto={(data) => setDistribucionFotoTorre(data)}
+              onRequestFullscreen={() => setOpenDistribucion(true)}
+            />
+
+            <FullscreenDistributionModal
+              open={openDistribucion}
+              onClose={() => setOpenDistribucion(false)}
+              scene={equipmentInventoryData?.distribucionTorre?.scene}
+              pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
+              fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
+              onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
+              onSaveFoto={(data) => setDistribucionFotoTorre(data)}
+            />
+          </>
         )
       case 'drawing-template':
         return (
