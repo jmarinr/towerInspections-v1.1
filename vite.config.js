@@ -58,7 +58,7 @@ export default defineConfig({
       }
     })
   ],
-  base: './',
+  base: '/towerInspections-v1.1/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets'
