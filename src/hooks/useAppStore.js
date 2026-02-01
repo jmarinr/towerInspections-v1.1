@@ -166,6 +166,10 @@ export const useAppStore = create(
       // ============ EQUIPMENT INVENTORY (Formulario 3) ============
       equipmentInventoryData: getDefaultEquipmentInventoryData(),
 
+      // ============ GROUNDING SYSTEM TEST (Nuevo formulario) ============
+      groundingSystemData: {},
+
+
       updateEquipmentSiteField: (field, value) => {
         set((state) => ({
           equipmentInventoryData: {
@@ -339,6 +343,25 @@ export const useAppStore = create(
       },
 
       resetEquipmentInventoryData: () => set({ equipmentInventoryData: getDefaultEquipmentInventoryData() }),
+
+      // Prueba de puesta a tierra
+      setGroundingField: (sectionId, fieldId, value) => {
+        set((state) => ({
+          groundingSystemData: {
+            ...(state.groundingSystemData || {}),
+            [sectionId]: {
+              ...((state.groundingSystemData && state.groundingSystemData[sectionId]) || {}),
+              [fieldId]: value,
+            },
+          },
+        }))
+        get().triggerAutosave()
+      },
+      resetGroundingSystemData: () => {
+        set({ groundingSystemData: {} })
+        get().triggerAutosave()
+      },
+
 
       // Sistema de ascenso
 setSafetyField: (sectionId, fieldId, value) => {
