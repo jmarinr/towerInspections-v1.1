@@ -30,6 +30,10 @@ function App() {
         <Route path="/inspeccion-sitio/:step" element={<InspeccionSitio />} />
         <Route path="/mantenimiento" element={<MantenimientoPreventivo />} />
         <Route path="/inventario-equipos/:step?" element={<InventarioEquipos />} />
+        <Route path="/sistema-ascenso/:step?" element={<SafetyClimbingDevice />} />
+
+        {/* Fallback para evitar pantalla en blanco si alguien navega a una ruta no registrada */}
+        <Route path="*" element={<Home />} />
       </Routes>
       <Toast message={toast.message} type={toast.type} show={toast.show} onClose={hideToast} />
     </>
