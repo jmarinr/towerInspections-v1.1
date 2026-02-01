@@ -13,7 +13,7 @@ export default function Home() {
       icon: ClipboardCheck,
       iconBg: 'bg-blue-500',
       stats: '38 ítems / 6 secciones',
-      route: '/inspeccion',
+      route: '/intro/inspeccion',
     },
     {
       id: 'mantenimiento',
@@ -22,7 +22,7 @@ export default function Home() {
       icon: Wrench,
       iconBg: 'bg-orange-500',
       stats: '92 ítems / 17 pasos',
-      route: '/mantenimiento',
+      route: '/intro/mantenimiento',
     },
     {
       id: 'equipment',
@@ -31,7 +31,7 @@ export default function Home() {
       icon: Package,
       iconBg: 'bg-emerald-500',
       stats: '28 ítems / 6 pasos',
-      route: '/inventario-equipos',
+      route: '/intro/inventario',
     },
     {
       id: 'sistema-ascenso',
@@ -40,7 +40,7 @@ export default function Home() {
       icon: Shield,
       iconBg: 'bg-indigo-500',
       stats: '34 ítems / 6 secciones',
-      route: '/sistema-ascenso',
+      route: '/intro/ascenso',
     },
 {
   id: 'grounding-system-test',
@@ -49,7 +49,7 @@ export default function Home() {
   icon: Zap,
   iconBg: 'bg-purple-500',
   stats: '29 ítems / 5 secciones',
-  route: '/grounding-system-test',
+  route: '/intro/puesta_tierra',
 },
   ]
 
@@ -63,12 +63,12 @@ export default function Home() {
         <div className="flex flex-col items-center">
           <div className="mb-2">
             {/* Logo placeholder - se reemplazará con imagen */}
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
               <span className="text-3xl font-black text-primary">PTI</span>
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-1">Sistema de Inspección v1.1.4</p>
+          <p className="text-white/70 text-sm mt-1">Sistema de Inspección v1.1.7</p>
         </div>
       </header>
 
@@ -90,7 +90,7 @@ export default function Home() {
                   className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all text-left"
                 >
                   {/* Icono */}
-                  <div className={`w-14 h-14 ${form.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
+                  <div className={`w-12 h-12 ${form.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
                     <IconComponent size={28} className="text-white" />
                   </div>
                   

@@ -40,6 +40,22 @@ export default function InventarioEquipos() {
   const currentStepIndex = Math.max(0, getEquipmentStepIndex(currentStepId))
   const currentStep = equipmentInventorySteps[currentStepIndex]
 
+  const siteInfo = equipmentInventoryData.siteInfo
+
+  const isSiteInfoValid =
+    siteInfo.proveedor &&
+    siteInfo.tipoVisita &&
+    siteInfo.idSitio &&
+    siteInfo.nombreSitio &&
+    siteInfo.fechaInicio &&
+    siteInfo.fechaTermino &&
+    siteInfo.direccion &&
+    siteInfo.latitud &&
+    siteInfo.longitud
+
+  const isCurrentValid = currentStep.type !== 'form' ? true : !!isSiteInfoValid
+  const isLastStep = currentStepIndex === equipmentInventorySteps.length - 1
+
   const [completedSteps, setCompletedSteps] = useState([])
   const [openCroquis, setOpenCroquis] = useState(false)
   const [openPlano, setOpenPlano] = useState(false)
@@ -236,7 +252,7 @@ case 'drawing-template':
         {renderStepContent()}
       </div>
 
-      <BottomNav onBack={goPrev} onNext={goNext} nextLabel={currentStepIndex === equipmentInventorySteps.length - 1 ? 'Finalizar' : 'Siguiente'} />
+      <BottomNav onPrev={goPrev} onNext={goNext} prevDisabled={currentStepIndex === 0} nextDisabled={!isCurrentValid} nextLabel={isLastStep ? 'Finalizar' : 'Siguiente'} />
     </div>
   )
 }

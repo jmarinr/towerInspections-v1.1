@@ -28,6 +28,50 @@ export default function MantenimientoPreventivo() {
   const photos = maintenanceData?.photos || {}
   
   const currentStepData = getStepById(currentStep)
+
+  const isBlank = (v) => v === null || v === undefined || String(v).trim() === ''
+
+  const shouldShow = (item) => {
+    if (!item?.showIf) return true
+    const { field, value, values } = item.showIf
+    const currentValue = formData[field]
+    if (values) return values.includes(currentValue)
+    return currentValue === value
+  }
+
+  const validateField = (field, value) => {
+    if (!field?.required && isBlank(value)) return true
+    if (field?.required && isBlank(value)) return false
+    switch (field.type) {
+      case 'number': return Number.isFinite(Number(String(value)))
+      case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(String(value))
+      case 'time': return /^\d{2}:\d{2}$/.test(String(value))
+      case 'select': return !isBlank(value)
+      case 'toggle':
+      case 'status': return !isBlank(value)
+      case 'gps': {
+        const parts = String(value).split(',').map(s => s.trim())
+        if (parts.length !== 2) return false
+        const lat = Number(parts[0]); const lng = Number(parts[1])
+        return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+      }
+      case 'photo': return !isBlank(value)
+      default: return true
+    }
+  }
+
+  const isFormStepValid = useMemo(() => {
+    if (!currentStepData || currentStepData.type !== 'form') return true
+    const fields = currentStepData.fields || []
+    for (const f of fields) {
+      if (!shouldShow(f)) continue
+      const value = formData[f.id]
+      if (!validateField(f, value)) return false
+    }
+    return true
+  }, [currentStepData, formData])
+
+  const isLastStep = currentStep === totalSteps
   const totalSteps = maintenanceFormConfig.steps.length
 
   // Calcular progreso general
@@ -87,6 +131,11 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleNext = () => {
+    if (!isFormStepValid) {
+      showToast('Completa los campos requeridos antes de continuar', 'warning')
+      return
+    }
+
     // Marcar step actual como completado
     completeMaintenanceStep(currentStep)
 
@@ -189,8 +238,8 @@ export default function MantenimientoPreventivo() {
       <BottomNav 
         onPrev={handlePrev} 
         onNext={handleNext} 
-        showPrev={currentStep > 1} 
-        nextLabel={currentStep === totalSteps ? 'Finalizar' : 'Siguiente'} 
+        showPrev={currentStep > 1} prevDisabled={currentStep <= 1} nextDisabled={!isFormStepValid} 
+        nextLabel={isLastStep ? 'Finalizar' : 'Siguiente'} 
       />
     </div>
   )
