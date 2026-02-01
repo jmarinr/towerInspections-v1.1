@@ -58,7 +58,7 @@ export default function InspeccionSitio() {
           <div>{currentSection.items?.map((item, idx) => <InspectionItem key={item.id} item={item} index={idx} />)}</div>
         )}
       </main>
-      <BottomNav onPrev={goToPrev} onNext={goToNext} showPrev={currentStepIndex > 0} prevDisabled={currentStepIndex === 0} nextDisabled={!isCurrentCompleted} nextLabel={isLastStep ? 'Finalizar' : 'Siguiente'} />
+      <BottomNav onPrev={goToPrev} onNext={goToNext} showPrev={currentStepIndex > 0} nextLabel={currentStepIndex === inspectionSections.length - 1 ? 'Finalizar' : 'Siguiente'} />
     </div>
   )
 }

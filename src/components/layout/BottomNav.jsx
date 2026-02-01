@@ -1,97 +1,84 @@
-import { ArrowLeft, ArrowRight, Home, ClipboardList, Wrench, ListChecks } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Home, FileText, Clock, User } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-
-const tabs = [
-  { id: 'home', label: 'Inicio', icon: Home, path: '/' },
-  { id: 'inspeccion', label: 'Inspección', icon: ClipboardList, path: '/inspeccion' },
-  { id: 'mantenimiento', label: 'Mantenimiento', icon: Wrench, path: '/mantenimiento' },
-  { id: 'inventario', label: 'Inventario', icon: ListChecks, path: '/inventario-equipos' },
-]
-
-const isActivePath = (pathname, tabPath) => {
-  if (tabPath === '/') return pathname === '/'
-  return pathname === tabPath || pathname.startsWith(tabPath + '/')
-}
 
 export default function BottomNav({
   onPrev,
   onNext,
-  prevDisabled = false,
-  nextDisabled = false,
-  showPrev,
-  showNext,
+  onBack, // compat
   prevLabel = 'Anterior',
   nextLabel = 'Siguiente',
+  showPrev = true,
+  showNext = true,
+  prevDisabled = false,
+  nextDisabled = false,
 }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const canPrev = typeof onPrev === 'function' && !prevDisabled
-  const canNext = typeof onNext === 'function' && !nextDisabled
-  const renderPrev = showPrev ?? typeof onPrev === 'function'
-  const renderNext = showNext ?? typeof onNext === 'function'
+  const handlePrev = onPrev ?? onBack
+
+  const tabs = [
+    { id: 'home', icon: Home, label: 'Inicio', path: '/' },
+    { id: 'forms', icon: FileText, label: 'Formularios', path: '/' },
+    { id: 'history', icon: Clock, label: 'Historial', path: null },
+    { id: 'profile', icon: User, label: 'Perfil', path: null },
+  ]
+
+  const activeTab = (() => {
+    const p = location.pathname
+    if (p === '/' || p.startsWith('/intro')) return 'forms'
+    if (p.startsWith('/inspeccion') || p.startsWith('/mantenimiento') || p.startsWith('/inventario') || p.startsWith('/sistema-ascenso') || p.startsWith('/grounding')) return 'forms'
+    return 'home'
+  })()
+
+  const buttonBase = 'flex-1 flex items-center justify-center gap-1 sm:gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-[15px] transition-all'
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="py-2 flex items-center justify-between gap-3">
-          {renderPrev ? (
-            <button
-              type="button"
-              onClick={onPrev}
-              disabled={!canPrev}
-              className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                canPrev
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95'
-                  : 'bg-gray-100/60 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <ArrowLeft size={16} />
-              {prevLabel}
-            </button>
-          ) : (
-            <div />
-          )}
-
-          {renderNext ? (
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={!canNext}
-              className={`px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                canNext
-                  ? 'bg-primary text-white hover:bg-primary/90 active:scale-95'
-                  : 'bg-primary/40 text-white/80 cursor-not-allowed'
-              }`}
-            >
-              {nextLabel}
-              <ArrowRight size={16} />
-            </button>
-          ) : (
-            <div />
-          )}
-        </div>
-
-        <div className="pb-2 flex justify-around">
-          {tabs.map((tab) => {
-            const active = isActivePath(location.pathname, tab.path)
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => navigate(tab.path)}
-                className={`flex flex-col items-center px-3 py-2 rounded-xl transition-all ${
-                  active ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Icon size={20} />
-                <span className="text-xs font-medium mt-1">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="flex gap-2 sm:gap-3 p-3 sm:p-4">
+        {showPrev && (
+          <button
+            onClick={handlePrev}
+            disabled={!handlePrev || prevDisabled}
+            className={`${buttonBase} bg-gray-100 text-gray-700 active:scale-95 ${(!handlePrev || prevDisabled) ? 'opacity-50 active:scale-100' : ''}`}
+          >
+            <ChevronLeft size={18} />
+            <span className="truncate">{prevLabel}</span>
+          </button>
+        )}
+        {showNext && (
+          <button
+            onClick={onNext}
+            disabled={!onNext || nextDisabled}
+            className={`${buttonBase} bg-primary text-white active:scale-95 ${(!onNext || nextDisabled) ? 'opacity-50 active:scale-100' : ''}`}
+          >
+            <span className="truncate">{nextLabel}</span>
+            <ChevronRight size={18} />
+          </button>
+        )}
       </div>
-    </div>
+
+      <div className="flex border-t border-gray-100 pb-safe">
+        {tabs.map((tab) => {
+          const Icon = tab.icon
+          const isActive = tab.id === activeTab
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (tab.path) navigate(tab.path)
+                else alert('Próximamente')
+              }}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-all min-w-0 ${isActive ? 'text-primary' : 'text-gray-400'}`}
+            >
+              <div className={`w-7 h-7 flex items-center justify-center rounded-lg ${isActive ? 'bg-primary/10 text-primary' : ''}`}>
+                <Icon size={20} />
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-semibold truncate max-w-full px-1">{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </nav>
   )
 }

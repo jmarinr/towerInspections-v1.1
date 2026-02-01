@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware'
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
-// Datos por defecto para mantenimiento v1.1.7
+// Datos por defecto para mantenimiento v1.1.4
 const getDefaultMaintenanceData = () => ({
   currentStep: 1,
   completedSteps: [],
@@ -124,15 +124,6 @@ export const useAppStore = create(
       },
       hideToast: () => set({ toast: { show: false, message: '', type: 'info' } }),
 
-
-      // ============ AUTH ============
-      auth: { isAuthenticated: false, user: '' },
-      login: (username, password) => {
-        const ok = String(username) === '101010' && String(password) === '101010'
-        if (ok) set({ auth: { isAuthenticated: true, user: String(username) } })
-        return ok
-      },
-      logout: () => set({ auth: { isAuthenticated: false, user: '' } }),
       // ============ AUTOSAVE ============
       showAutosave: false,
       triggerAutosave: () => {
@@ -481,11 +472,10 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 4, // Incrementar versión para forzar migración
+      version: 3, // Incrementar versión para forzar migración
       migrate: (persistedState, version) => {
         // Migraciones simples para mantener compatibilidad
         let state = { ...persistedState }
-        state = { ...state, auth: state.auth || { isAuthenticated: false, user: '' } }
         if (version < 2) {
           state = { ...state, maintenanceData: getDefaultMaintenanceData() }
         }

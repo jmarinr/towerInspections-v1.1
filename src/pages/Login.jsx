@@ -1,100 +1,86 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Lock, User } from 'lucide-react'
-import { useAppStore } from '../hooks/useAppStore'
+import { setAuthed } from '../components/auth/RequireAuth'
 
 export default function Login() {
+  const [user, setUser] = useState('')
+  const [pass, setPass] = useState('')
+  const [touched, setTouched] = useState(false)
+  const [show, setShow] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const login = useAppStore(s => s.login)
-  const showToast = useAppStore(s => s.showToast)
 
-  const from = useMemo(() => location.state?.from || '/', [location.state])
+  const isOk = useMemo(() => user.trim() === '101010' && pass.trim() === '101010', [user, pass])
+  const showError = touched && !isOk
 
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
+  const from = (location.state && location.state.from) ? location.state.from : '/'
 
-  const handleSubmit = (e) => {
+  const submit = (e) => {
     e.preventDefault()
-    setBusy(true)
-    try {
-      const ok = login(username, password)
-      if (!ok) {
-        showToast('Usuario o contraseña incorrectos', 'error')
-        return
-      }
-      navigate(from, { replace: true })
-    } finally {
-      setBusy(false)
-    }
+    setTouched(true)
+    if (!isOk) return
+    setAuthed(true)
+    navigate(from, { replace: true })
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 pt-8 pb-6 bg-gradient-to-br from-primary/10 via-white to-white">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-sm">
-                <Lock size={22} />
-              </div>
-              <div>
-                <div className="text-lg font-extrabold text-gray-900 leading-tight">PTI Inspect</div>
-                <div className="text-sm text-gray-600">Inicia sesión para continuar</div>
-              </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
+            <span className="text-2xl font-black text-primary">PTI</span>
+          </div>
+          <h1 className="mt-3 text-xl font-extrabold text-gray-900">PTI Inspect</h1>
+          <p className="text-sm text-gray-500 mt-1">Inicia sesión para continuar</p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Usuario</label>
+            <input
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+              onBlur={() => setTouched(true)}
+              inputMode="numeric"
+              placeholder="101010"
+              className={`w-full px-4 py-3 text-[15px] border-2 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 ${touched && user.trim() ? 'border-emerald-500' : 'border-gray-200'}`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Contraseña</label>
+            <div className="relative">
+              <input
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                onBlur={() => setTouched(true)}
+                type={show ? 'text' : 'password'}
+                placeholder="101010"
+                className={`w-full px-4 py-3 pr-20 text-[15px] border-2 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 ${touched && pass.trim() ? 'border-emerald-500' : 'border-gray-200'}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShow(s => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-gray-100 active:scale-95"
+              >
+                {show ? 'Ocultar' : 'Ver'}
+              </button>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 pb-7">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Usuario</label>
-                <div className="mt-2 flex items-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-2xl bg-white focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition">
-                  <User size={18} className="text-gray-400" />
-                  <input
-                    inputMode="numeric"
-                    className="w-full outline-none text-[15px] placeholder:text-gray-400"
-                    placeholder="101010"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                </div>
-              </div>
+          {showError && (
+            <p className="text-sm font-semibold text-red-600">⚠ Usuario o contraseña incorrectos</p>
+          )}
 
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Contraseña</label>
-                <div className="mt-2 flex items-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-2xl bg-white focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition">
-                  <Lock size={18} className="text-gray-400" />
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    className="w-full outline-none text-[15px] placeholder:text-gray-400"
-                    placeholder="101010"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-              </div>
+          <button
+            type="submit"
+            className={`w-full py-3 rounded-xl font-extrabold text-white bg-primary active:scale-[0.99] transition-all ${(!user.trim() || !pass.trim()) ? 'opacity-60' : ''}`}
+          >
+            Entrar
+          </button>
 
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full py-3.5 rounded-2xl bg-primary text-white font-extrabold shadow-sm active:scale-[0.99] disabled:opacity-60"
-              >
-                {busy ? 'Ingresando…' : 'Ingresar'}
-              </button>
-
-              <div className="text-center text-xs text-gray-500">
-                Versión v1.1.7
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <div className="mt-4 text-center text-xs text-gray-400">
-          Acceso rápido para técnicos en campo
-        </div>
+          <p className="text-xs text-gray-400 text-center">Phoenix Tower International © 2026</p>
+        </form>
       </div>
     </div>
   )

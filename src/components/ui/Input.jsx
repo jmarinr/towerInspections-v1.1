@@ -1,103 +1,78 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 
-const isBlank = (v) => v === null || v === undefined || String(v).trim() === ''
-
-const defaultTypeValidate = (type, value) => {
-  if (isBlank(value)) return { valid: true }
-  const v = String(value)
-  switch (type) {
-    case 'number': {
-      const n = Number(v)
-      if (!Number.isFinite(n)) return { valid: false, message: 'Número inválido' }
-      return { valid: true }
-    }
-    case 'date': {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { valid: false, message: 'Fecha inválida' }
-      return { valid: true }
-    }
-    case 'time': {
-      if (!/^\d{2}:\d{2}$/.test(v)) return { valid: false, message: 'Hora inválida' }
-      return { valid: true }
-    }
-    case 'email': {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { valid: false, message: 'Email inválido' }
-      return { valid: true }
-    }
-    default:
-      return { valid: true }
-  }
-}
-
+// Input con validación visual: rojo/verde + asterisco requerido.
+// Verde se muestra cuando el usuario interactúa y el valor cumple el tipo.
 export default function Input({
   label,
   description,
-  required = false,
+  required,
   className = '',
-  validator, // (value) => boolean | { valid, message }
-  touchedExternally = false,
-  successText = 'Dato registrado correctamente',
-  requiredText = 'Campo requerido',
+  validate, // (value) => boolean
+  successText = '✓ Dato registrado correctamente',
+  errorText = '⚠ Campo requerido',
   ...props
 }) {
   const [touched, setTouched] = useState(false)
-
-  useEffect(() => {
-    if (touchedExternally && !touched) setTouched(true)
-  }, [touchedExternally, touched])
-
   const value = props.value ?? ''
-  const type = props.type || 'text'
+  const type = props.type ?? 'text'
 
-  const runValidator = () => {
-    if (!touched) return { status: 'neutral' }
+  const isEmpty = useMemo(() => {
+    if (value === null || value === undefined) return true
+    if (typeof value === 'string') return value.trim().length === 0
+    return String(value).trim().length === 0
+  }, [value])
 
-    if (required && isBlank(value)) {
-      return { status: 'invalid', message: requiredText }
+  const isTypeValid = useMemo(() => {
+    // Si es vacío y no es requerido, no forzamos validación (estado neutral)
+    if (!required && isEmpty) return null
+
+    // Requerido y vacío => inválido
+    if (required && isEmpty) return false
+
+    // Validación custom si existe
+    if (typeof validate === 'function') {
+      try {
+        return !!validate(value)
+      } catch {
+        return false
+      }
     }
 
-    if (!required && isBlank(value)) return { status: 'neutral' }
-
-    if (typeof validator === 'function') {
-      const res = validator(value)
-      if (typeof res === 'boolean') {
-        return res ? { status: 'valid' } : { status: 'invalid', message: 'Valor inválido' }
-      }
-      if (res && typeof res === 'object') {
-        return res.valid ? { status: 'valid' } : { status: 'invalid', message: res.message || 'Valor inválido' }
-      }
+    // Validación por tipo
+    if (type === 'number') {
+      const n = Number(value)
+      return Number.isFinite(n)
+    }
+    if (type === 'date') {
+      // value: YYYY-MM-DD
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(value))
+    }
+    if (type === 'time') {
+      // value: HH:MM
+      return /^\d{2}:\d{2}$/.test(String(value))
+    }
+    if (type === 'gps') {
+      // "lat, lng" - ambos números
+      const parts = String(value).split(',').map(s => s.trim())
+      if (parts.length !== 2) return false
+      const lat = Number(parts[0])
+      const lng = Number(parts[1])
+      return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
     }
 
-    const t = defaultTypeValidate(type, value)
-    if (!t.valid) return { status: 'invalid', message: t.message || 'Valor inválido' }
+    // text/otros: no vacío ya es válido
+    return true
+  }, [required, isEmpty, validate, value, type])
 
-    return { status: 'valid' }
-  }
+  const effectiveTouched = touched || (props.readOnly && String(value).trim().length > 0)
+  const showError = effectiveTouched && isTypeValid === false
+  const showSuccess = effectiveTouched && isTypeValid === true
 
-  const { status, message } = runValidator()
-
-  const borderClass =
-    status === 'valid'
-      ? 'border-emerald-500 bg-emerald-50/40'
-      : status === 'invalid'
-      ? 'border-red-500 bg-red-50/40'
-      : 'border-gray-200 bg-white'
-
-  const focusClass =
-    status === 'valid'
-      ? 'focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10'
-      : status === 'invalid'
-      ? 'focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
-      : 'focus:border-primary focus:ring-4 focus:ring-primary/10'
-
-  const handleChange = (e) => {
-    if (!touched) setTouched(true)
-    props.onChange?.(e)
-  }
-
-  const handleBlur = (e) => {
-    if (!touched) setTouched(true)
-    props.onBlur?.(e)
-  }
+  const borderClass = showError
+    ? 'border-red-500'
+    : showSuccess
+      ? 'border-emerald-500'
+      : 'border-gray-200'
 
   return (
     <div className={`mb-4 ${className}`}>
@@ -105,7 +80,7 @@ export default function Input({
         <label className="block mb-2">
           <span className="text-sm font-semibold text-gray-700 flex flex-wrap items-center gap-1">
             {label}
-            {required && <span className="text-red-500 font-extrabold">*</span>}
+            {required && <span className="text-red-500">*</span>}
           </span>
           {description && <span className="text-xs text-gray-500 block mt-1">{description}</span>}
         </label>
@@ -113,18 +88,19 @@ export default function Input({
 
       <input
         {...props}
-        value={value}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        className={`w-full px-4 py-3 text-[15px] border-2 rounded-xl transition-all placeholder:text-gray-400 focus:outline-none ${borderClass} ${focusClass}`}
+        className={`w-full px-4 py-3 text-[15px] border-2 rounded-xl bg-white transition-all placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 ${borderClass}`}
+        onChange={(e) => {
+          if (!touched) setTouched(true)
+          props.onChange?.(e)
+        }}
+        onBlur={(e) => {
+          setTouched(true)
+          props.onBlur?.(e)
+        }}
       />
 
-      {status === 'valid' && (
-        <p className="mt-2 text-xs text-emerald-600 font-semibold">✓ {successText}</p>
-      )}
-      {status === 'invalid' && (
-        <p className="mt-2 text-xs text-red-600 font-semibold">⚠ {message || 'Valor inválido'}</p>
-      )}
+      {showError && <p className="mt-2 text-xs text-red-500 font-medium">{errorText}</p>}
+      {showSuccess && <p className="mt-2 text-xs text-emerald-600 font-semibold">{successText}</p>}
     </div>
   )
 }

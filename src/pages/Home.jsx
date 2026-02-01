@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Settings, User, Package, Zap } from 'lucide-react'
-import Toast from '../components/ui/Toast'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap } from 'lucide-react'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -31,7 +30,7 @@ export default function Home() {
       icon: Package,
       iconBg: 'bg-emerald-500',
       stats: '28 ítems / 6 pasos',
-      route: '/intro/inventario',
+      route: '/intro/equipment',
     },
     {
       id: 'sistema-ascenso',
@@ -40,7 +39,7 @@ export default function Home() {
       icon: Shield,
       iconBg: 'bg-indigo-500',
       stats: '34 ítems / 6 secciones',
-      route: '/intro/ascenso',
+      route: '/intro/sistema-ascenso',
     },
 {
   id: 'grounding-system-test',
@@ -49,16 +48,16 @@ export default function Home() {
   icon: Zap,
   iconBg: 'bg-purple-500',
   stats: '29 ítems / 5 secciones',
-  route: '/intro/puesta_tierra',
+  route: '/intro/grounding-system-test',
 },
   ]
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Toast />
       
       {/* Header con gradiente */}
-      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-6 pt-6 pb-5">
+      {/* Header (compactado para que quepan los 5 formularios sin scroll) */}
+      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-6 pt-4 pb-3">
         {/* Logo PTI */}
         <div className="flex flex-col items-center">
           <div className="mb-2">
@@ -68,12 +67,12 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-1">Sistema de Inspección v1.1.7</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v1.1.7</p>
         </div>
       </header>
 
       {/* Contenido principal */}
-      <main className="flex-1 px-4 -mt-4">
+      <main className="flex-1 px-4 -mt-3">
         {/* Sección de formularios */}
         <section>
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
@@ -90,7 +89,7 @@ export default function Home() {
                   className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all text-left"
                 >
                   {/* Icono */}
-                  <div className={`w-12 h-12 ${form.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
+                  <div className={`w-14 h-14 ${form.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
                     <IconComponent size={28} className="text-white" />
                   </div>
                   
@@ -114,28 +113,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Sección de acciones rápidas */}
-        <section className="mt-6 mb-8">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
-            Acceso Rápido
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <button className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-all">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Settings size={20} className="text-gray-500" />
-              </div>
-              <span className="text-sm font-semibold text-gray-700">Configuración</span>
-            </button>
-            
-            <button className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-all">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <User size={20} className="text-gray-500" />
-              </div>
-              <span className="text-sm font-semibold text-gray-700">Mi Perfil</span>
-            </button>
-          </div>
-        </section>
+        {/* Nota: se removió “Acceso Rápido” para evitar scroll y mantener el diseño original de cards */}
       </main>
 
       {/* Footer */}

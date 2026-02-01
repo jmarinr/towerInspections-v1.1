@@ -1,71 +1,18 @@
-import { useMemo, useState } from 'react'
 import { MapPin, Camera, X } from 'lucide-react'
-
-const isBlank = (v) => v === null || v === undefined || String(v).trim() === ''
-
-const validateCoords = (coords) => {
-  if (isBlank(coords)) return { valid: false, message: 'Campo requerido' }
-  const parts = String(coords).split(',').map(s => s.trim())
-  if (parts.length !== 2) return { valid: false, message: 'Formato: latitud, longitud' }
-  const lat = Number(parts[0])
-  const lng = Number(parts[1])
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { valid: false, message: 'Coordenadas inválidas' }
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return { valid: false, message: 'Coordenadas fuera de rango' }
-  return { valid: true }
-}
-
-const validateField = (field, value) => {
-  // If not required and blank => neutral/valid
-  if (!field?.required && isBlank(value)) return { valid: true }
-
-  // Required check
-  if (field?.required && isBlank(value)) return { valid: false, message: 'Campo requerido' }
-
-  // Type checks
-  switch (field.type) {
-    case 'number': {
-      const n = Number(String(value))
-      if (!Number.isFinite(n)) return { valid: false, message: 'Número inválido' }
-      return { valid: true }
-    }
-    case 'date': {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return { valid: false, message: 'Fecha inválida' }
-      return { valid: true }
-    }
-    case 'time': {
-      if (!/^\d{2}:\d{2}$/.test(String(value))) return { valid: false, message: 'Hora inválida' }
-      return { valid: true }
-    }
-    case 'select': {
-      if (isBlank(value)) return { valid: false, message: 'Seleccione una opción' }
-      return { valid: true }
-    }
-    case 'toggle':
-    case 'status': {
-      if (isBlank(value)) return { valid: false, message: 'Seleccione una opción' }
-      return { valid: true }
-    }
-    case 'gps':
-      return validateCoords(value)
-    case 'photo':
-      if (isBlank(value)) return { valid: false, message: 'Foto requerida' }
-      return { valid: true }
-    default:
-      return { valid: true }
-  }
-}
+import { useState } from 'react'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
  *  1) <DynamicForm step={{ title, description, fields }} formData={...} onFieldChange={...} />
  *  2) <DynamicForm fields={[...]} data={...} onChange={...} title="..." description="..." />
+ *
+ * This keeps forms backward/forward compatible and prevents pages from
+ * rendering "No hay campos para mostrar" due to a prop-shape mismatch.
  */
 export default function DynamicForm(props) {
   const step = props.step ?? (props.fields ? { title: props.title, description: props.description, fields: props.fields } : null)
   const formData = props.formData ?? props.data ?? props.sectionData ?? {}
   const onFieldChange = props.onFieldChange ?? props.onChange ?? (() => {})
-
-  const [touched, setTouched] = useState({})
 
   // Guard against undefined step or fields
   if (!step || !Array.isArray(step.fields) || step.fields.length === 0) {
@@ -73,6 +20,39 @@ export default function DynamicForm(props) {
   }
 
   const { fields } = step
+
+  const [touched, setTouched] = useState({})
+
+  const markTouched = (id) => setTouched((prev) => (prev[id] ? prev : { ...prev, [id]: true }))
+
+  const validateByType = (field, value) => {
+    const v = value ?? ''
+    const isEmpty = String(v).trim().length === 0
+    if (!field.required && isEmpty) return null
+    if (field.required && isEmpty) return false
+
+    switch (field.type) {
+      case 'number':
+        return Number.isFinite(Number(v))
+      case 'date':
+        return /^\d{4}-\d{2}-\d{2}$/.test(String(v))
+      case 'time':
+        return /^\d{2}:\d{2}$/.test(String(v))
+      case 'gps': {
+        const parts = String(v).split(',').map(s => s.trim())
+        if (parts.length !== 2) return false
+        const lat = Number(parts[0])
+        const lng = Number(parts[1])
+        return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      }
+      case 'photo':
+        return String(v).startsWith('data:image')
+      case 'select':
+        return String(v).trim().length > 0
+      default:
+        return true
+    }
+  }
 
   const shouldShowField = (field) => {
     if (!field.showIf) return true
@@ -82,10 +62,7 @@ export default function DynamicForm(props) {
     return currentValue === value
   }
 
-  const markTouched = (fieldId) => setTouched((prev) => (prev[fieldId] ? prev : { ...prev, [fieldId]: true }))
-
   const handleGPSCapture = (fieldId) => {
-    markTouched(fieldId)
     if (!navigator.geolocation) {
       alert('Geolocalización no disponible')
       return
@@ -101,7 +78,6 @@ export default function DynamicForm(props) {
   }
 
   const handlePhotoCapture = (fieldId) => (e) => {
-    markTouched(fieldId)
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
@@ -113,37 +89,17 @@ export default function DynamicForm(props) {
     reader.readAsDataURL(file)
   }
 
-  const fieldStatus = useMemo(() => {
-    const map = {}
-    fields.forEach((field) => {
-      if (!shouldShowField(field)) return
-      const value = formData[field.id] || ''
-      const v = validateField(field, value)
-      map[field.id] = v
-    })
-    return map
-  }, [fields, formData])
-
-  const baseInputClass = (status) => {
-    const base = "w-full px-4 py-3 text-[15px] border-2 rounded-xl outline-none transition-all"
-    const focusNeutral = "focus:border-primary focus:ring-4 focus:ring-primary/10"
-    if (status === 'valid') return `${base} border-emerald-500 bg-emerald-50/40 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10`
-    if (status === 'invalid') return `${base} border-red-500 bg-red-50/40 focus:border-red-500 focus:ring-4 focus:ring-red-500/10`
-    return `${base} border-gray-200 bg-white ${focusNeutral}`
-  }
-
   const renderField = (field) => {
     if (!shouldShowField(field)) return null
 
     const value = formData[field.id] || ''
-    const isTouched = !!touched[field.id]
-    const validity = fieldStatus[field.id]
-    const status = !isTouched ? 'neutral' : (validity?.valid ? 'valid' : 'invalid')
+    const validity = validateByType(field, value)
+    const isTouched = !!touched[field.id] || (field.type === 'gps' && String(value).trim().length > 0)
+    const showError = isTouched && validity === false
+    const showSuccess = isTouched && validity === true
 
-    const onChangeWrap = (next) => {
-      markTouched(field.id)
-      onFieldChange(field.id, next)
-    }
+    const borderClass = showError ? 'border-red-500' : showSuccess ? 'border-emerald-500' : 'border-gray-200'
+    const baseInputClass = `w-full px-4 py-3 text-[15px] border-2 ${borderClass} rounded-xl bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all`
 
     switch (field.type) {
       case 'text':
@@ -152,9 +108,13 @@ export default function DynamicForm(props) {
           <input
             type={field.type}
             value={value}
-            onChange={(e) => onChangeWrap(e.target.value)}
+            onChange={(e) => {
+              markTouched(field.id)
+              onFieldChange(field.id, e.target.value)
+            }}
+            onBlur={() => markTouched(field.id)}
             placeholder={field.placeholder}
-            className={baseInputClass(status)}
+            className={baseInputClass}
           />
         )
 
@@ -163,8 +123,12 @@ export default function DynamicForm(props) {
           <input
             type="date"
             value={value}
-            onChange={(e) => onChangeWrap(e.target.value)}
-            className={baseInputClass(status)}
+            onChange={(e) => {
+              markTouched(field.id)
+              onFieldChange(field.id, e.target.value)
+            }}
+            onBlur={() => markTouched(field.id)}
+            className={baseInputClass}
           />
         )
 
@@ -173,8 +137,12 @@ export default function DynamicForm(props) {
           <input
             type="time"
             value={value}
-            onChange={(e) => onChangeWrap(e.target.value)}
-            className={baseInputClass(status)}
+            onChange={(e) => {
+              markTouched(field.id)
+              onFieldChange(field.id, e.target.value)
+            }}
+            onBlur={() => markTouched(field.id)}
+            className={baseInputClass}
           />
         )
 
@@ -183,8 +151,12 @@ export default function DynamicForm(props) {
           <div className="relative">
             <select
               value={value}
-              onChange={(e) => onChangeWrap(e.target.value)}
-              className={`${baseInputClass(status)} appearance-none pr-10`}
+              onChange={(e) => {
+                markTouched(field.id)
+                onFieldChange(field.id, e.target.value)
+              }}
+              onBlur={() => markTouched(field.id)}
+              className={`${baseInputClass} appearance-none pr-10`}
             >
               {field.options.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -203,7 +175,10 @@ export default function DynamicForm(props) {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => onChangeWrap(opt.value)}
+                onClick={() => {
+                  markTouched(field.id)
+                  onFieldChange(field.id, opt.value)
+                }}
                 className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95 ${
                   value === opt.value
                     ? 'bg-primary text-white'
@@ -216,7 +191,8 @@ export default function DynamicForm(props) {
           </div>
         )
 
-      case 'status': {
+      case 'status':
+        // Botones estilo inspección: Bueno/Regular/Malo/N/A
         const statusOptions = [
           { value: 'bueno', label: 'Bueno', color: 'bg-green-500' },
           { value: 'regular', label: 'Regular', color: 'bg-amber-500' },
@@ -229,7 +205,10 @@ export default function DynamicForm(props) {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => onChangeWrap(opt.value)}
+                onClick={() => {
+                  markTouched(field.id)
+                  onFieldChange(field.id, opt.value)
+                }}
                 className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 ${
                   value === opt.value
                     ? `${opt.color} text-white`
@@ -241,16 +220,19 @@ export default function DynamicForm(props) {
             ))}
           </div>
         )
-      }
 
       case 'textarea':
         return (
           <textarea
             value={value}
-            onChange={(e) => onChangeWrap(e.target.value)}
+            onChange={(e) => {
+              markTouched(field.id)
+              onFieldChange(field.id, e.target.value)
+            }}
+            onBlur={() => markTouched(field.id)}
             placeholder={field.placeholder}
             rows={3}
-            className={`${baseInputClass(status)} resize-none`}
+            className={`${baseInputClass} resize-none`}
           />
         )
 
@@ -262,12 +244,12 @@ export default function DynamicForm(props) {
               value={value}
               readOnly
               placeholder="Latitud, Longitud"
-              className={`${baseInputClass(status)} flex-1 bg-gray-50`}
+              className={`${baseInputClass} flex-1 bg-gray-50`}
             />
             <button
               type="button"
               onClick={() => handleGPSCapture(field.id)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 hover:bg-gray-50 transition-all"
+              className="px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-600 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 hover:bg-gray-50 transition-all"
             >
               <MapPin size={18} />
               <span>Capturar</span>
@@ -287,11 +269,11 @@ export default function DynamicForm(props) {
               className="hidden"
             />
             {value ? (
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-emerald-500">
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-500">
                 <img src={value} alt="Captura" className="w-full h-full object-cover" />
                 <button
                   type="button"
-                  onClick={() => { markTouched(field.id); onFieldChange(field.id, '') }}
+                  onClick={() => onFieldChange(field.id, '')}
                   className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95"
                 >
                   <X size={16} />
@@ -300,9 +282,7 @@ export default function DynamicForm(props) {
             ) : (
               <label
                 htmlFor={`photo-${field.id}`}
-                className={`w-full aspect-video rounded-xl border-2 border-dashed ${
-                  status === 'invalid' ? 'border-red-400 bg-red-50/40' : 'border-gray-300 bg-gray-50'
-                } flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all`}
+                className="w-full aspect-video rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               >
                 <Camera size={32} className="text-gray-400" />
                 <span className="text-sm font-semibold text-gray-500">Tomar foto</span>
@@ -312,12 +292,13 @@ export default function DynamicForm(props) {
         )
 
       case 'calculated':
+        // Campo calculado - solo lectura
         return (
           <input
             type="text"
             value={value || 'Auto-calculado'}
             readOnly
-            className={`${baseInputClass('neutral')} bg-gray-100 text-gray-500`}
+            className={`${baseInputClass} bg-gray-100 text-gray-500`}
           />
         )
 
@@ -338,25 +319,21 @@ export default function DynamicForm(props) {
       {fields.map((field) => {
         if (!shouldShowField(field)) return null
 
-        const isTouched = !!touched[field.id]
-        const v = fieldStatus[field.id]
-        const status = !isTouched ? 'neutral' : (v?.valid ? 'valid' : 'invalid')
-
+        const value = formData[field.id] || ''
+        const validity = validateByType(field, value)
+        const isTouched = !!touched[field.id] || (field.type === 'gps' && String(value).trim().length > 0)
+        const showError = isTouched && validity === false
+        const showSuccess = isTouched && validity === true
+        
         return (
           <div key={field.id} className="space-y-1.5">
-            <label className="flex items-center gap-1 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
               {field.label}
-              {field.required && <span className="text-red-500 font-extrabold">*</span>}
+              {field.required && <span className="text-red-500">*</span>}
             </label>
-
             {renderField(field)}
-
-            {status === 'valid' && (
-              <p className="text-xs text-emerald-600 font-semibold">✓ Dato validado</p>
-            )}
-            {status === 'invalid' && (
-              <p className="text-xs text-red-600 font-semibold">⚠ {v?.message || 'Valor inválido'}</p>
-            )}
+            {showError && <p className="text-xs font-medium text-red-500">⚠ {field.errorText || 'Dato requerido o inválido'}</p>}
+            {showSuccess && <p className="text-xs font-semibold text-emerald-600">✓ {field.successText || 'Dato registrado correctamente'}</p>}
           </div>
         )
       })}

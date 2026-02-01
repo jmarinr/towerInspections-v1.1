@@ -1,132 +1,133 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ClipboardCheck, Wrench, ListChecks, Shield, Zap } from 'lucide-react'
-import BottomNav from '../components/layout/BottomNav'
+import { ClipboardCheck, Wrench, Package, Shield, Zap } from 'lucide-react'
 
-const introConfig = {
+const FORM_MAP = {
   inspeccion: {
-    title: 'Inspección de Sitio',
+    title: 'Inspección General',
     badge: 'EJECUCIÓN',
+    description: 'Complete la inspección del sitio y equipos. Registre evidencia y valide campos obligatorios.',
     icon: ClipboardCheck,
-    description: 'Registra la inspección del sitio con fotografías y validación automática para asegurar calidad y consistencia.',
+    iconBg: 'bg-blue-500',
+    route: '/inspeccion',
     features: [
-      { icon: '📷', label: 'Fotos Antes/Después' },
-      { icon: '📍', label: 'GPS Automático' },
-      { icon: '✓', label: 'Validación en Tiempo Real' },
-      { icon: '💾', label: 'Guardado Automático' },
+      { icon: '📷', text: 'Fotos Antes/Después' },
+      { icon: '📍', text: 'GPS Automático' },
+      { icon: '✓', text: 'Validación en Tiempo Real' },
+      { icon: '💾', text: 'Guardado Automático' },
     ],
-    startPath: '/inspeccion',
-    buttonText: 'Iniciar Formulario',
   },
   mantenimiento: {
     title: 'Mantenimiento Preventivo',
     badge: 'EJECUCIÓN',
+    description: 'Registre los trabajos de mantenimiento preventivo realizados en el sitio, incluyendo evidencias antes y después.',
     icon: Wrench,
-    description: 'Registre los trabajos de mantenimiento preventivo ejecutados en el sitio, incluyendo fotografías antes y después de cada actividad realizada con validación automática.',
+    iconBg: 'bg-orange-500',
+    route: '/mantenimiento',
     features: [
-      { icon: '📷', label: 'Fotos Antes/Después' },
-      { icon: '📍', label: 'GPS Automático' },
-      { icon: '✓', label: 'Validación en Tiempo Real' },
-      { icon: '💾', label: 'Guardado Automático' },
+      { icon: '📷', text: 'Fotos Antes/Después' },
+      { icon: '📍', text: 'GPS Automático' },
+      { icon: '✓', text: 'Validación en Tiempo Real' },
+      { icon: '💾', text: 'Guardado Automático' },
     ],
-    startPath: '/mantenimiento',
-    buttonText: 'Iniciar Formulario',
   },
-  inventario: {
+  equipment: {
     title: 'Inventario de Equipos',
     badge: 'EJECUCIÓN',
-    icon: ListChecks,
-    description: 'Captura el inventario de equipos por torre y por piso, con croquis y distribución para documentación completa del sitio.',
+    description: 'Complete el inventario de equipos (Torre + Piso) y registre evidencias del sitio.',
+    icon: Package,
+    iconBg: 'bg-emerald-500',
+    route: '/inventario-equipos',
     features: [
-      { icon: '🗼', label: 'Inventario por Torre' },
-      { icon: '🏢', label: 'Inventario por Piso' },
-      { icon: '🗺️', label: 'Croquis y Planos' },
-      { icon: '💾', label: 'Guardado Automático' },
+      { icon: '📍', text: 'GPS Automático' },
+      { icon: '✓', text: 'Validación en Tiempo Real' },
+      { icon: '💾', text: 'Guardado Automático' },
     ],
-    startPath: '/inventario-equipos',
-    buttonText: 'Iniciar Formulario',
   },
-  ascenso: {
-    title: 'Sistema de Ascenso',
+  'sistema-ascenso': {
+    title: 'Sistema de ascenso',
     badge: 'EJECUCIÓN',
+    description: 'Revise el sistema de ascenso y registre el estado de los componentes.',
     icon: Shield,
-    description: 'Evalúa el sistema de ascenso y componentes de seguridad con checklist por secciones y soporte visual.',
+    iconBg: 'bg-indigo-500',
+    route: '/sistema-ascenso',
     features: [
-      { icon: '🧷', label: 'Secciones Guiadas' },
-      { icon: '📷', label: 'Evidencia Fotográfica' },
-      { icon: '✓', label: 'Validación en Tiempo Real' },
-      { icon: '💾', label: 'Guardado Automático' },
+      { icon: '✓', text: 'Validación en Tiempo Real' },
+      { icon: '💾', text: 'Guardado Automático' },
     ],
-    startPath: '/sistema-ascenso',
-    buttonText: 'Iniciar Formulario',
   },
-  puesta_tierra: {
-    title: 'Sistema de Puesta a Tierra',
+  'grounding-system-test': {
+    title: 'Prueba de puesta a tierra',
     badge: 'EJECUCIÓN',
+    description: 'Registre mediciones del sistema de puesta a tierra y adjunte evidencia.',
     icon: Zap,
-    description: 'Registra mediciones y verificación del sistema de puesta a tierra con secciones organizadas para una captura rápida en campo.',
+    iconBg: 'bg-purple-500',
+    route: '/grounding-system-test',
     features: [
-      { icon: '🧪', label: 'Mediciones y Datos' },
-      { icon: '📷', label: 'Evidencia Fotográfica' },
-      { icon: '✓', label: 'Validación en Tiempo Real' },
-      { icon: '💾', label: 'Guardado Automático' },
+      { icon: '✓', text: 'Validación en Tiempo Real' },
+      { icon: '💾', text: 'Guardado Automático' },
     ],
-    startPath: '/grounding-system-test',
-    buttonText: 'Iniciar Formulario',
   },
 }
 
 export default function FormIntro() {
-  const navigate = useNavigate()
   const { formId } = useParams()
+  const navigate = useNavigate()
 
-  const cfg = useMemo(() => introConfig[formId] || introConfig.mantenimiento, [formId])
+  const cfg = useMemo(() => FORM_MAP[formId], [formId])
+  if (!cfg) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6 text-center">
+        <div>
+          <p className="text-gray-600 font-semibold mb-4">Formulario no encontrado</p>
+          <button onClick={() => navigate('/')} className="px-4 py-2 bg-primary text-white rounded-xl font-bold">Volver al inicio</button>
+        </div>
+      </div>
+    )
+  }
+
   const Icon = cfg.icon
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-xl mx-auto px-4 pt-6 pb-28">
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Icon size={26} className="text-primary" />
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div className="px-6 pt-8 pb-6">
+        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className={`w-14 h-14 ${cfg.iconBg} rounded-2xl flex items-center justify-center shadow-md flex-shrink-0`}>
+              <Icon size={28} className="text-white" />
             </div>
-            <div className="flex-1">
-              <div className="text-xl font-extrabold text-gray-900">{cfg.title}</div>
-              <div className="inline-flex mt-2 px-3 py-1 rounded-full bg-primary text-white text-xs font-extrabold tracking-wide">
-                {cfg.badge}
-              </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">{cfg.title}</h1>
+              <span className="inline-block mt-2 px-3 py-1 rounded-full bg-primary text-white text-xs font-extrabold">{cfg.badge}</span>
             </div>
           </div>
 
-          <div className="px-6 pb-5 text-gray-600 leading-relaxed">
-            {cfg.description}
-          </div>
+          <p className="text-gray-500 mt-5 leading-relaxed">{cfg.description}</p>
 
-          <div className="px-6 pb-6 space-y-3">
+          <div className="mt-6 space-y-3">
             {cfg.features.map((f, idx) => (
-              <div key={idx} className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center">
-                  <span className="text-lg">{f.icon}</span>
-                </div>
-                <div className="font-semibold text-gray-800">{f.label}</div>
+              <div key={idx} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                <span className="text-lg">{f.icon}</span>
+                <span className="font-semibold text-gray-700">{f.text}</span>
               </div>
             ))}
           </div>
 
-          <div className="px-6 pb-7">
-            <button
-              type="button"
-              onClick={() => navigate(cfg.startPath)}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-extrabold shadow-sm active:scale-[0.99] flex items-center justify-center gap-2"
-            >
-              {cfg.buttonText} <span aria-hidden>→</span>
-            </button>
-          </div>
+          <button
+            onClick={() => navigate(cfg.route)}
+            className="mt-7 w-full bg-primary text-white rounded-2xl py-4 font-extrabold text-lg flex items-center justify-center gap-2 active:scale-[0.99]"
+          >
+            Iniciar Formulario <span className="text-xl">→</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/')}
+            className="mt-3 w-full bg-white border border-gray-200 text-gray-700 rounded-2xl py-3 font-bold active:scale-[0.99]"
+          >
+            Volver
+          </button>
         </div>
       </div>
-
-      <BottomNav showPrev={false} showNext={false} />
     </div>
   )
 }
