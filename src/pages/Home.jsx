@@ -1,5 +1,16 @@
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Settings, User, Package } from 'lucide-react'
+impor
+
+{
+  id: 'sistema-ascenso',
+  title: 'Sistema de ascenso',
+  description: 'Revisión de dispositivo de ascenso y componentes asociados',
+  icon: Shield,
+  iconBg: 'bg-emerald-500',
+  stats: '34 ítems / 6 secciones',
+  route: '/sistema-ascenso',
+},
+t { useNavigate } from 'react-router-dom'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Settings, User, Package } from 'lucide-react'
 import Toast from '../components/ui/Toast'
 
 export default function Home() {

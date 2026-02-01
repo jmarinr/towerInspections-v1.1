@@ -66,7 +66,7 @@ export default function FloorInventoryClients() {
               <Input label="Área en uso" placeholder="m²" value={c.areaEnUso || ''} onChange={(e) => updateFloorClientField(idx, 'areaEnUso', e.target.value)} />
             </div>
 
-            <Input label="Placa de equipos" description="Texto libre para identificadores, placas o referencias." placeholder="Ej: placa/identificadores" value={c.placaEquipos || ''} onChange={(e) => updateFloorClientField(idx, 'placaEquipos', e.target.value)} />
+            <Input label="Placa de equipos" description="Texto libre." placeholder="Ej: placa/identificadores" value={c.placaEquipos || ''} onChange={(e) => updateFloorClientField(idx, 'placaEquipos', e.target.value)} />
 
             <div className="mt-4 bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-2 p-3 border-b border-gray-200">

@@ -340,6 +340,21 @@ export const useAppStore = create(
 
       resetEquipmentInventoryData: () => set({ equipmentInventoryData: getDefaultEquipmentInventoryData() }),
 
+      // Sistema de ascenso
+setSafetyField: (sectionId, fieldId, value) => {
+  set(state => ({
+    safetyClimbingData: {
+      ...state.safetyClimbingData,
+      [sectionId]: {
+        ...(state.safetyClimbingData?.[sectionId] || {}),
+        [fieldId]: value,
+      },
+    },
+  }))
+  get().triggerAutosave()
+},
+resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),
+
 
       // Actualizar campo de formulario
       updateMaintenanceField: (field, value) => {

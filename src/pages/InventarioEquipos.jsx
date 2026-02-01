@@ -12,7 +12,6 @@ import { useAppStore } from '../hooks/useAppStore'
 import EquipmentInventorySiteInfoForm from '../components/forms/EquipmentInventorySiteInfoForm'
 import TowerInventoryTable from '../components/forms/TowerInventoryTable'
 import FloorInventoryClients from '../components/forms/FloorInventoryClients'
-import DistributionBuilder from '../components/equipment/DistributionBuilder'
 import FullscreenDrawingModal from '../components/drawing/FullscreenDrawingModal'
 import FullscreenDistributionModal from '../components/equipment/FullscreenDistributionModal'
 import Input from '../components/ui/Input'
@@ -74,30 +73,56 @@ export default function InventarioEquipos() {
         return <TowerInventoryTable />
       case 'piso':
         return <FloorInventoryClients />
-      case 'builder':
-        return (
-          <>
-            <DistributionBuilder
-              scene={equipmentInventoryData?.distribucionTorre?.scene}
-              pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
-              fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
-              onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
-              onSaveFoto={(data) => setDistribucionFotoTorre(data)}
-              onRequestFullscreen={() => setOpenDistribucion(true)}
-            />
+      
+case 'builder':
+  return (
+    <>
+      {/* Vista previa: la edición se hace únicamente en pantalla completa */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <div className="font-extrabold text-gray-900">Distribución de equipos en torre</div>
+            <div className="text-xs text-gray-500 mt-0.5">Toca “Editar” para abrir el editor y armar el croquis.</div>
+          </div>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold shadow-sm active:scale-[0.99]"
+            onClick={() => setOpenDistribucion(true)}
+          >
+            Editar
+          </button>
+        </div>
 
-            <FullscreenDistributionModal
-              open={openDistribucion}
-              onClose={() => setOpenDistribucion(false)}
-              scene={equipmentInventoryData?.distribucionTorre?.scene}
-              pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
-              fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
-              onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
-              onSaveFoto={(data) => setDistribucionFotoTorre(data)}
-            />
-          </>
-        )
-      case 'drawing-template':
+        <div className="p-3 bg-gray-50">
+          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+            {equipmentInventoryData?.distribucionTorre?.pngDataUrl ? (
+              <img
+                src={equipmentInventoryData.distribucionTorre.pngDataUrl}
+                alt="Vista previa del croquis"
+                className="w-full h-auto block"
+              />
+            ) : (
+              <div className="p-6 text-center text-sm text-gray-500">
+                Aún no hay un croquis guardado. Abre el editor para comenzar.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <FullscreenDistributionModal
+        open={openDistribucion}
+        onClose={() => setOpenDistribucion(false)}
+        scene={equipmentInventoryData?.distribucionTorre?.scene}
+        pngDataUrl={equipmentInventoryData?.distribucionTorre?.pngDataUrl}
+        fotoTorreDataUrl={equipmentInventoryData?.distribucionTorre?.fotoTorreDataUrl}
+        onSaveScene={(scene, png) => setDistribucionTorre(scene, png)}
+        onSaveFoto={(data) => setDistribucionFotoTorre(data)}
+      />
+    </>
+  )
+case 'drawing-template':
+
         return (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 p-4">
