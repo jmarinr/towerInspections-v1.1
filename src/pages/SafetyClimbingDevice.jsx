@@ -5,7 +5,7 @@ import BottomNav from '../components/layout/BottomNav'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import DynamicForm from '../components/forms/DynamicForm'
 import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
-import useAppStore from '../hooks/useAppStore'
+import { useAppStore } from '../hooks/useAppStore'
 
 import safety1 from '../assets/safety/safety_1.png'
 import safety2 from '../assets/safety/safety_2.png'
