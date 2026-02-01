@@ -82,9 +82,9 @@ export default function SafetyClimbingDevice() {
 
               <div className="p-4">
                 <DynamicForm
-                  step={{ fields: safetySectionFields[sectionId] || [] }}
-                  formData={safetyData?.[sectionId] || {}}
-                  onFieldChange={(fieldId, value) => setSafetyField(sectionId, fieldId, value)}
+                  fields={safetySectionFields[sectionId] || []}
+                  data={safetyData?.[sectionId] || {}}
+                  onChange={(fieldId, value) => setSafetyField(sectionId, fieldId, value)}
                 />
               </div>
 

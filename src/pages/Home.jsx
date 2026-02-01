@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Settings, User, Package, MoreVertical } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Settings, User, Package, Zap } from 'lucide-react'
 import Toast from '../components/ui/Toast'
 
 export default function Home() {
@@ -42,39 +42,38 @@ export default function Home() {
       stats: '34 ítems / 6 secciones',
       route: '/sistema-ascenso',
     },
+{
+  id: 'grounding-system-test',
+  title: 'Prueba de puesta a tierra',
+  description: 'Medición de resistencia del sistema de puesta a tierra y evidencia',
+  icon: Zap,
+  iconBg: 'bg-purple-500',
+  stats: '29 ítems / 5 secciones',
+  route: '/grounding-system-test',
+},
   ]
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Toast />
       
-      {/* Header compacto (más espacio para ver todos los formularios) */}
-      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-4 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-              <span className="text-xl font-black text-primary">PTI</span>
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold tracking-tight leading-tight truncate">PTI Inspect</h1>
-              <p className="text-white/70 text-xs leading-tight truncate">Sistema de Inspección v1.1.4</p>
+      {/* Header con gradiente */}
+      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-6 pt-6 pb-5">
+        {/* Logo PTI */}
+        <div className="flex flex-col items-center">
+          <div className="mb-2">
+            {/* Logo placeholder - se reemplazará con imagen */}
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-3xl font-black text-primary">PTI</span>
             </div>
           </div>
-
-          {/* Botón de menú (placeholder visual, consistente con otras pantallas) */}
-          <button
-            type="button"
-            aria-label="Menú"
-            className="w-11 h-11 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center active:scale-95 transition-all"
-            onClick={() => { /* TODO: menú futuro */ }}
-          >
-            <MoreVertical size={20} className="text-white" />
-          </button>
+          <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
+          <p className="text-white/70 text-sm mt-1">Sistema de Inspección v1.1.4</p>
         </div>
       </header>
 
       {/* Contenido principal */}
-      <main className="flex-1 px-4 -mt-2">
+      <main className="flex-1 px-4 -mt-4">
         {/* Sección de formularios */}
         <section>
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
