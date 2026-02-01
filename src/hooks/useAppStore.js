@@ -353,7 +353,7 @@ setSafetyField: (sectionId, fieldId, value) => {
   }))
   get().triggerAutosave()
 },
-resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),
+resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),
 
 
       // Actualizar campo de formulario
