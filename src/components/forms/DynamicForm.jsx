@@ -8,6 +8,16 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
 
   const { fields } = step
 
+  // Backward/forward compatible options:
+  // - allow [{value,label}] or ['texto'] formats
+  const normalizeOptions = (options = []) =>
+    (options || []).map((opt) => {
+      if (typeof opt === 'string' || typeof opt === 'number') {
+        return { value: String(opt), label: String(opt) }
+      }
+      return opt
+    })
+
   const shouldShowField = (field) => {
     if (!field.showIf) return true
     const { field: condField, value, values } = field.showIf
@@ -90,7 +100,7 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
               onChange={(e) => onFieldChange(field.id, e.target.value)}
               className={`${baseInputClass} appearance-none pr-10`}
             >
-              {field.options.map((opt) => (
+              {normalizeOptions(field.options).map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
@@ -103,7 +113,7 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
       case 'toggle':
         return (
           <div className="flex flex-wrap gap-2">
-            {field.options.map((opt) => (
+            {normalizeOptions(field.options).map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -118,6 +128,19 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
               </button>
             ))}
           </div>
+        )
+
+      case 'checkbox':
+        return (
+          <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 bg-white">
+            <input
+              type="checkbox"
+              checked={!!formData[field.id]}
+              onChange={(e) => onFieldChange(field.id, e.target.checked)}
+              className="h-5 w-5"
+            />
+            <span className="text-[15px] font-semibold text-gray-700">{field.label}</span>
+          </label>
         )
 
       case 'status':
@@ -241,14 +264,18 @@ export default function DynamicForm({ step, formData = {}, onFieldChange }) {
       {fields.map((field) => {
         if (!shouldShowField(field)) return null
         
+        const showAboveLabel = field.type !== 'checkbox'
+
         return (
           <div key={field.id} className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              {field.label}
-              {field.required && (
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Requerido" />
-              )}
-            </label>
+            {showAboveLabel && (
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                {field.label}
+                {field.required && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Requerido" />
+                )}
+              </label>
+            )}
             {renderField(field)}
           </div>
         )
