@@ -1,8 +1,20 @@
 import { MapPin, Camera, X } from 'lucide-react'
 
-export default function DynamicForm({ step, formData = {}, onFieldChange }) {
+/**
+ * DynamicForm supports two calling conventions used across the app:
+ *  1) <DynamicForm step={{ title, description, fields }} formData={...} onFieldChange={...} />
+ *  2) <DynamicForm fields={[...]} data={...} onChange={...} title="..." description="..." />
+ *
+ * This keeps forms backward/forward compatible and prevents pages from
+ * rendering "No hay campos para mostrar" due to a prop-shape mismatch.
+ */
+export default function DynamicForm(props) {
+  const step = props.step ?? (props.fields ? { title: props.title, description: props.description, fields: props.fields } : null)
+  const formData = props.formData ?? props.data ?? props.sectionData ?? {}
+  const onFieldChange = props.onFieldChange ?? props.onChange ?? (() => {})
+
   // Guard against undefined step or fields
-  if (!step || !step.fields) {
+  if (!step || !Array.isArray(step.fields) || step.fields.length === 0) {
     return <div className="text-gray-500 text-center py-4">No hay campos para mostrar</div>
   }
 

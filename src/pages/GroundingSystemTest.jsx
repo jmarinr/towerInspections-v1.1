@@ -99,9 +99,14 @@ export default function GroundingSystemTest() {
 
               <div className="p-4">
                 <DynamicForm
+                  // Backwards/forwards compatible props (some versions expect fields/data, others step/formData)
                   fields={currentSection.fields || []}
                   data={groundingData?.[sectionId] || {}}
                   onChange={(fieldId, value) => handleChange(sectionId, fieldId, value)}
+
+                  step={currentSection}
+                  formData={groundingData?.[sectionId] || {}}
+                  onFieldChange={(fieldId, value) => handleChange(sectionId, fieldId, value)}
                 />
               </div>
 
