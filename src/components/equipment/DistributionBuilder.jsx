@@ -50,6 +50,12 @@ const byType = (t) => PALETTE.find(p => p.type === t)
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
+const clampObjToWorld = (obj) => {
+  const x = clamp(obj.x, 0, Math.max(0, WORLD_W - obj.w))
+  const y = clamp(obj.y, 0, Math.max(0, WORLD_H - obj.h))
+  return { ...obj, x, y }
+}
+
 const loadImage = (src) => new Promise((resolve) => {
   const img = new Image()
   img.onload = () => resolve(img)
@@ -243,6 +249,11 @@ export default function DistributionBuilder({
     const vp = viewportRef.current
     if (!vp) return
     const rect = vp.getBoundingClientRect()
+    // En móviles, durante el primer layout rect.height puede ser 0.
+    // Si fijamos la vista con alto=0, el world queda fuera de pantalla (oy negativo)
+    // y el usuario solo ve las barras. Esperamos a tener un tamaño razonable.
+    if (rect.width < 80 || rect.height < 180) return
+
     setView(fitView(rect.width, rect.height))
     setViewReady(true)
   }
@@ -250,13 +261,15 @@ export default function DistributionBuilder({
   useEffect(() => {
     const vp = viewportRef.current
     if (!vp) return
+    // Re-ajustar también después de rotar, porque el primer fit puede correr
+    // con dimensiones pequeñas en iOS/Android.
     const ro = new ResizeObserver(() => {
-      if (!viewReady) fit()
+      fit()
     })
     ro.observe(vp)
     return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewReady])
+  }, [])
 
   useEffect(() => {
     if (!viewReady) fit()
@@ -267,7 +280,7 @@ export default function DistributionBuilder({
     const p = byType(type)
     if (!p) return
     const id = `${type}-${Math.random().toString(36).slice(2, 9)}`
-    const obj = {
+    const obj = clampObjToWorld({
       id,
       type,
       x: wx - p.w / 2,
@@ -277,7 +290,7 @@ export default function DistributionBuilder({
       rot: 0,
       locked: false,
       z: objects.length + 1,
-    }
+    })
     const next = [...objects, obj]
     setObjects(next)
     setSelectedId(id)
@@ -295,13 +308,13 @@ export default function DistributionBuilder({
   }
 
   const snapX = (obj) => {
-    if (!snapEnabled) return obj
+    if (!snapEnabled) return clampObjToWorld(obj)
     const centerLine = WORLD_W / 2
     const cx = obj.x + obj.w / 2
     if (Math.abs(cx - centerLine) < 14) {
-      return { ...obj, x: centerLine - obj.w / 2 }
+      return clampObjToWorld({ ...obj, x: centerLine - obj.w / 2 })
     }
-    return obj
+    return clampObjToWorld(obj)
   }
 
   const onViewportPointerDown = (e) => {
@@ -314,17 +327,35 @@ export default function DistributionBuilder({
       return
     }
 
-    // Si toca fondo, pan con 1 dedo
-    if (e.target === viewportRef.current) {
-      e.preventDefault()
-      e.currentTarget.setPointerCapture?.(e.pointerId)
-      updatePointer(e, null)
-      gestureRef.current = {
-        mode: 'pan',
-        start: { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy },
+    // Pan / Zoom del lienzo (si no tocó una pieza). En iOS/Android,
+    // queremos que el fondo siempre responda.
+    e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    updatePointer(e, null)
+
+    // Si ya hay 2 dedos => iniciar pinch del lienzo
+    if (pointersRef.current.size >= 2) {
+      const two = getTwoPointers()
+      if (two) {
+        const v1 = two.a[1]
+        const v2 = two.b[1]
+        const dx = v2.x - v1.x
+        const dy = v2.y - v1.y
+        const dist = Math.hypot(dx, dy)
+        gestureRef.current = {
+          mode: 'pinch-view',
+          start: { dist, scale: view.scale, ox: view.ox, oy: view.oy },
+        }
+        return
       }
-      setSelectedId(null)
     }
+
+    // 1 dedo => pan
+    gestureRef.current = {
+      mode: 'pan',
+      start: { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy },
+    }
+    setSelectedId(null)
   }
 
   const onViewportPointerMove = (e) => {
@@ -636,6 +667,9 @@ export default function DistributionBuilder({
                   backgroundPosition: 'center',
                   border: '1px solid rgba(0,0,0,0.08)',
                   borderRadius: 16,
+                  // Importante: el fondo debe dejar pasar los eventos al viewport
+                  // para pan/zoom y tap de colocación.
+                  pointerEvents: 'none',
                 }}
               >
                 {/* guía vertical suave (vista lateral) */}
@@ -669,6 +703,7 @@ export default function DistributionBuilder({
                           height: o.h,
                           transform: `rotate(${o.rot || 0}deg)`,
                           touchAction: 'none',
+                          pointerEvents: 'auto',
                         }}
                       />
                     )

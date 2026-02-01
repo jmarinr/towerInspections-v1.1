@@ -237,7 +237,9 @@ export default function DrawingCanvas({
 
       // Fit only the first time (or if we don't have a saved view)
       if (!didInitViewRef.current) {
-        fitToScreen(0.96)
+        // En plantillas (croquis esquemático) queremos que la imagen se vea lo más grande posible.
+        const pad = backgroundImage ? (isFullscreen ? 0.995 : 0.97) : 0.96
+        fitToScreen(pad)
         didInitViewRef.current = true
       }
 
@@ -290,36 +292,44 @@ export default function DrawingCanvas({
     e.currentTarget.setPointerCapture?.(e.pointerId)
     setPointer(e)
 
-    if (mode === 'move') {
+    // UX móvil: permitir zoom/pan con 2 dedos EN CUALQUIER MODO.
+    // Si el segundo dedo entra mientras se estaba dibujando, cancelamos el stroke activo
+    // (para evitar "manchas" o estados raros).
+    if (isMultiPointer()) {
       setIsDrawing(false)
       setActiveStroke(null)
 
-      if (isMultiPointer()) {
-        const two = getTwoPointers()
-        if (!two) return
-        const dx = two.b.x - two.a.x
-        const dy = two.b.y - two.a.y
-        const dist = Math.hypot(dx, dy)
-        const cx = (two.a.x + two.b.x) / 2
-        const cy = (two.a.y + two.b.y) / 2
-        gestureRef.current = {
-          mode: 'pinch',
-          start: { dist, scale: view.scale, ox: view.ox, oy: view.oy, cx, cy },
-        }
-      } else {
-        gestureRef.current = {
-          mode: 'pan',
-          start: { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy },
-        }
+      const two = getTwoPointers()
+      if (!two) return
+      const dx = two.b.x - two.a.x
+      const dy = two.b.y - two.a.y
+      const dist = Math.hypot(dx, dy)
+      const cx = (two.a.x + two.b.x) / 2
+      const cy = (two.a.y + two.b.y) / 2
+      const rect = canvasRef.current.getBoundingClientRect()
+      const scx = cx - rect.left
+      const scy = cy - rect.top
+      const wx = (scx - view.ox) / Math.max(0.0001, view.scale)
+      const wy = (scy - view.oy) / Math.max(0.0001, view.scale)
+      gestureRef.current = {
+        mode: 'pinch',
+        start: { dist, scale: view.scale, ox: view.ox, oy: view.oy, wx, wy },
       }
       return
     }
 
-    // draw mode
-    if (isMultiPointer()) {
-      // ignore multi-touch in draw mode (user can switch to move/zoom)
+    if (mode === 'move') {
+      setIsDrawing(false)
+      setActiveStroke(null)
+
+      gestureRef.current = {
+        mode: 'pan',
+        start: { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy },
+      }
       return
     }
+
+    // draw mode (1 dedo)
 
     setIsDrawing(true)
     setRedoStack([])
@@ -335,39 +345,35 @@ export default function DrawingCanvas({
     e.preventDefault()
     setPointer(e)
 
-    if (mode === 'move') {
-      const g = gestureRef.current
-      if (!g?.mode) return
+    // Pan/Pinch (cualquier modo)
+    const g = gestureRef.current
+    if (g?.mode === 'pan') {
+      const dx = e.clientX - g.start.x
+      const dy = e.clientY - g.start.y
+      setView((v) => ({ ...v, ox: g.start.ox + dx, oy: g.start.oy + dy }))
+      return
+    }
 
-      if (g.mode === 'pan') {
-        const dx = e.clientX - g.start.x
-        const dy = e.clientY - g.start.y
-        setView((v) => ({ ...v, ox: g.start.ox + dx, oy: g.start.oy + dy }))
-        return
-      }
+    if (g?.mode === 'pinch') {
+      const two = getTwoPointers()
+      if (!two) return
+      const dx = two.b.x - two.a.x
+      const dy = two.b.y - two.a.y
+      const dist = Math.hypot(dx, dy)
+      const ratio = dist / Math.max(1, g.start.dist)
+      const nextScale = Math.max(0.35, Math.min(5.0, g.start.scale * ratio))
+      if (!Number.isFinite(nextScale)) return
 
-      if (g.mode === 'pinch') {
-        const two = getTwoPointers()
-        if (!two) return
-        const dx = two.b.x - two.a.x
-        const dy = two.b.y - two.a.y
-        const dist = Math.hypot(dx, dy)
-        const ratio = dist / Math.max(1, g.start.dist)
-        const nextScale = Math.max(0.35, Math.min(5.0, g.start.scale * ratio))
+      const rect = canvasRef.current.getBoundingClientRect()
+      const cx = ((two.a.x + two.b.x) / 2) - rect.left
+      const cy = ((two.a.y + two.b.y) / 2) - rect.top
 
-        // Zoom around center point
-        const rect = canvasRef.current.getBoundingClientRect()
-        const cx = g.start.cx - rect.left
-        const cy = g.start.cy - rect.top
+      // Mantener el mismo punto del mundo bajo el centro (zoom + pan combinado)
+      const ox = cx - g.start.wx * nextScale
+      const oy = cy - g.start.wy * nextScale
 
-        // Convert screen center to world before and after
-        const wx = (cx - g.start.ox) / Math.max(0.0001, g.start.scale)
-        const wy = (cy - g.start.oy) / Math.max(0.0001, g.start.scale)
-        const ox = cx - wx * nextScale
-        const oy = cy - wy * nextScale
-
-        setView({ scale: nextScale, ox, oy })
-      }
+      if (!Number.isFinite(ox) || !Number.isFinite(oy)) return
+      setView({ scale: nextScale, ox, oy })
       return
     }
 
