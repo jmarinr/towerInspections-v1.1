@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ClipboardCheck, Wrench, Package, Shield, Zap } from 'lucide-react'
+import { ClipboardCheck, Wrench, Package, Shield, Zap, Camera } from 'lucide-react'
 
 const FORM_MAP = {
   inspeccion: {

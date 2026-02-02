@@ -42,6 +42,8 @@ function App() {
 
           <Route path="/mantenimiento" element={<MantenimientoPreventivo />} />
 
+          <Route path="/mantenimiento-ejecutado" element={<PreventiveMaintenanceExecuted />} />
+
           <Route path="/inventario-equipos" element={<InventarioEquipos />} />
           <Route path="/inventario-equipos/:step" element={<InventarioEquipos />} />
 
