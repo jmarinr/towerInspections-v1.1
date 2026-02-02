@@ -22,7 +22,7 @@ export default function Home() {
       iconBg: 'bg-orange-500',
       stats: '92 ítems / 17 pasos',
       route: '/intro/mantenimiento',
-    },,
+    },
     {
       id: 'mantenimiento-ejecutado',
       title: 'Mantenimiento Ejecutado',
@@ -31,7 +31,7 @@ export default function Home() {
       iconBg: 'bg-teal-500',
       stats: '32 actividades / 64 fotos',
       route: '/intro/mantenimiento-ejecutado',
-    }
+    },
     {
       id: 'equipment',
       title: 'Inventario de Equipos',
