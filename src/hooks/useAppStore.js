@@ -113,6 +113,23 @@ const getDefaultEquipmentInventoryData = () => ({
   },
 })
 
+// Datos por defecto para Formulario 6: Reporte de Trabajos Ejecutados (Mantenimiento Preventivo)
+const getDefaultPMExecutedData = () => ({
+  siteInfo: {
+    proveedor: '',
+    idSitio: '',
+    tipoVisita: '',
+    nombreSitio: '',
+    logoProveedor: '', // dataURL
+    tipoSitio: '', // rooftop | rawland
+    fecha: getDefaultDate(),
+    hora: getDefaultTime(),
+    coordenadas: '',
+    direccion: '',
+  },
+  photos: {}, // `${activityId}-before` / `${activityId}-after`
+})
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
@@ -163,8 +180,37 @@ export const useAppStore = create(
       // ============ MAINTENANCE DATA v1.1.4 ============
       maintenanceData: getDefaultMaintenanceData(),
 
-      // ============ EQUIPMENT INVENTORY (Formulario 3) ============
+            // ============ EQUIPMENT INVENTORY (Formulario 3) ============
       equipmentInventoryData: getDefaultEquipmentInventoryData(),
+
+      // ============ PM EXECUTED (Formulario 6) ============
+      pmExecutedData: getDefaultPMExecutedData(),
+
+      updatePMExecutedField: (field, value) => {
+        set((state) => ({
+          pmExecutedData: {
+            ...(state.pmExecutedData || getDefaultPMExecutedData()),
+            siteInfo: {
+              ...((state.pmExecutedData || getDefaultPMExecutedData()).siteInfo || {}),
+              [field]: value,
+            },
+          },
+        }))
+        get().triggerAutosave()
+      },
+
+      updatePMExecutedPhoto: (activityId, photoType, photoData) => {
+        set((state) => ({
+          pmExecutedData: {
+            ...(state.pmExecutedData || getDefaultPMExecutedData()),
+            photos: {
+              ...((state.pmExecutedData || getDefaultPMExecutedData()).photos || {}),
+              [`${activityId}-${photoType}`]: photoData,
+            },
+          },
+        }))
+        get().triggerAutosave()
+      },
 
       // ============ GROUNDING SYSTEM TEST (Nuevo formulario) ============
       groundingSystemData: {},

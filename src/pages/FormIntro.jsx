@@ -68,6 +68,20 @@ const FORM_MAP = {
       { icon: '💾', text: 'Guardado Automático' },
     ],
   },
+'pm-executed': {
+  title: 'Mantenimiento Preventivo',
+  badge: 'EJECUCIÓN',
+  description: 'Registre los trabajos de mantenimiento preventivo ejecutados en el sitio, incluyendo fotografías Antes/Después por actividad.',
+  icon: Wrench,
+  iconBg: 'bg-sky-500',
+  route: '/mantenimiento-ejecutado',
+  features: [
+    { icon: '📷', text: 'Fotos Antes/Después por actividad' },
+    { icon: '📍', text: 'GPS automático (opcional)' },
+    { icon: '✓', text: 'Validación en Tiempo Real' },
+    { icon: '💾', text: 'Guardado Automático' },
+  ],
+}
 }
 
 export default function FormIntro() {
