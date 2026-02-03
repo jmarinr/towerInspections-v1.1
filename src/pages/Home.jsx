@@ -1,8 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut } from 'lucide-react'
+import { setAuthed } from '../components/auth/RequireAuth'
 
 export default function Home() {
   const navigate = useNavigate()
+
+  const logout = () => {
+    setAuthed(false)
+    navigate('/login', { replace: true })
+  }
 
   const forms = [
     {
@@ -66,7 +72,16 @@ export default function Home() {
       
       {/* Header con gradiente */}
       {/* Header (compactado para que quepan los 5 formularios sin scroll) */}
-      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-6 pt-4 pb-3">
+      <header className="bg-gradient-to-b from-primary to-primary/90 text-white px-6 pt-4 pb-3 relative">
+        {/* Salir */}
+        <button
+          type="button"
+          onClick={logout}
+          aria-label="Cerrar sesión"
+          className="absolute right-4 top-4 w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
+        >
+          <LogOut size={18} />
+        </button>
         {/* Logo PTI */}
         <div className="flex flex-col items-center">
           <div className="mb-2">
@@ -127,9 +142,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="px-6 py-4 text-center">
-        <p className="text-xs text-gray-400">
-          Phoenix Tower International © 2026
-        </p>
+        <p className="text-xs text-gray-400">© 2026</p>
       </footer>
     </div>
   )

@@ -85,7 +85,7 @@ export default function PreventiveMaintenanceExecuted() {
             <Input
               label="Proveedor"
               required
-              placeholder="Ej: Phoenix Tower International"
+              placeholder="Ej: Proveedor del sitio"
               value={siteInfo.proveedor || ''}
               onChange={(e) => updatePMExecutedField('proveedor', e.target.value)}
             />

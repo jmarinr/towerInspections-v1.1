@@ -1,8 +1,37 @@
-import { ChevronLeft, MoreVertical } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, Info, LogOut, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { setAuthed } from '../auth/RequireAuth'
 
 export default function AppHeader({ title, subtitle, badge, progress, onMenuClick }) {
   const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (ev) => {
+      if (!open) return
+      if (menuRef.current && !menuRef.current.contains(ev.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('touchstart', handler)
+    }
+  }, [open])
+
+  const logout = () => {
+    setAuthed(false)
+    setOpen(false)
+    navigate('/login', { replace: true })
+  }
+
+  const runExtra = () => {
+    setOpen(false)
+    if (typeof onMenuClick === 'function') onMenuClick()
+  }
+
   return (
     <header className="bg-primary sticky top-0 z-50">
       <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
@@ -16,9 +45,35 @@ export default function AppHeader({ title, subtitle, badge, progress, onMenuClic
             {badge && <span className="bg-accent px-2 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0">{badge}</span>}
           </div>
         </div>
-        <button onClick={onMenuClick} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 flex items-center justify-center text-white active:scale-95 transition-all flex-shrink-0">
-          <MoreVertical size={20} />
-        </button>
+        <div className="relative flex-shrink-0" ref={menuRef}>
+          <button onClick={() => setOpen((v) => !v)} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 flex items-center justify-center text-white active:scale-95 transition-all">
+            <MoreVertical size={20} />
+          </button>
+
+          {open && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full px-4 py-3 flex items-center gap-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 active:bg-gray-100"
+              >
+                <LogOut size={18} className="text-gray-500" />
+                Cerrar sesión
+              </button>
+
+              {typeof onMenuClick === 'function' && (
+                <button
+                  type="button"
+                  onClick={runExtra}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 active:bg-gray-100 border-t border-gray-100"
+                >
+                  <Info size={18} className="text-gray-500" />
+                  Información
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       {progress !== undefined && (
         <div className="px-3 sm:px-4 py-3 bg-black/20">

@@ -79,7 +79,7 @@ export default function Login() {
             Entrar
           </button>
 
-          <p className="text-xs text-gray-400 text-center">Phoenix Tower International © 2026</p>
+          <p className="text-xs text-gray-400 text-center">© 2026</p>
         </form>
       </div>
     </div>
