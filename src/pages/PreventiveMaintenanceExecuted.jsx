@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import AppHeader from '../components/layout/AppHeader'
+import FormMetaBar from '../components/layout/FormMetaBar'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import PhotoUpload from '../components/ui/PhotoUpload'
@@ -60,22 +61,6 @@ export default function PreventiveMaintenanceExecuted() {
     return Math.round((completedCount / total) * 100)
   }, [applicableItems.length, completedCount, siteType])
 
-  const handleGPS = () => {
-    if (!navigator.geolocation) {
-      showToast('Geolocalización no disponible', 'error')
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`
-        updatePMExecutedField('coordenadas', coords)
-        showToast('GPS capturado', 'success')
-      },
-      (err) => showToast('Error GPS: ' + err.message, 'error'),
-      { enableHighAccuracy: true, timeout: 15000 }
-    )
-  }
-
   const toggleGroup = (name) => setOpenGroups((prev) => ({ ...prev, [name]: !prev[name] }))
 
   return (
@@ -129,15 +114,6 @@ export default function PreventiveMaintenanceExecuted() {
               onChange={(e) => updatePMExecutedField('nombreSitio', e.target.value)}
             />
 
-            <SinglePhotoUpload
-              id="pmx-logo-proveedor"
-              label="Logo del proveedor"
-              value={siteInfo.logoProveedor || ''}
-              onChange={(v) => updatePMExecutedField('logoProveedor', v)}
-              required={false}
-              helpText="Opcional. Puede adjuntar el logo que aparece en el reporte."
-            />
-
             <Select
               label="Tipo de sitio"
               required
@@ -147,47 +123,6 @@ export default function PreventiveMaintenanceExecuted() {
               successText="✓ Tipo de sitio seleccionado"
               errorText="⚠ Campo requerido"
             />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Fecha"
-                type="date"
-                required
-                value={siteInfo.fecha || ''}
-                onChange={(e) => updatePMExecutedField('fecha', e.target.value)}
-                successText="✓ Fecha registrada correctamente"
-              />
-              <Input
-                label="Hora"
-                type="time"
-                required
-                value={siteInfo.hora || ''}
-                onChange={(e) => updatePMExecutedField('hora', e.target.value)}
-                successText="✓ Hora registrada correctamente"
-              />
-            </div>
-
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <Input
-                  label="Coordenadas"
-                  placeholder="lat, lng"
-                  value={siteInfo.coordenadas || ''}
-                  onChange={(e) => updatePMExecutedField('coordenadas', e.target.value)}
-                  required={false}
-                  successText="✓ Coordenadas registradas"
-                  errorText="⚠ Formato inválido"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleGPS}
-                className="h-[54px] px-4 rounded-xl bg-primary text-white font-semibold flex items-center gap-2 active:scale-95 transition-all"
-              >
-                <MapPin size={18} />
-                GPS
-              </button>
-            </div>
 
             <Input
               label="Dirección"

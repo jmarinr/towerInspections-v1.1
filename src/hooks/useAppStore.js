@@ -15,9 +15,8 @@ const getDefaultMaintenanceData = () => ({
     idSitio: '',
     coordenadas: '',
     tipoSitio: '',
-    fechaInicio: getDefaultDate(),
-    fechaTermino: getDefaultDate(),
-    horaEntrada: getDefaultTime(),
+    fechaInicio: '',
+    horaEntrada: '',
     horaSalida: '',
     tipoTorre: '',
     alturaTorre: '',
@@ -68,8 +67,7 @@ const getDefaultEquipmentInventoryData = () => ({
     tipoVisita: '', // RoofTop | RawLand
     idSitio: '',
     nombreSitio: '',
-    fechaInicio: getDefaultDate(),
-    fechaTermino: getDefaultDate(),
+    fechaInicio: '',
     direccion: '',
     alturaMts: '',
     tipoSitio: '',
@@ -120,10 +118,9 @@ const getDefaultPMExecutedData = () => ({
     idSitio: '',
     tipoVisita: '',
     nombreSitio: '',
-    logoProveedor: '', // dataURL
     tipoSitio: '', // rooftop | rawland
-    fecha: getDefaultDate(),
-    hora: getDefaultTime(),
+    fecha: '',
+    hora: '',
     coordenadas: '',
     direccion: '',
   },
@@ -148,9 +145,18 @@ export const useAppStore = create(
         setTimeout(() => set({ showAutosave: false }), 1500)
       },
 
-      // ============ INSPECTION DATA (Original) ============
+            // ============ FORM META (Inicio automático) ============
+      formMeta: {},
+      setFormMeta: (formId, meta) => set((state) => ({ formMeta: { ...(state.formMeta || {}), [formId]: meta } })),
+      clearFormMeta: (formId) => set((state) => {
+        const fm = { ...(state.formMeta || {}) }
+        delete fm[formId]
+        return { formMeta: fm }
+      }),
+
+// ============ INSPECTION DATA (Original) ============
       inspectionData: {
-        siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: getDefaultDate(), hora: getDefaultTime(), tipoTorre: '', alturaTorre: '' },
+        siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
         items: {},
         photos: {},
       },
@@ -215,6 +221,10 @@ export const useAppStore = create(
       // ============ GROUNDING SYSTEM TEST (Nuevo formulario) ============
       groundingSystemData: {},
 
+
+
+      // ============ SAFETY CLIMBING DEVICE (Nuevo formulario) ============
+      safetyClimbingData: {},
 
       updateEquipmentSiteField: (field, value) => {
         set((state) => ({
@@ -494,7 +504,13 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
               }
             }
           }
-          return state
+  
+        // v4: asegurar nuevos estados
+        state = { ...state, formMeta: state.formMeta || {} }
+        state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
+        state = { ...state, groundingSystemData: state.groundingSystemData || {} }
+        state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
+        return state
         })
       },
 
@@ -518,7 +534,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 3, // Incrementar versión para forzar migración
+      version: 4, // Incrementar versión para forzar migración
       migrate: (persistedState, version) => {
         // Migraciones simples para mantener compatibilidad
         let state = { ...persistedState }
@@ -531,6 +547,12 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
           // Asegurar que exista aunque venga de localStorage incompleto
           state = { ...state, equipmentInventoryData: state.equipmentInventoryData || getDefaultEquipmentInventoryData() }
         }
+
+        // v4: asegurar nuevos estados
+        state = { ...state, formMeta: state.formMeta || {} }
+        state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
+        state = { ...state, groundingSystemData: state.groundingSystemData || {} }
+        state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
         return state
       }
     }

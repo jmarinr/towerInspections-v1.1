@@ -48,8 +48,7 @@ export const safetyClimbingSections = [
     icon: BadgeCheck,
     items: 2,
     steps: 1,
-  },
-]
+  }]
 
 export const safetySectionFields = {
   datos: [
@@ -60,12 +59,7 @@ export const safetySectionFields = {
     { id: 'tipoSitio', label: 'Tipo sitio', type: 'text' },
     { id: 'tipoEstructura', label: 'Tipo estructura', type: 'text' },
     { id: 'altura', label: 'Altura (m)', type: 'number' },
-    { id: 'latitud', label: 'Latitud', type: 'text' },
-    { id: 'longitud', label: 'Longitud', type: 'text' },
-    { id: 'direccion', label: 'Dirección', type: 'textarea' },
-    { id: 'fechaInicio', label: 'Fecha inicio', type: 'date' },
-    { id: 'fechaTermino', label: 'Fecha término', type: 'date' },
-  ],
+    { id: 'direccion', label: 'Dirección', type: 'textarea' }],
   herrajes: [
     { id: 'herrajeInferior', label: 'Herraje inferior', type: 'text' },
     { id: 'diametroCable', label: 'Diámetro del cable', type: 'text' },
@@ -74,8 +68,7 @@ export const safetySectionFields = {
     { id: 'estadoCable', label: 'Estado del cable', type: 'select', options: ['Bueno', 'Regular', 'Malo', 'N/A'] },
     { id: 'comentarioCable', label: 'Comentario cable', type: 'textarea' },
     { id: 'oxidacion', label: '¿Hay oxidación?', type: 'checkbox' },
-    { id: 'comentarioOxidacion', label: 'Comentario oxidación', type: 'textarea' },
-  ],
+    { id: 'comentarioOxidacion', label: 'Comentario oxidación', type: 'textarea' }],
   prensacables: [
     { id: 'prensacableInferior', label: 'Prensacable inferior', type: 'select', options: ['Actual', 'No aplica'] },
     { id: 'cantidadPrensacables', label: 'Cantidad', type: 'number' },
@@ -86,8 +79,7 @@ export const safetySectionFields = {
     { id: 'tipoCarro', label: 'Tipo de carro', type: 'text' },
     { id: 'observacionMordaza', label: 'Observación mordaza', type: 'textarea' },
     { id: 'malaSujecion', label: '¿Mala sujeción?', type: 'select', options: ['No', 'Sí', 'N/A'] },
-    { id: 'comentarioMalaSujecion', label: 'Comentario (mala sujeción)', type: 'textarea' },
-  ],
+    { id: 'comentarioMalaSujecion', label: 'Comentario (mala sujeción)', type: 'textarea' }],
   tramos: [
     { id: 'fotoEscalera', label: 'Foto escalera', type: 'photo' },
     { id: 'cantidadTramos', label: 'Cantidad de tramos', type: 'number' },
@@ -96,16 +88,13 @@ export const safetySectionFields = {
     { id: 'cantidadUniones', label: 'Cantidad de uniones', type: 'number' },
     { id: 'tramosDañados', label: 'Tramos dañados', type: 'text' },
     { id: 'diametroTornillo', label: 'Diámetro tornillo', type: 'text' },
-    { id: 'comentarioTornillos', label: 'Comentario tornillería', type: 'textarea' },
-  ],
+    { id: 'comentarioTornillos', label: 'Comentario tornillería', type: 'textarea' }],
   platinas: [
     { id: 'cantidadPlatinas', label: 'Cantidad', type: 'number' },
-    { id: 'observacionPlatinas', label: 'Observación', type: 'textarea' },
-  ],
+    { id: 'observacionPlatinas', label: 'Observación', type: 'textarea' }],
   certificacion: [
     { id: 'fotoCertificacion', label: 'Foto certificación', type: 'photo' },
-    { id: 'observacionCertificacion', label: 'Observación', type: 'textarea' },
-  ],
+    { id: 'observacionCertificacion', label: 'Observación', type: 'textarea' }],
 }
 
 export const defaultSafetyClimbingData = {

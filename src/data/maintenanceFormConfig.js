@@ -27,16 +27,12 @@ export const maintenanceFormConfig = {
         ]},
         { id: 'nombreSitio', label: 'Nombre del Sitio', type: 'text', required: true, placeholder: 'Ej: San José Centro' },
         { id: 'idSitio', label: 'ID/Número del Sitio', type: 'text', required: true, placeholder: 'Ej: PTI-CR-SJ-001' },
-        { id: 'coordenadas', label: 'Coordenadas GPS', type: 'gps', required: true },
         { id: 'tipoSitio', label: 'Tipo de Sitio', type: 'toggle', required: true, options: [
           { value: 'urbano', label: 'Urbano' },
           { value: 'rural', label: 'Rural' },
           { value: 'rawland', label: 'Rawland' },
           { value: 'rooftop', label: 'Rooftop' },
         ]},
-        { id: 'fechaInicio', label: 'Fecha de Inicio', type: 'date', required: true },
-        { id: 'fechaTermino', label: 'Fecha de Término', type: 'date', required: true },
-        { id: 'horaEntrada', label: 'Hora de Entrada', type: 'time', required: true },
         { id: 'horaSalida', label: 'Hora de Salida', type: 'time', required: true },
       ]
     },

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import AppHeader from '../components/layout/AppHeader'
+import FormMetaBar from '../components/layout/FormMetaBar'
 import BottomNav from '../components/layout/BottomNav'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import CategoryTabs from '../components/layout/CategoryTabs'
@@ -17,7 +18,8 @@ export default function MantenimientoPreventivo() {
     updateChecklistPhoto,
     setMaintenanceStep,
     completeMaintenanceStep,
-    showToast 
+    showToast,
+    formMeta
   } = useAppStore()
 
   // Asegurar que tenemos datos válidos con valores por defecto
@@ -29,6 +31,73 @@ export default function MantenimientoPreventivo() {
   
   const currentStepData = getStepById(currentStep)
   const totalSteps = maintenanceFormConfig.steps.length
+
+  const validateFieldByType = (field, value) => {
+    const v = value ?? ''
+    const isEmpty = String(v).trim().length === 0
+    if (!field.required && isEmpty) return true
+    if (field.required && isEmpty) return false
+
+    switch (field.type) {
+      case 'number':
+        return Number.isFinite(Number(v))
+      case 'date':
+        return /^\d{4}-\d{2}-\d{2}$/.test(String(v))
+      case 'time':
+        return /^\d{2}:\d{2}$/.test(String(v))
+      case 'photo':
+        return String(v).startsWith('data:image')
+      case 'select':
+        return String(v).trim().length > 0
+      default:
+        return true
+    }
+  }
+
+  const getMissingForStep = (stepCfg) => {
+    if (!stepCfg) return []
+    if (stepCfg.type === 'form') {
+      const fields = stepCfg.fields || []
+      return fields
+        .filter(f => f.required)
+        .filter(f => {
+          // Condicional
+          if (f.showIf) {
+            const { field, value, values } = f.showIf
+            const currentValue = formData[field]
+            if (values && !values.includes(currentValue)) return false
+            if (value && currentValue !== value) return false
+          }
+          return !validateFieldByType(f, formData[f.id])
+        })
+        .map(f => f.label)
+    }
+
+    if (stepCfg.type === 'checklist') {
+      const items = stepCfg.items || []
+      const missing = []
+      items.forEach(item => {
+        // Condicional
+        if (item.showIf) {
+          const { field, value, values } = item.showIf
+          const currentValue = formData[field]
+          if (values && !values.includes(currentValue)) return
+          if (value && currentValue !== value) return
+        }
+        const st = checklistData[item.id]?.status
+        if (!st) missing.push(item.title || item.label || item.id)
+        // Si es yes, requiere fotos before/after
+        if (st === 'yes') {
+          const hasBefore = !!photos[`${item.id}-before`]
+          const hasAfter = !!photos[`${item.id}-after`]
+          if (!hasBefore || !hasAfter) missing.push(`${item.title || item.id} (fotos)`)
+        }
+      })
+      return missing
+    }
+
+    return []
+  }
 
   // Calcular progreso general
   const { progress, stats } = useMemo(() => {
@@ -87,6 +156,16 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleNext = () => {
+    const stepCfg = currentStepData
+    const missing = getMissingForStep(stepCfg)
+
+    if (missing.length) {
+      const preview = missing.slice(0, 8).join(', ')
+      const suffix = missing.length > 8 ? ` (+${missing.length - 8})` : ''
+      showToast(`Pendientes para continuar: ${preview}${suffix}`, 'error')
+      return
+    }
+
     // Marcar step actual como completado
     completeMaintenanceStep(currentStep)
 
@@ -98,10 +177,20 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleFinish = () => {
-    if (stats.pendingPhotos > 0) {
-      showToast(`Faltan fotos en ${stats.pendingPhotos} ítem(s)`, 'warning')
+    // Validar todo el formulario antes de finalizar
+    const allMissing = []
+    maintenanceFormConfig.steps.forEach(stepCfg => {
+      const miss = getMissingForStep(stepCfg)
+      miss.forEach(m => allMissing.push(`${stepCfg.title}: ${m}`))
+    })
+
+    if (allMissing.length) {
+      const preview = allMissing.slice(0, 10).join(' | ')
+      const suffix = allMissing.length > 10 ? ` (+${allMissing.length - 10})` : ''
+      showToast(`Pendientes para finalizar: ${preview}${suffix}`, 'error')
       return
     }
+
     showToast('¡Mantenimiento completado!', 'success')
   }
 
@@ -150,6 +239,7 @@ export default function MantenimientoPreventivo() {
       />
 
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
+        <FormMetaBar meta={formMeta?.mantenimiento} />
         <div className="mb-4">
           <div className="flex items-start justify-between">
             <div>

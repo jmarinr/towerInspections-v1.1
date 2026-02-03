@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import StepPills from '../components/layout/StepPills'
+import FormMetaBar from '../components/layout/FormMetaBar'
 import BottomNav from '../components/layout/BottomNav'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 
@@ -24,6 +25,8 @@ export default function InventarioEquipos() {
 
   const {
     showAutosaveIndicator,
+    showToast,
+    formMeta,
     equipmentInventoryData,
     setDistribucionTorre,
     setDistribucionFotoTorre,
@@ -56,8 +59,25 @@ export default function InventarioEquipos() {
 
   const goToStep = (id) => navigate(`/inventario-equipos/${id}`)
   const goNext = () => {
+    // Validación de requeridos (solo en Datos Generales)
+    if (currentStep.type === 'form') {
+      const si = equipmentInventoryData?.siteInfo || {}
+      const missing = []
+      if (!String(si.proveedor || '').trim()) missing.push('Proveedor')
+      if (!String(si.tipoVisita || '').trim()) missing.push('Tipo de Visita')
+      if (!String(si.idSitio || '').trim()) missing.push('ID Sitio')
+      if (!String(si.nombreSitio || '').trim()) missing.push('Nombre Sitio')
+      if (!String(si.direccion || '').trim()) missing.push('Dirección')
+
+      if (missing.length) {
+        showToast(`Campos requeridos pendientes: ${missing.join(', ')}`, 'error')
+        return
+      }
+    }
+
     const next = equipmentInventorySteps[currentStepIndex + 1]
     if (next) goToStep(next.id)
+    else showToast('¡Inventario completado!', 'success')
   }
   const goPrev = () => {
     const prev = equipmentInventorySteps[currentStepIndex - 1]
@@ -228,6 +248,7 @@ case 'drawing-template':
       <AutosaveIndicator show={showAutosaveIndicator} />
 
       <div className="px-4 pb-32">
+        <FormMetaBar meta={formMeta?.equipment} />
         <div className="mb-4">
           <div className="text-lg font-extrabold text-gray-900">{currentStep.icon} {currentStep.title}</div>
           <div className="text-sm text-gray-600 mt-1">{currentStep.description}</div>

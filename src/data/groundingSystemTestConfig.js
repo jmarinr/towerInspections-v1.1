@@ -20,14 +20,7 @@ export const groundingSystemTestConfig = {
 
         { id: "tipoSitio", label: "Tipo de sitio", type: "select", options: ["Torre", "Rooftop", "Indoor", "Otro"] },
         { id: "tipoEstructura", label: "Tipo de estructura", type: "select", options: ["Autosoportada", "Arriostrada", "Monopolo", "Otro"] },
-        { id: "alturaMts", label: "Altura (mts)", type: "number", placeholder: "0" },
-
-        { id: "latitud", label: "Latitud", type: "text", placeholder: "Ej: 9.93" },
-        { id: "longitud", label: "Longitud", type: "text", placeholder: "Ej: -84.10" },
-
-        { id: "fechaInicio", label: "Fecha inicio", type: "date" },
-        { id: "fechaTermino", label: "Fecha término", type: "date" },
-      ],
+        { id: "alturaMts", label: "Altura (mts)", type: "number", placeholder: "0" }],
     },
 
     {
@@ -62,8 +55,7 @@ export const groundingSystemTestConfig = {
           type: "textarea",
           placeholder:
             "Si el sitio es un rooftop y no se pueden colocar picas/estacas, describa el método alterno de medición y ubicación del electrodo.",
-        },
-      ],
+        }],
     },
 
     {
@@ -75,8 +67,7 @@ export const groundingSystemTestConfig = {
         { id: "equipoMarca", label: "Marca", type: "text", placeholder: "Ej: Fluke" },
         { id: "equipoModelo", label: "Modelo", type: "text", placeholder: "Ej: 1625-2" },
         { id: "equipoSerial", label: "Serial", type: "text", placeholder: "Número de serie" },
-        { id: "equipoCalibracion", label: "Fecha de calibración", type: "date" },
-      ],
+        { id: "equipoCalibracion", label: "Fecha de calibración", type: "date" }],
     },
 
     {
@@ -98,8 +89,7 @@ export const groundingSystemTestConfig = {
         { id: "sumResistencias", label: "Sumatoria (automática)", type: "calculated" },
         { id: "rg", label: "Rg (promedio automático)", type: "calculated" },
 
-        { id: "observaciones", label: "Observaciones", type: "textarea", placeholder: "Notas relevantes de la medición." },
-      ],
+        { id: "observaciones", label: "Observaciones", type: "textarea", placeholder: "Notas relevantes de la medición." }],
     },
 
     {
@@ -114,8 +104,6 @@ export const groundingSystemTestConfig = {
         { id: "fotoPararrayos", label: "Foto - Pararrayos", type: "photo" },
         { id: "fotoBarraSPT", label: "Foto - Barra SPT", type: "photo" },
         { id: "fotoEscalerilla1", label: "Foto - Escalerilla #1", type: "photo" },
-        { id: "fotoEscalerilla2", label: "Foto - Escalerilla #2", type: "photo" },
-      ],
-    },
-  ],
+        { id: "fotoEscalerilla2", label: "Foto - Escalerilla #2", type: "photo" }],
+    }],
 };

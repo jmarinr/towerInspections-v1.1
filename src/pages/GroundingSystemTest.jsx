@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AppHeader from "../components/layout/AppHeader";
 import BottomNav from "../components/layout/BottomNav";
+import FormMetaBar from "../components/layout/FormMetaBar";
 import AutosaveIndicator from "../components/ui/AutosaveIndicator";
 import DynamicForm from "../components/forms/DynamicForm";
 import { groundingSystemTestConfig } from "../data/groundingSystemTestConfig";
@@ -14,6 +15,8 @@ export default function GroundingSystemTest() {
   const groundingData = useAppStore((s) => s.groundingSystemData);
   const setGroundingField = useAppStore((s) => s.setGroundingField);
   const lastSavedAt = useAppStore((s) => s.lastSavedAt);
+  const showToast = useAppStore((s) => s.showToast);
+  const formMeta = useAppStore((s) => s.formMeta);
 
   const sections = groundingSystemTestConfig.sections;
 
@@ -65,6 +68,7 @@ export default function GroundingSystemTest() {
 
       <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
         <AutosaveIndicator lastSavedAt={lastSavedAt} />
+        <FormMetaBar meta={formMeta?.["grounding-system-test"]} />
 
         {!sectionId && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,7 +118,29 @@ export default function GroundingSystemTest() {
                 <button
                   type="button"
                   className="w-full px-4 py-3 rounded-2xl bg-gray-900 text-white font-semibold shadow-sm active:scale-[0.99]"
-                  onClick={() => navigate("/grounding-system-test")}
+                  onClick={() => {
+                  const fields = groundingSystemTestConfig.sectionFields?.[sectionId] || []
+                  const data = groundingData?.[sectionId] || {}
+                  const missing = fields
+                    .filter((f) => f.required)
+                    .filter((f) => {
+                      const v = data[f.id]
+                      const isEmpty = String(v ?? "").trim().length === 0
+                      if (isEmpty) return true
+                      if (f.type === "number") return !Number.isFinite(Number(v))
+                      if (f.type === "photo") return !String(v).startsWith("data:image")
+                      if (f.type === "date") return !/^\d{4}-\d{2}-\d{2}$/.test(String(v))
+                      if (f.type === "time") return !/^\d{2}:\d{2}$/.test(String(v))
+                      return false
+                    })
+                    .map((f) => f.label)
+
+                  if (missing.length) {
+                    showToast(`Campos requeridos pendientes: ${missing.join(", ")}`, "error")
+                    return
+                  }
+                  navigate("/grounding-system-test")
+                }}
                 >
                   Guardar y volver al menú
                 </button>
