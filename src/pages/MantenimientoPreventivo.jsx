@@ -23,13 +23,14 @@ export default function MantenimientoPreventivo() {
   } = useAppStore()
 
   // Asegurar que tenemos datos válidos con valores por defecto
-  const currentStep = maintenanceData?.currentStep || 1
+  // Importante: normalizar a número (evita que "1" rompa getStepById)
+  const currentStep = Number(maintenanceData?.currentStep) || 1
   const completedSteps = maintenanceData?.completedSteps || []
   const formData = maintenanceData?.formData || {}
   const checklistData = maintenanceData?.checklistData || {}
   const photos = maintenanceData?.photos || {}
   
-  const currentStepData = getStepById(currentStep)
+  const currentStepData = getStepById(currentStep) || getStepById(1)
   const totalSteps = maintenanceFormConfig.steps.length
 
   const validateFieldByType = (field, value) => {

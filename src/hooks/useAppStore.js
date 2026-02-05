@@ -486,7 +486,8 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         set((state) => {
           const currentData = state.maintenanceData || getDefaultMaintenanceData()
           return {
-            maintenanceData: { ...currentData, currentStep: step }
+            // Guard: asegurar número para evitar concatenación ("1" + 1 => "11")
+            maintenanceData: { ...currentData, currentStep: Number(step) || 1 }
           }
         })
       },
@@ -534,7 +535,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 4, // Incrementar versión para forzar migración
+      version: 5, // v1.1.9+: normalizar tipos (steps numéricos)
       migrate: (persistedState, version) => {
         // Migraciones simples para mantener compatibilidad
         let state = { ...persistedState }
@@ -553,6 +554,11 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
         state = { ...state, groundingSystemData: state.groundingSystemData || {} }
         state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
+
+        // Normalizar maintenanceData.currentStep a número (algunas versiones antiguas lo guardaban como string)
+        const md = state.maintenanceData || getDefaultMaintenanceData()
+        const stepNum = Number(md.currentStep)
+        state = { ...state, maintenanceData: { ...md, currentStep: Number.isFinite(stepNum) && stepNum > 0 ? stepNum : 1 } }
         return state
       }
     }

@@ -16,6 +16,7 @@ const FORM_MAP = {
     title: 'Mantenimiento preventivo',
     description: 'Registre actividades de mantenimiento preventivo con fotos antes/después.',
     summary: ['Datos del sitio', 'Checklist de actividades', 'Fotos antes / después'],
+    // Ruta canónica (App.jsx mantiene también alias /mantenimiento)
     route: '/mantenimiento-preventivo',
     icon: Wrench,
   },
