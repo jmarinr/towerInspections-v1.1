@@ -111,6 +111,7 @@ export default function GroundingSystemTest() {
                   step={currentSection}
                   formData={groundingData?.[sectionId] || {}}
                   onFieldChange={(fieldId, value) => handleChange(sectionId, fieldId, value)}
+                  formCode="grounding-system-test"
                 />
               </div>
 

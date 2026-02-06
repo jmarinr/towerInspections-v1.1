@@ -89,6 +89,7 @@ export default function SafetyClimbingDevice() {
                   fields={safetySectionFields[sectionId] || []}
                   data={safetyData?.[sectionId] || {}}
                   onChange={(fieldId, value) => setSafetyField(sectionId, fieldId, value)}
+                  formCode="safety-climbing-device"
                 />
               </div>
 

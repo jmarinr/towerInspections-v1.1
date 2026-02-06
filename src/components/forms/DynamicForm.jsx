@@ -1,5 +1,6 @@
 import { MapPin, Camera, X } from 'lucide-react'
 import { useState } from 'react'
+import { queueAssetUpload } from '../../lib/supabaseSync'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
@@ -13,6 +14,7 @@ export default function DynamicForm(props) {
   const step = props.step ?? (props.fields ? { title: props.title, description: props.description, fields: props.fields } : null)
   const formData = props.formData ?? props.data ?? props.sectionData ?? {}
   const onFieldChange = props.onFieldChange ?? props.onChange ?? (() => {})
+  const formCode = props.formCode ?? props.form_code ?? props.formId ?? step?.formCode ?? null
 
   // Guard against undefined step or fields
   if (!step || !Array.isArray(step.fields) || step.fields.length === 0) {
@@ -46,7 +48,8 @@ export default function DynamicForm(props) {
         return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
       }
       case 'photo':
-        return String(v).startsWith('data:image')
+        // We accept local DataURLs, blob URLs, or remote URLs/keys.
+        return String(v).startsWith('data:image') || String(v).startsWith('blob:') || String(v).startsWith('http') || String(v).startsWith('/')
       case 'select':
         return String(v).trim().length > 0
       default:
@@ -85,7 +88,20 @@ export default function DynamicForm(props) {
       return
     }
     const reader = new FileReader()
-    reader.onload = (ev) => onFieldChange(fieldId, ev.target.result)
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result
+      onFieldChange(fieldId, dataUrl)
+      // Background upload to Supabase Storage (if configured). This should NOT
+      // block navigation or local autosave.
+      if (formCode) {
+        try {
+          queueAssetUpload({ formCode, assetType: fieldId, dataUrl })
+        } catch (err) {
+          // Silent: offline / storage not configured yet.
+          console.warn('[Supabase] queueAssetUpload failed', err)
+        }
+      }
+    }
     reader.readAsDataURL(file)
   }
 

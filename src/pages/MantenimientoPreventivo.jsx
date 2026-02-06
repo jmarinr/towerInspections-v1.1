@@ -47,7 +47,10 @@ export default function MantenimientoPreventivo() {
       case 'time':
         return /^\d{2}:\d{2}$/.test(String(v))
       case 'photo':
-        return String(v).startsWith('data:image')
+        return (
+          typeof v === 'string' &&
+          (v.startsWith('data:image') || v.startsWith('blob:') || v.startsWith('http'))
+        )
       case 'select':
         return String(v).trim().length > 0
       default:
@@ -263,6 +266,7 @@ export default function MantenimientoPreventivo() {
               step={currentStepData}
               formData={formData}
               onFieldChange={updateMaintenanceField}
+              formCode="preventive-maintenance"
             />
           ) : (
             <InspectionChecklist

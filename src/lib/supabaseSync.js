@@ -38,7 +38,9 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
     form_version: formVersion,
     app_version: getAppVersion(),
     payload: {},
-    last_saved_at: new Date().toISOString(),
+    // `last_saved_at` column is not guaranteed to exist in every demo DB.
+    // We keep the timestamp inside the JSON payload instead of relying on a
+    // dedicated column (avoids PostgREST 400 errors when the column is missing).
   };
 
   const { data, error } = await supabase
@@ -116,8 +118,15 @@ export async function flushSupabaseQueues({ formCode } = {}) {
         form_code: code,
         form_version: item.formVersion,
         app_version: getAppVersion(),
-        payload: item.payload,
-        last_saved_at: new Date().toISOString(),
+        // We store the save timestamp inside the JSON payload to avoid
+        // requiring an additional SQL column in the demo DB.
+        payload: {
+          ...item.payload,
+          _meta: {
+            ...(item.payload?._meta || {}),
+            last_saved_at: new Date().toISOString(),
+          },
+        },
       };
 
       const { error } = await supabase
