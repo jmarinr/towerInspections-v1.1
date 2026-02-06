@@ -12,6 +12,7 @@ import FormIntro from './pages/FormIntro'
 import SplashScreen from './components/ui/SplashScreen'
 import Toast from './components/ui/Toast'
 import { useAppStore } from './hooks/useAppStore'
+import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import RequireAuth from './components/auth/RequireAuth'
 
 function NotFound() {
@@ -34,6 +35,11 @@ function NotFound() {
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const { toast, hideToast } = useAppStore()
+
+
+  useEffect(() => {
+    startSupabaseBackgroundSync()
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1800)

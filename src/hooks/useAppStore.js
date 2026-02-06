@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { queueSubmissionSync, queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
 import { persist } from 'zustand/middleware'
 
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
@@ -140,9 +141,22 @@ export const useAppStore = create(
 
       // ============ AUTOSAVE ============
       showAutosave: false,
-      triggerAutosave: () => {
+      triggerAutosave: (formCode) => {
         set({ showAutosave: true })
         setTimeout(() => set({ showAutosave: false }), 1500)
+
+        // Option C: also queue a background upsert to Supabase on each local autosave.
+        try {
+          if (formCode) {
+            const payload = get().getSupabasePayloadForForm(formCode)
+            if (payload) {
+              queueSubmissionSync(formCode, payload, '1.2.1')
+              flushSupabaseQueues({ formCode })
+            }
+          }
+        } catch (e) {
+          console.warn('[Supabase] autosave queue failed', e?.message || e)
+        }
       },
 
             // ============ FORM META (Inicio automático) ============
@@ -169,7 +183,7 @@ export const useAppStore = create(
         set((state) => ({
           inspectionData: { ...state.inspectionData, items: { ...state.inspectionData.items, [itemId]: { ...state.inspectionData.items[itemId], status } } }
         }))
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       updateItemObservation: (itemId, observation) => set((state) => ({
@@ -180,7 +194,14 @@ export const useAppStore = create(
         set((state) => ({
           inspectionData: { ...state.inspectionData, photos: { ...state.inspectionData.photos, [`${itemId}-${photoType}`]: photoData } }
         }))
-        get().triggerAutosave()
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('inspection-general', `inspection:${itemId}:${photoType}`, photoData)
+          flushSupabaseQueues({ formCode: 'inspection-general' })
+        } catch (e) {}
+
+        get().triggerAutosave('inspection-general')
       },
 
       // ============ MAINTENANCE DATA v1.1.4 ============
@@ -202,20 +223,39 @@ export const useAppStore = create(
             },
           },
         }))
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       updatePMExecutedPhoto: (activityId, photoType, photoData) => {
-        set((state) => ({
-          pmExecutedData: {
-            ...(state.pmExecutedData || getDefaultPMExecutedData()),
-            photos: {
-              ...((state.pmExecutedData || getDefaultPMExecutedData()).photos || {}),
-              [`${activityId}-${photoType}`]: photoData,
-            },
+        set((state) => {
+          const currentData = state.pmExecutedData || getDefaultPMExecutedData()
+          return {
+            pmExecutedData: {
+              ...currentData,
+              checklistPhotos: {
+                ...(currentData.checklistPhotos || {}),
+                [`${activityId}-${photoType}`]: photoData
+              }
+            }
+          }
+        })
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('executed-maintenance', `executed:${activityId}:${photoType}`, photoData)
+          flushSupabaseQueues({ formCode: 'executed-maintenance' })
+        } catch (e) {}
+
+        get().triggerAutosave('executed-maintenance')
+      },
           },
         }))
-        get().triggerAutosave()
+                try {
+          queueAssetUpload('executed-maintenance', `pmExecuted:${categoryKey}:${subItemKey}:${photoType}`, photoDataUrl)
+          flushSupabaseQueues({ formCode: 'executed-maintenance' })
+        } catch (e) {}
+
+        get().triggerAutosave('executed-maintenance')
       },
 
       // ============ GROUNDING SYSTEM TEST (Nuevo formulario) ============
@@ -236,7 +276,7 @@ export const useAppStore = create(
             },
           },
         }))
-        get().triggerAutosave()
+        get().triggerAutosave('executed-maintenance')
       },
 
       // --- TORRE: tabla repetible ---
@@ -254,7 +294,7 @@ export const useAppStore = create(
             },
           }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('executed-maintenance')
       },
 
       removeTowerItem: (index) => {
@@ -264,7 +304,7 @@ export const useAppStore = create(
           items.splice(index, 1)
           return { equipmentInventoryData: { ...current, torre: { ...(current.torre || {}), items: items.length ? items : [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', dimensionesMts: '', areaM2: '', carrier: '' }] } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('equipment')
       },
 
       updateTowerItemField: (index, field, value) => {
@@ -273,7 +313,7 @@ export const useAppStore = create(
           const items = (current.torre?.items || []).map((it, i) => (i === index ? { ...it, [field]: value } : it))
           return { equipmentInventoryData: { ...current, torre: { ...(current.torre || {}), items } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       // --- PISO: clientes + gabinetes ---
@@ -294,7 +334,7 @@ export const useAppStore = create(
             },
           }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       removeFloorClient: (index) => {
@@ -304,7 +344,7 @@ export const useAppStore = create(
           clientes.splice(index, 1)
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes: clientes.length ? clientes : [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       updateFloorClientField: (index, field, value) => {
@@ -313,7 +353,7 @@ export const useAppStore = create(
           const clientes = (current.piso?.clientes || []).map((c, i) => (i === index ? { ...c, [field]: value } : c))
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       addCabinet: (clientIndex) => {
@@ -326,7 +366,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       removeCabinet: (clientIndex, cabinetIndex) => {
@@ -340,7 +380,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       updateCabinetField: (clientIndex, cabinetIndex, field, value) => {
@@ -353,7 +393,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       // --- DISTRIBUCIÓN / CROQUIS / PLANO ---
@@ -362,23 +402,39 @@ export const useAppStore = create(
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
           return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), scene, pngDataUrl } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       setDistribucionFotoTorre: (fotoTorreDataUrl) => {
         set((state) => {
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
-          return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), fotoTorreDataUrl } } }
+          return { equipmentInventoryData: { ...current, fotoTorreDataUrl } }
         })
-        get().triggerAutosave()
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('equipment', 'equipment:fotoTorre', fotoTorreDataUrl)
+          flushSupabaseQueues({ formCode: 'equipment' })
+        } catch (e) {}
+
+        get().triggerAutosave('equipment')
       },
 
-      setCroquisEsquematico: (drawing, pngDataUrl) => {
+      setCroquisEsquematico: (pngDataUrl) => {
         set((state) => {
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
-          return { equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), drawing, pngDataUrl } } }
+          return {
+            equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), pngDataUrl } }
+          }
         })
-        get().triggerAutosave()
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('equipment', 'equipment:croquisEsquematico', pngDataUrl)
+          flushSupabaseQueues({ formCode: 'equipment' })
+        } catch (e) {}
+
+        get().triggerAutosave('equipment')
       },
 
       setCroquisNiveles: (field, value) => {
@@ -387,15 +443,24 @@ export const useAppStore = create(
           const niveles = current.croquisEsquematico?.niveles || { nivel1: '', nivel2: '', nivel3: '', banqueta: '' }
           return { equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), niveles: { ...niveles, [field]: value } } } }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
-      setPlanoPlanta: (drawing, pngDataUrl) => {
+      setPlanoPlanta: (pngDataUrl) => {
         set((state) => {
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
-          return { equipmentInventoryData: { ...current, planoPlanta: { ...(current.planoPlanta || {}), drawing, pngDataUrl } } }
+          return {
+            equipmentInventoryData: { ...current, planoPlanta: { ...(current.planoPlanta || {}), pngDataUrl } }
+          }
         })
-        get().triggerAutosave()
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('equipment', 'equipment:planoPlanta', pngDataUrl)
+          flushSupabaseQueues({ formCode: 'equipment' })
+        } catch (e) {}
+
+        get().triggerAutosave('equipment')
       },
 
       resetEquipmentInventoryData: () => set({ equipmentInventoryData: getDefaultEquipmentInventoryData() }),
@@ -411,11 +476,11 @@ export const useAppStore = create(
             },
           },
         }))
-        get().triggerAutosave()
+        get().triggerAutosave('grounding-system-test')
       },
       resetGroundingSystemData: () => {
         set({ groundingSystemData: {} })
-        get().triggerAutosave()
+        get().triggerAutosave('grounding-system-test')
       },
 
 
@@ -430,7 +495,7 @@ setSafetyField: (sectionId, fieldId, value) => {
       },
     },
   }))
-  get().triggerAutosave()
+  get().triggerAutosave('safety-system')
 },
 resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),
 
@@ -446,7 +511,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
             }
           }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('preventive-maintenance')
       },
 
       // Actualizar item de checklist
@@ -464,7 +529,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
             }
           }
         })
-        get().triggerAutosave()
+        get().triggerAutosave('inspection-general')
       },
 
       // Actualizar foto de checklist
@@ -474,11 +539,21 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
           return {
             maintenanceData: {
               ...currentData,
-              photos: { ...(currentData.photos || {}), [`${itemId}-${photoType}`]: photoData }
+              checklistPhotos: {
+                ...(currentData.checklistPhotos || {}),
+                [`${itemId}-${photoType}`]: photoData
+              }
             }
           }
         })
-        get().triggerAutosave()
+
+        // Upload photo in background (best effort)
+        try {
+          queueAssetUpload('preventive-maintenance', `maintenance:${itemId}:${photoType}`, photoData)
+          flushSupabaseQueues({ formCode: 'preventive-maintenance' })
+        } catch (e) {}
+
+        get().triggerAutosave('preventive-maintenance')
       },
 
       // Navegar a step
