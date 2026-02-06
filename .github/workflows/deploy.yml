@@ -28,7 +28,12 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        # NOTE: We use `npm install` (instead of `npm ci`) because this repo
+        # is still evolving and the lockfile may not always be in sync with
+        # package.json (e.g., when adding new deps).
+        # Once package-lock.json is updated and committed, you can switch back
+        # to `npm ci` for fully reproducible builds.
+        run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
