@@ -248,15 +248,6 @@ export const useAppStore = create(
 
         get().triggerAutosave('executed-maintenance')
       },
-          },
-        }))
-                try {
-          queueAssetUpload('executed-maintenance', `pmExecuted:${categoryKey}:${subItemKey}:${photoType}`, photoDataUrl)
-          flushSupabaseQueues({ formCode: 'executed-maintenance' })
-        } catch (e) {}
-
-        get().triggerAutosave('executed-maintenance')
-      },
 
       // ============ GROUNDING SYSTEM TEST (Nuevo formulario) ============
       groundingSystemData: {},
