@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { queueSubmissionSync, queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
+import { getDeviceId } from '../lib/deviceId'
 import { persist } from 'zustand/middleware'
 
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
@@ -167,6 +168,79 @@ export const useAppStore = create(
         delete fm[formId]
         return { formMeta: fm }
       }),
+  // Build the full Supabase payload for a given autosave bucket (one submission per form)
+  // Note: we intentionally send **all** captured data for the form (not a minimal subset).
+  getSupabasePayloadForForm: (formCode) => {
+    const state = get()
+
+    // Map internal autosave buckets to a canonical PTI form_code (used in DB uniqueness)
+    const toFormCode = (code) => {
+      if (!code) return 'unknown'
+      if (code.startsWith('inspection') || code === 'safety-system') return 'inspeccion'
+      if (code === 'preventive-maintenance') return 'mantenimiento'
+      if (code === 'executed-maintenance' || code === 'pm-executed') return 'mantenimiento-ejecutado'
+      if (code === 'equipment-inventory' || code === 'equipment') return 'inventario'
+      if (code === 'grounding-system-test') return 'puesta-tierra'
+      return code
+    }
+
+    const canonicalFormCode = toFormCode(formCode)
+
+    // Form meta is stored using the public form ids (inspeccion, mantenimiento, etc.)
+    const metaKey =
+      canonicalFormCode === 'inspeccion' ? 'inspeccion'
+      : canonicalFormCode === 'mantenimiento' ? 'mantenimiento'
+      : canonicalFormCode === 'mantenimiento-ejecutado' ? 'mantenimiento-ejecutado'
+      : canonicalFormCode === 'inventario' ? 'inventario'
+      : canonicalFormCode === 'puesta-tierra' ? 'puesta-tierra'
+      : canonicalFormCode
+
+    const meta = (state.formMeta && state.formMeta[metaKey]) ? state.formMeta[metaKey] : null
+
+    // Pick the full form snapshot from the store
+    const snapshot =
+      canonicalFormCode === 'inspeccion' ? state.inspectionData
+      : canonicalFormCode === 'mantenimiento' ? state.maintenanceData
+      : canonicalFormCode === 'mantenimiento-ejecutado' ? state.pmExecutedData
+      : canonicalFormCode === 'inventario' ? state.equipmentInventoryData
+      : canonicalFormCode === 'puesta-tierra' ? state.groundingSystemData
+      : null
+
+    // Collect any queued assets that belong to this form (photos uploaded to Storage)
+    const queuedAssets = Array.isArray(state.assetUploadQueue)
+      ? state.assetUploadQueue.filter(a => a && a.formCode === formCode)
+      : []
+
+    return {
+      org_code: 'PTI',
+      device_id: getDeviceId(),
+      form_code: canonicalFormCode,
+      app_version: '1.2.1',
+      form_version: '1',
+      payload: {
+        meta,
+        // raw autosave bucket (helps debugging)
+        autosave_bucket: formCode,
+        // full snapshot of the form state
+        data: snapshot,
+        // include current validation status if present
+        validation: state.validationState || null,
+        // include any other global state you want to preserve
+        profile: state.profile || null
+      },
+      assets: queuedAssets.map(a => ({
+        key: a.storageKey,
+        type: a.assetType || 'photo',
+        bucket: a.bucket || 'pti-inspect',
+        // optional metadata
+        meta: {
+          field: a.field || null,
+          capturedAt: a.capturedAt || null
+        }
+      }))
+    }
+  },
+
 
 // ============ INSPECTION DATA (Original) ============
       inspectionData: {
