@@ -31,7 +31,7 @@ export default function InventarioEquipos() {
     setDistribucionFotoTorre,
     setCroquisEsquematico,
     setCroquisNiveles,
-    setPlanoPlanta,, resetFormDraft, finalizeForm } = useAppStore()
+    setPlanoPlanta, resetFormDraft, finalizeForm } = useAppStore()
 
   const currentStepId = useMemo(() => {
     if (step && equipmentInventorySteps.some(s => s.id === step)) return step
