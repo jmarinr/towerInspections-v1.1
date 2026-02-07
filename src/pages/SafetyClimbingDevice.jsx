@@ -28,7 +28,7 @@ export default function SafetyClimbingDevice() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader title="Sistema de ascenso" showBack={!!sectionId} onBack={() => try {
+      <AppHeader title="Sistema de ascenso" showBack={!!sectionId} onBack={async () => { try {
                     await finalizeForm('safety-system')
                     showToast('¡Formulario enviado y cerrado!', 'success')
                     navigate('/')
