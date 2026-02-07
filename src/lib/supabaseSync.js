@@ -2,6 +2,30 @@ import { supabase } from './supabaseClient';
 import { getDeviceId } from './deviceId';
 import { dataUrlToBlob } from './dataUrl';
 
+
+// Converts multiple image representations into a Blob:
+// - DataURL string: "data:image/...;base64,..."
+// - Blob/File objects
+// - Object URLs: "blob:..."
+async function toBlobAny(input) {
+  if (!input) throw new Error("Invalid image input (empty)");
+
+  // Blob or File
+  if (typeof Blob !== "undefined" && input instanceof Blob) return input;
+
+  // Data URL string
+  if (typeof input === "string") {
+    if (input.startsWith("data:")) return dataUrlToBlob(input);
+    if (input.startsWith("blob:")) {
+      const resp = await fetch(input);
+      if (!resp.ok) throw new Error("Failed to fetch blob URL");
+      return await resp.blob();
+    }
+  }
+
+  throw new Error("Invalid image input (expected DataURL string or Blob/File)");
+}
+
 const ORG_CODE = 'PTI';
 const BUCKET = 'pti-inspect';
 const SUBMISSION_IDS_KEY = 'pti_submission_ids_v1';
@@ -157,7 +181,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
     for (const asset of list) {
       try {
         const submissionId = await ensureSubmissionId(code);
-        const blob = dataUrlToBlob(asset.dataUrl);
+        const blob = await toBlobAny(asset.dataUrl);
         const ext = extFromMime(blob.type);
         const safeType = (asset.assetType || 'asset').replace(/[^a-zA-Z0-9-_./]/g, '_');
         const objectPath = `${ORG_CODE}/${getDeviceId()}/${code}/${submissionId}/${safeType}.${ext}`;
@@ -176,7 +200,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
 
         const { error: assetDbErr } = await supabase
           .from('submission_assets')
-          .upsert([row], { onConflict: 'asset_key' });
+          .insert([row]);
 
         if (assetDbErr) throw assetDbErr;
 // remove item on success
