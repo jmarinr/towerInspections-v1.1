@@ -138,7 +138,7 @@ export default function GroundingSystemTest() {
 
                   if (missing.length) {
                     showToast(`Campos requeridos pendientes: ${missing.join(", ")}`, "error")
-                    return
+                    return;
                   }
                   navigate("/grounding-system-test")
                 }}

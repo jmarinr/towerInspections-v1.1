@@ -34,8 +34,9 @@ export default function SafetyClimbingDevice() {
                     navigate('/')
                   } catch (e) {
                     showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
-                    return
-                  }} />
+                    return;
+                  }
+                }} />
 
       <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
         <AutosaveIndicator lastSavedAt={lastSavedAt} />
@@ -123,7 +124,7 @@ export default function SafetyClimbingDevice() {
 
                     if (missing.length) {
                       showToast(`Campos requeridos pendientes: ${missing.join(', ')}`, 'error')
-                      return
+                      return;
                     }
                     try {
                     await finalizeForm('safety-system')
@@ -131,7 +132,7 @@ export default function SafetyClimbingDevice() {
                     navigate('/')
                   } catch (e) {
                     showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
-                    return
+                    return;
                   }
                   }}
                 >
