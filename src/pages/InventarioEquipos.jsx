@@ -23,8 +23,7 @@ export default function InventarioEquipos() {
   const navigate = useNavigate()
   const { step } = useParams()
 
-  const {
-    showAutosaveIndicator,
+  const { showAutosaveIndicator,
     showToast,
     formMeta,
     equipmentInventoryData,
@@ -32,8 +31,7 @@ export default function InventarioEquipos() {
     setDistribucionFotoTorre,
     setCroquisEsquematico,
     setCroquisNiveles,
-    setPlanoPlanta,
-  } = useAppStore()
+    setPlanoPlanta,, resetFormDraft, finalizeForm } = useAppStore()
 
   const currentStepId = useMemo(() => {
     if (step && equipmentInventorySteps.some(s => s.id === step)) return step
@@ -77,7 +75,15 @@ export default function InventarioEquipos() {
 
     const next = equipmentInventorySteps[currentStepIndex + 1]
     if (next) goToStep(next.id)
-    else showToast('¡Inventario completado!', 'success')
+    else {
+      try {
+        await finalizeForm('inventario')
+        showToast('¡Formulario enviado y cerrado!', 'success')
+      } catch (e) {
+        showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
+        return
+      }
+    }
   }
   const goPrev = () => {
     const prev = equipmentInventorySteps[currentStepIndex - 1]

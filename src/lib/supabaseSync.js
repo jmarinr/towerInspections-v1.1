@@ -49,6 +49,35 @@ function saveMap(key, obj) {
   localStorage.setItem(key, JSON.stringify(obj));
 }
 
+
+
+export function clearSupabaseLocalForForm(formCode) {
+  if (!formCode) return;
+  try {
+    const syncMap = loadMap(PENDING_SYNC_KEY);
+    if (syncMap && typeof syncMap === 'object') {
+      delete syncMap[formCode];
+      saveMap(PENDING_SYNC_KEY, syncMap);
+    }
+  } catch (e) {}
+
+  try {
+    const assetsMap = loadMap(PENDING_ASSETS_KEY);
+    if (assetsMap && typeof assetsMap === 'object') {
+      delete assetsMap[formCode];
+      saveMap(PENDING_ASSETS_KEY, assetsMap);
+    }
+  } catch (e) {}
+
+  try {
+    const idsMap = loadMap(SUBMISSION_IDS_KEY);
+    if (idsMap && typeof idsMap === 'object') {
+      delete idsMap[formCode];
+      saveMap(SUBMISSION_IDS_KEY, idsMap);
+    }
+  } catch (e) {}
+}
+
 export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
   const deviceId = getDeviceId();
   const map = loadMap(SUBMISSION_IDS_KEY);

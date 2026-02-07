@@ -28,7 +28,14 @@ export default function SafetyClimbingDevice() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader title="Sistema de ascenso" showBack={!!sectionId} onBack={() => navigate('/sistema-ascenso')} />
+      <AppHeader title="Sistema de ascenso" showBack={!!sectionId} onBack={() => try {
+                    await finalizeForm('safety-system')
+                    showToast('¡Formulario enviado y cerrado!', 'success')
+                    navigate('/')
+                  } catch (e) {
+                    showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
+                    return
+                  }} />
 
       <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
         <AutosaveIndicator lastSavedAt={lastSavedAt} />
@@ -118,7 +125,14 @@ export default function SafetyClimbingDevice() {
                       showToast(`Campos requeridos pendientes: ${missing.join(', ')}`, 'error')
                       return
                     }
-                    navigate('/sistema-ascenso')
+                    try {
+                    await finalizeForm('safety-system')
+                    showToast('¡Formulario enviado y cerrado!', 'success')
+                    navigate('/')
+                  } catch (e) {
+                    showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
+                    return
+                  }
                   }}
                 >
                   Guardar y volver al menú

@@ -11,16 +11,14 @@ import { useAppStore } from '../hooks/useAppStore'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
 export default function MantenimientoPreventivo() {
-  const { 
-    maintenanceData, 
+  const { maintenanceData, 
     updateMaintenanceField, 
     updateChecklistItem,
     updateChecklistPhoto,
     setMaintenanceStep,
     completeMaintenanceStep,
     showToast,
-    formMeta
-  } = useAppStore()
+    formMeta, resetFormDraft, finalizeForm } = useAppStore()
 
   // Asegurar que tenemos datos válidos con valores por defecto
   // Importante: normalizar a número (evita que "1" rompa getStepById)
@@ -249,7 +247,20 @@ export default function MantenimientoPreventivo() {
       />
 
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
-        <FormMetaBar meta={formMeta?.mantenimiento} />
+        <div className="flex items-center justify-between gap-2">
+          <FormMetaBar meta={formMeta?.mantenimiento} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95"
+            onClick={async () => {
+              if (confirm('Esto borrará los datos guardados de este formulario en este dispositivo. ¿Deseas reiniciar?')) {
+                resetFormDraft('mantenimiento')
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
         <div className="mb-4">
           <div className="flex items-start justify-between">
             <div>

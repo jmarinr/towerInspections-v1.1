@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { queueSubmissionSync, queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
+import { queueSubmissionSync, queueAssetUpload, flushSupabaseQueues, clearSupabaseLocalForForm } from '../lib/supabaseSync'
 import { getDeviceId } from '../lib/deviceId'
 import { persist } from 'zustand/middleware'
 
@@ -168,6 +168,49 @@ export const useAppStore = create(
         delete fm[formId]
         return { formMeta: fm }
       }),
+
+
+      // ============ RESET / FINALIZE ============
+      resetFormDraft: (formKey) => {
+        const map = {
+          'inspeccion': { code: 'inspection-general', reset: 'resetInspectionData' },
+          'mantenimiento': { code: 'preventive-maintenance', reset: 'resetMaintenanceData' },
+          'inventario': { code: 'equipment', reset: 'resetEquipmentInventoryData' },
+          'mantenimiento-ejecutado': { code: 'executed-maintenance', reset: 'resetPMExecutedData' },
+          'puesta-tierra': { code: 'grounding-system-test', reset: 'resetGroundingSystemData' },
+          'safety-system': { code: 'safety-system', reset: 'resetSafetyClimbingData' },
+        }
+        const cfg = map[formKey]
+        if (!cfg) return
+        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
+        get().clearFormMeta(formKey)
+        const fn = get()[cfg.reset]
+        if (typeof fn === 'function') fn()
+
+        set((state) => {
+          const aq = Array.isArray(state.assetUploadQueue) ? state.assetUploadQueue : []
+          return { assetUploadQueue: aq.filter(a => a.formCode !== cfg.code) }
+        })
+      },
+
+      finalizeForm: async (formKey) => {
+        const map = {
+          'inspeccion': { code: 'inspection-general' },
+          'mantenimiento': { code: 'preventive-maintenance' },
+          'inventario': { code: 'equipment' },
+          'mantenimiento-ejecutado': { code: 'executed-maintenance' },
+          'puesta-tierra': { code: 'grounding-system-test' },
+          'safety-system': { code: 'safety-system' },
+        }
+        const cfg = map[formKey]
+        if (!cfg) throw new Error('unknown form')
+        const payload = get().getSupabasePayloadForForm(cfg.code)
+        if (payload) queueSubmissionSync(cfg.code, payload, '1.2.2')
+        await flushSupabaseQueues({ formCode: cfg.code })
+        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
+        get().resetFormDraft(formKey)
+      },
+
   // Build the full Supabase payload for a given autosave bucket (one submission per form)
   // Note: we intentionally send **all** captured data for the form (not a minimal subset).
   getSupabasePayloadForForm: (formCode) => {
@@ -278,7 +321,17 @@ export const useAppStore = create(
         get().triggerAutosave('inspection-general')
       },
 
-      // ============ MAINTENANCE DATA v1.1.4 ============
+      
+
+      resetInspectionData: () => set({
+        inspectionData: {
+          siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
+          items: {},
+          photos: {},
+        }
+      }),
+
+// ============ MAINTENANCE DATA v1.1.4 ============
       maintenanceData: getDefaultMaintenanceData(),
 
             // ============ EQUIPMENT INVENTORY (Formulario 3) ============
@@ -286,6 +339,8 @@ export const useAppStore = create(
 
       // ============ PM EXECUTED (Formulario 6) ============
       pmExecutedData: getDefaultPMExecutedData(),
+
+      resetPMExecutedData: () => set({ pmExecutedData: getDefaultPMExecutedData() }),
 
       updatePMExecutedField: (field, value) => {
         set((state) => ({

@@ -13,7 +13,7 @@ import { useAppStore } from '../hooks/useAppStore'
 export default function InspeccionSitio() {
   const navigate = useNavigate()
   const { step } = useParams()
-  const { inspectionData, showToast, formMeta } = useAppStore()
+  const { inspectionData, showToast, formMeta, resetFormDraft, finalizeForm } = useAppStore()
 
   const currentStepId = step || inspectionSections[0].id
   const currentStepIndex = inspectionSections.findIndex(s => s.id === currentStepId)
@@ -37,7 +37,7 @@ export default function InspeccionSitio() {
 
   const goToStep = (stepId) => navigate(`/inspeccion-sitio/${stepId}`)
   const goToPrev = () => currentStepIndex > 0 && goToStep(inspectionSections[currentStepIndex - 1].id)
-  const goToNext = () => {
+  const goToNext = async () => {
     // Validar campos requeridos antes de avanzar/finalizar
     if (currentSection.type === 'form') {
       const missing = []
@@ -61,7 +61,15 @@ export default function InspeccionSitio() {
     }
 
     if (currentStepIndex < inspectionSections.length - 1) goToStep(inspectionSections[currentStepIndex + 1].id)
-    else showToast('¡Inspección completada!', 'success')
+    else {
+      try {
+        await finalizeForm('inspeccion')
+        showToast('¡Inspección enviada y cerrada!', 'success')
+      } catch (e) {
+        showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
+        return
+      }
+    }
   }
 
   const steps = inspectionSections.map(s => ({ id: s.id, title: s.title }))
@@ -72,7 +80,20 @@ export default function InspeccionSitio() {
       <AppHeader title="Inspección de Sitio" subtitle={inspectionData.siteInfo.idSitio || 'Nuevo'} badge="En progreso" progress={progress} onMenuClick={() => showToast('Menú de opciones')} />
       <StepPills steps={steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={goToStep} />
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden">
-        <FormMetaBar meta={formMeta?.inspeccion} />
+        <div className="flex items-center justify-between gap-2">
+          <FormMetaBar meta={formMeta?.inspeccion} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95"
+            onClick={async () => {
+              if (confirm('Esto borrará los datos guardados de este formulario en este dispositivo. ¿Deseas reiniciar?')) {
+                resetFormDraft('inspeccion')
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
         <div className="mb-4">
           <div className="text-3xl mb-2">{currentSection.icon}</div>
           <h2 className="text-xl font-extrabold text-gray-900">{currentSection.title}</h2>
