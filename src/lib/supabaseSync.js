@@ -164,15 +164,18 @@ export async function flushSupabaseQueues({ formCode } = {}) {
         const publicUrl = await uploadToStorage(objectPath, blob);
 
         // Register in DB
+        // NOTE: submission_assets.path is NOT NULL in DB, so we must send it.
         const row = {
           submission_id: submissionId,
           asset_key: objectPath,
           asset_type: asset.assetType,
-          bucket: BUCKET,
+          bucket: BUCKET, // optional (has default) but OK to send
+          path: objectPath,
           public_url: publicUrl,
-          created_at: new Date().toISOString(),
+          // created_at has default now() in DB; avoid sending to prevent schema mismatch
         };
-        await supabase.from('submission_assets').insert(row);
+        const { error: assetErr } = await supabase.from('submission_assets').insert([row]);
+        if (assetErr) throw assetErr;
 
         // remove item on success
         const freshMap = loadMap(PENDING_ASSETS_KEY);
