@@ -163,7 +163,7 @@ export default function MantenimientoPreventivo() {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const stepCfg = currentStepData
     const missing = getMissingForStep(stepCfg)
 
@@ -184,7 +184,7 @@ export default function MantenimientoPreventivo() {
     }
   }
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     // Validar todo el formulario antes de finalizar
     const allMissing = []
     maintenanceFormConfig.steps.forEach(stepCfg => {

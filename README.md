@@ -1,4 +1,4 @@
-# PTI Inspect v1.1.5
+# PTI Inspect v1.1.6
 
 Sistema de Inspección de Torres - PWA Mobile
 

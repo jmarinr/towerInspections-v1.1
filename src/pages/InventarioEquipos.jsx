@@ -56,7 +56,7 @@ export default function InventarioEquipos() {
   }, [currentStepIndex])
 
   const goToStep = (id) => navigate(`/inventario-equipos/${id}`)
-  const goNext = () => {
+  const goNext = async () => {
     // Validación de requeridos (solo en Datos Generales)
     if (currentStep.type === 'form') {
       const si = equipmentInventoryData?.siteInfo || {}
