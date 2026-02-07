@@ -47,10 +47,16 @@ export default function MantenimientoPreventivo() {
       case 'time':
         return /^\d{2}:\d{2}$/.test(String(v))
       case 'photo':
-        return (
-          typeof v === 'string' &&
-          (v.startsWith('data:image') || v.startsWith('blob:') || v.startsWith('http'))
-        )
+        // Puede venir como string (dataUrl/blob/url) o como objeto (metadatos de subida a Supabase)
+        if (!v) return false
+        if (typeof v === 'string') {
+          const s = v.trim()
+          return s.startsWith('data:image') || s.startsWith('blob:') || s.startsWith('http')
+        }
+        if (typeof v === 'object') {
+          return Boolean(v.dataUrl || v.publicUrl || v.url || v.path || v.key || v.storageKey)
+        }
+        return false
       case 'select':
         return String(v).trim().length > 0
       default:
