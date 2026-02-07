@@ -95,7 +95,6 @@ export default function DynamicForm(props) {
       // block navigation or local autosave.
       if (formCode) {
         try {
-          // queueAssetUpload signature is (formCode, assetType, dataUrl)
           queueAssetUpload(formCode, fieldId, dataUrl)
         } catch (err) {
           // Silent: offline / storage not configured yet.
