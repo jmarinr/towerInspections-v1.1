@@ -231,18 +231,18 @@ export default function DistributionBuilder({
 
   // Nota: usamos Pointer Events para que el arrastre sea más sensible.
 
-  const rotate = (dir) => {
+  const rotate = async (dir) => {
     if (!selectedId) return
     setObjects(prev => prev.map(o => (o.id === selectedId ? { ...o, rot: (o.rot + (dir === 'cw' ? 15 : -15)) } : o)))
   }
 
-  const removeSelected = () => {
+  const removeSelected = async () => {
     if (!selectedId) return
     setObjects(prev => prev.filter(o => o.id !== selectedId))
     setSelectedId(null)
   }
 
-  const clearAll = () => {
+  const clearAll = async () => {
     setObjects([])
     setSelectedId(null)
   }
