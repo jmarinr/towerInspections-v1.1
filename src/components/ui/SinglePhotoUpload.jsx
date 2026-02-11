@@ -22,7 +22,7 @@ export default function SinglePhotoUpload({
     reader.readAsDataURL(file)
   }
 
-  const handleRemove = () => onChange?.('')
+  const handleRemove = () => onChange?.(null)
 
   return (
     <div className="mb-4">

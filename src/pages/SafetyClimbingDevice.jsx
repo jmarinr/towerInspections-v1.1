@@ -105,7 +105,7 @@ export default function SafetyClimbingDevice() {
                 <button
                   type="button"
                   className="w-full px-4 py-3 rounded-2xl bg-gray-900 text-white font-semibold shadow-sm active:scale-[0.99]"
-                  onClick={async () => {
+                  onClick={() => {
                     const fields = safetySectionFields[sectionId] || []
                     const data = safetyData?.[sectionId] || {}
                     const missing = fields

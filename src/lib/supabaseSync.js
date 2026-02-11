@@ -120,15 +120,26 @@ export function queueSubmissionSync(formCode, payload, formVersion = '1.2.1') {
 }
 
 export function queueAssetUpload(formCode, assetType, dataUrl) {
-  const map = loadMap(PENDING_ASSETS_KEY);
-  const list = map[formCode] || [];
-  // Replace if same assetType already pending (keeps latest)
-  const idx = list.findIndex((x) => x.assetType === assetType);
-  const item = { assetType, dataUrl, ts: Date.now() };
-  if (idx >= 0) list[idx] = item;
-  else list.push(item);
-  map[formCode] = list;
-  saveMap(PENDING_ASSETS_KEY, map);
+  if (!formCode || !assetType) return
+
+  const map = loadMap(PENDING_ASSETS_KEY)
+  const list = Array.isArray(map[formCode]) ? map[formCode] : []
+  const now = Date.now()
+
+  const isBlob = typeof Blob !== 'undefined' && dataUrl instanceof Blob
+  const isNonEmptyString = typeof dataUrl === 'string' && dataUrl.trim().length > 0
+  const action = (isBlob || isNonEmptyString) ? 'upload' : 'delete'
+
+  const item = action === 'upload'
+    ? { assetType, action, dataUrl, ts: now }
+    : { assetType, action, ts: now }
+
+  const idx = list.findIndex(a => a.assetType === assetType)
+  if (idx >= 0) list[idx] = item
+  else list.push(item)
+
+  map[formCode] = list
+  saveMap(PENDING_ASSETS_KEY, map)
 }
 
 function extFromMime(mime) {
@@ -200,46 +211,99 @@ export async function flushSupabaseQueues({ formCode } = {}) {
   }
 
   // 2) assets
-  const assetsMap = loadMap(PENDING_ASSETS_KEY);
-  const assetCodes = formCode ? [formCode] : Object.keys(assetsMap);
+  const assetsMap = loadMap(PENDING_ASSETS_KEY)
+  for (const [formCode, pendingAssetsRaw] of Object.entries(assetsMap)) {
+    const pendingAssets = Array.isArray(pendingAssetsRaw) ? pendingAssetsRaw : []
+    if (!pendingAssets.length) continue
 
-  for (const code of assetCodes) {
-    const list = assetsMap[code] || [];
-    if (!list.length) continue;
+    // Ensure we have a submission_id for this form so we can attach assets (or delete DB rows)
+    const submissionId = await ensureSubmissionId(formCode)
 
-    for (const asset of list) {
+    // Process items one-by-one so we can persist progress and retry cleanly
+    for (const asset of pendingAssets) {
+      const action = asset?.action || 'upload'
+
+      // DELETE: remove the DB record for this asset slot, keep Storage object (Option A)
+      if (action === 'delete' || !asset?.dataUrl) {
+        const { error: delErr } = await supabase
+          .from('submission_assets')
+          .delete()
+          .eq('submission_id', submissionId)
+          .eq('asset_type', asset.assetType)
+
+        if (delErr) {
+          console.warn('[Supabase] asset delete failed', formCode, asset?.assetType, delErr?.message || delErr)
+          break
+        }
+
+        // remove from queue
+        assetsMap[formCode] = (assetsMap[formCode] || []).filter(a => a.assetType !== asset.assetType)
+        saveMap(PENDING_ASSETS_KEY, assetsMap)
+        continue
+      }
+
+      // UPLOAD
       try {
-        const submissionId = await ensureSubmissionId(code);
-        const blob = await toBlobAny(asset.dataUrl);
-        const ext = extFromMime(blob.type);
-        const safeType = (asset.assetType || 'asset').replace(/[^a-zA-Z0-9-_./]/g, '_');
-        const objectPath = `${ORG_CODE}/${getDeviceId()}/${code}/${submissionId}/${safeType}.${ext}`;
-        const publicUrl = await uploadToStorage(objectPath, blob);
+        const blob = await toBlobAny(asset.dataUrl)
 
-        // Register in DB
+        const extFromMime = (blob.type || '').split('/')[1] || 'jpg'
+        const ext = String(extFromMime).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+        const safeType = String(asset.assetType).replace(/[^a-zA-Z0-9\-_.:]/g, '_')
+
+        const objectPath = `${ORG_CODE}/${getDeviceId()}/${formCode}/${submissionId}/${safeType}.${ext}`
+
+        const { error: upErr } = await supabase.storage
+          .from('pti-inspect')
+          .upload(objectPath, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
+
+        if (upErr) throw upErr
+
+        const { data: pub } = supabase.storage.from('pti-inspect').getPublicUrl(objectPath)
+        const publicUrl = pub?.publicUrl || null
+
         const row = {
           submission_id: submissionId,
           asset_key: objectPath,
           asset_type: asset.assetType,
-          bucket: BUCKET,
+          bucket: 'pti-inspect',
           path: objectPath,
           public_url: publicUrl,
-          // created_at is optional (DB default now())
-        };
+          mime: blob.type || null,
+          size_bytes: typeof blob.size === 'number' ? blob.size : null
+        }
 
-        const { error: assetDbErr } = await supabase
+        // Prefer UPDATE by slot first (works even if unique constraint is not on asset_key)
+        const { data: updRows, error: updErr } = await supabase
           .from('submission_assets')
-          .insert([row]);
+          .update(row)
+          .eq('submission_id', submissionId)
+          .eq('asset_type', asset.assetType)
+          .select('id')
 
-        if (assetDbErr) throw assetDbErr;
-// remove item on success
-        const freshMap = loadMap(PENDING_ASSETS_KEY);
-        const freshList = freshMap[code] || [];
-        freshMap[code] = freshList.filter((x) => x.assetType !== asset.assetType);
-        saveMap(PENDING_ASSETS_KEY, freshMap);
+        if (updErr) throw updErr
+
+        if (!updRows || updRows.length === 0) {
+          const { error: insErr } = await supabase
+            .from('submission_assets')
+            .insert([row])
+
+          if (insErr) {
+            // If a unique constraint fires (asset_key or otherwise), fall back to UPDATE by asset_key
+            const { error: upd2Err } = await supabase
+              .from('submission_assets')
+              .update(row)
+              .eq('asset_key', objectPath)
+
+            if (upd2Err) throw insErr
+          }
+        }
+
+        // remove from queue on success
+        assetsMap[formCode] = (assetsMap[formCode] || []).filter(a => a.assetType !== asset.assetType)
+        saveMap(PENDING_ASSETS_KEY, assetsMap)
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[Supabase] asset upload failed', code, asset?.assetType, e?.message || e);
+        console.warn('[Supabase] asset upload failed', formCode, asset?.assetType, e?.message || e)
+        break
       }
     }
   }
