@@ -173,6 +173,11 @@ const getDefaultPMExecutedData = () => ({
 export const useAppStore = create(
   persist(
     (set, get) => ({
+      // ============ SESSION / AUTH ============
+      session: null, // { username, name, role, roleLabel }
+      setSession: (user) => set({ session: user }),
+      logout: () => set({ session: null }),
+
       // ============ TOAST ============
       toast: { show: false, message: '', type: 'info' },
       _toastTimer: null,

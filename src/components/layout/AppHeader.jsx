@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, Info, LogOut, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { setAuthed } from '../auth/RequireAuth'
+import { useAppStore } from '../../hooks/useAppStore'
 
 export default function AppHeader({ title, subtitle, badge, progress, onMenuClick }) {
   const navigate = useNavigate()
+  const storeLogout = useAppStore((s) => s.logout)
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -22,7 +23,7 @@ export default function AppHeader({ title, subtitle, badge, progress, onMenuClic
   }, [open])
 
   const logout = () => {
-    setAuthed(false)
+    storeLogout()
     setOpen(false)
     navigate('/login', { replace: true })
   }
