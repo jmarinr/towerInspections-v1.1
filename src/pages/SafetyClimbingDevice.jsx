@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
 import DynamicForm from '../components/forms/DynamicForm'
-import useAppStore from '../hooks/useAppStore'
+import { useAppStore } from '../hooks/useAppStore'
 import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
 
 function isFilled(value) {
