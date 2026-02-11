@@ -241,22 +241,16 @@ export default function PreventiveMaintenanceExecuted() {
                             {siteType && applicable ? (
                               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <PhotoUpload
-                                  label="Antes"
-                                  description={`Evidencia: ${a.photoLabel}`}
-                                  required
-                                  value={before || ''}
                                   type="before"
+                                  photo={before || null}
                                   onCapture={(data) => updatePMExecutedPhoto(a.id, 'before', data)}
-                                  onRemove={() => updatePMExecutedPhoto(a.id, 'before', '')}
+                                  onRemove={() => updatePMExecutedPhoto(a.id, 'before', null)}
                                 />
                                 <PhotoUpload
-                                  label="Después"
-                                  description={`Evidencia: ${a.photoLabel}`}
-                                  required
-                                  value={after || ''}
                                   type="after"
+                                  photo={after || null}
                                   onCapture={(data) => updatePMExecutedPhoto(a.id, 'after', data)}
-                                  onRemove={() => updatePMExecutedPhoto(a.id, 'after', '')}
+                                  onRemove={() => updatePMExecutedPhoto(a.id, 'after', null)}
                                 />
                               </div>
                             ) : (

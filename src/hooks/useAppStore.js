@@ -430,12 +430,15 @@ export const useAppStore = create(
       },
 
       updatePMExecutedPhoto: (activityId, photoType, photoData) => {
+        // Normalize empty string to null (some callers use '' to delete)
+        const normalizedData = (photoData === '' || photoData == null) ? null : photoData
+
         // Guard against invalid photo data
-        if (photoData != null && !isDataUrlString(photoData)) {
+        if (normalizedData != null && !isDataUrlString(normalizedData)) {
           console.warn('[Photo] Captura inválida en PM ejecutado (no es Data URL).', {
             activityId,
             photoType,
-            receivedType: typeof photoData,
+            receivedType: typeof normalizedData,
           })
           return
         }
@@ -447,16 +450,16 @@ export const useAppStore = create(
               ...currentData,
               photos: {
                 ...(currentData.photos || {}),
-                [`${activityId}-${photoType}`]: photoData
+                [`${activityId}-${photoType}`]: normalizedData
               }
             }
           }
         })
 
         // Upload photo in background (best effort)
-        if (photoData) {
+        if (normalizedData) {
           try {
-            queueAssetUpload('executed-maintenance', `executed:${activityId}:${photoType}`, photoData)
+            queueAssetUpload('executed-maintenance', `executed:${activityId}:${photoType}`, normalizedData)
             flushSupabaseQueues({ formCode: 'executed-maintenance' })
           } catch (e) {}
         }
@@ -740,12 +743,15 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
 
       // Actualizar foto de checklist
       updateChecklistPhoto: (itemId, photoType, photoData) => {
+        // Normalize empty string to null (some callers use '' to delete)
+        const normalizedData = (photoData === '' || photoData == null) ? null : photoData
+
         // Guard against invalid photo data
-        if (photoData != null && !isDataUrlString(photoData)) {
+        if (normalizedData != null && !isDataUrlString(normalizedData)) {
           console.warn('[Photo] Captura inválida en checklist (no es Data URL).', {
             itemId,
             photoType,
-            receivedType: typeof photoData,
+            receivedType: typeof normalizedData,
           })
           return
         }
@@ -757,16 +763,16 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
               ...currentData,
               photos: {
                 ...(currentData.photos || {}),
-                [`${itemId}-${photoType}`]: photoData
+                [`${itemId}-${photoType}`]: normalizedData
               }
             }
           }
         })
 
         // Upload photo in background (best effort)
-        if (photoData) {
+        if (normalizedData) {
           try {
-            queueAssetUpload('preventive-maintenance', `maintenance:${itemId}:${photoType}`, photoData)
+            queueAssetUpload('preventive-maintenance', `maintenance:${itemId}:${photoType}`, normalizedData)
             flushSupabaseQueues({ formCode: 'preventive-maintenance' })
           } catch (e) {}
         }

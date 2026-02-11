@@ -1,7 +1,13 @@
 import { Camera, X } from 'lucide-react'
+import { isDisplayablePhoto } from '../../hooks/useAppStore'
 
-export default function PhotoUpload({ type, photo, onCapture, onRemove }) {
+export default function PhotoUpload({ type, photo, value, onCapture, onRemove }) {
   const isBefore = type === 'before'
+  // Accept both 'photo' and 'value' props for compatibility
+  const rawPhoto = photo || value || null
+  const displayablePhoto = isDisplayablePhoto(rawPhoto) ? rawPhoto : null
+  const hasUploadedPhoto = !!rawPhoto && !displayablePhoto // placeholder from localStorage
+
   const handleChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -21,12 +27,18 @@ export default function PhotoUpload({ type, photo, onCapture, onRemove }) {
   return (
     <div className="relative">
       <input id={id} type="file" accept="image/*" capture="environment" onChange={handleChange} className="hidden" />
-      {photo ? (
+      {displayablePhoto ? (
         <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-green-500">
-          <img src={photo} alt={type} className="w-full h-full object-cover" />
+          <img src={displayablePhoto} alt={type} className="w-full h-full object-cover" />
           <span className={`absolute top-2 left-2 px-2 py-1 rounded text-[9px] font-bold uppercase text-white ${isBefore ? 'bg-blue-500' : 'bg-green-500'}`}>{isBefore ? 'Antes' : 'Después'}</span>
           <button type="button" onClick={onRemove} className="absolute top-2 right-2 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white"><X size={14} /></button>
         </div>
+      ) : hasUploadedPhoto ? (
+        <label htmlFor={id} className={`aspect-[4/3] rounded-xl border-2 flex flex-col items-center justify-center gap-1 cursor-pointer ${isBefore ? 'border-blue-500 bg-blue-50' : 'border-green-500 bg-green-50'}`}>
+          <span className={`px-2 py-1 rounded text-[9px] font-bold uppercase text-white ${isBefore ? 'bg-blue-500' : 'bg-green-500'}`}>{isBefore ? 'Antes' : 'Después'}</span>
+          <span className="text-[10px] font-semibold text-gray-600">📷 Subida</span>
+          <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
+        </label>
       ) : (
         <label htmlFor={id} className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 cursor-pointer bg-white hover:border-primary transition-all">
           <span className={`px-2 py-1 rounded text-[9px] font-bold uppercase text-white ${isBefore ? 'bg-blue-500' : 'bg-green-500'}`}>{isBefore ? 'Antes' : 'Después'}</span>

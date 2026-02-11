@@ -129,7 +129,7 @@ export default function GroundingSystemTest() {
                       const isEmpty = String(v ?? "").trim().length === 0
                       if (isEmpty) return true
                       if (f.type === "number") return !Number.isFinite(Number(v))
-                      if (f.type === "photo") return !String(v).startsWith("data:image")
+                      if (f.type === "photo") return !(String(v).startsWith("data:image") || String(v).startsWith("blob:") || String(v).startsWith("http") || v === "__photo__")
                       if (f.type === "date") return !/^\d{4}-\d{2}-\d{2}$/.test(String(v))
                       if (f.type === "time") return !/^\d{2}:\d{2}$/.test(String(v))
                       return false

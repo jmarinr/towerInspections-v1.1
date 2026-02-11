@@ -1,6 +1,7 @@
 import { MapPin, Camera, X } from 'lucide-react'
 import { useState } from 'react'
 import { queueAssetUpload } from '../../lib/supabaseSync'
+import { isDisplayablePhoto } from '../../hooks/useAppStore'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
@@ -48,8 +49,8 @@ export default function DynamicForm(props) {
         return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
       }
       case 'photo':
-        // We accept local DataURLs, blob URLs, or remote URLs/keys.
-        return String(v).startsWith('data:image') || String(v).startsWith('blob:') || String(v).startsWith('http') || String(v).startsWith('/')
+        // We accept local DataURLs, blob URLs, remote URLs/keys, or the __photo__ placeholder
+        return String(v).startsWith('data:image') || String(v).startsWith('blob:') || String(v).startsWith('http') || String(v).startsWith('/') || v === '__photo__'
       case 'select':
         return String(v).trim().length > 0
       default:
@@ -274,6 +275,8 @@ export default function DynamicForm(props) {
         )
 
       case 'photo':
+        const photoDisplayable = isDisplayablePhoto(value)
+        const photoPlaceholder = !!value && !photoDisplayable
         return (
           <div>
             <input
@@ -284,7 +287,7 @@ export default function DynamicForm(props) {
               onChange={handlePhotoCapture(field.id)}
               className="hidden"
             />
-            {value ? (
+            {photoDisplayable ? (
               <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-500">
                 <img src={value} alt="Captura" className="w-full h-full object-cover" />
                 <button
@@ -295,6 +298,15 @@ export default function DynamicForm(props) {
                   <X size={16} />
                 </button>
               </div>
+            ) : photoPlaceholder ? (
+              <label
+                htmlFor={`photo-${field.id}`}
+                className="w-full aspect-video rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-2 cursor-pointer"
+              >
+                <Camera size={32} className="text-green-500" />
+                <span className="text-sm font-semibold text-green-700">📷 Foto subida</span>
+                <span className="text-xs text-green-500">Toque para reemplazar</span>
+              </label>
             ) : (
               <label
                 htmlFor={`photo-${field.id}`}

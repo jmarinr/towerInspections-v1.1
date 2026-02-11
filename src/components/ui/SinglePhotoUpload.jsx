@@ -1,4 +1,5 @@
 import { Camera, X } from 'lucide-react'
+import { isDisplayablePhoto } from '../../hooks/useAppStore'
 
 export default function SinglePhotoUpload({
   id,
@@ -8,7 +9,9 @@ export default function SinglePhotoUpload({
   required = false,
   helpText = '',
 }) {
-  const hasPhoto = !!value
+  const rawValue = value || null
+  const displayablePhoto = isDisplayablePhoto(rawValue) ? rawValue : null
+  const hasUploadedPhoto = !!rawValue && !displayablePhoto
 
   const handleCapture = (e) => {
     const file = e.target.files?.[0]
@@ -43,9 +46,9 @@ export default function SinglePhotoUpload({
         className="hidden"
       />
 
-      {hasPhoto ? (
+      {displayablePhoto ? (
         <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
-          <img src={value} alt={label} className="w-full h-48 object-cover" />
+          <img src={displayablePhoto} alt={label} className="w-full h-48 object-cover" />
           <button
             type="button"
             onClick={handleRemove}
@@ -58,6 +61,19 @@ export default function SinglePhotoUpload({
             <p className="text-xs font-semibold text-emerald-600">✓ Foto cargada</p>
           </div>
         </div>
+      ) : hasUploadedPhoto ? (
+        <label
+          htmlFor={id}
+          className="w-full rounded-2xl border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center gap-2 py-8 cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+            <Camera size={22} className="text-emerald-500" />
+          </div>
+          <div className="text-center px-4">
+            <p className="text-sm font-bold text-emerald-700">📷 Foto subida</p>
+            <p className="text-xs text-emerald-500 mt-1">Toque para reemplazar</p>
+          </div>
+        </label>
       ) : (
         <label
           htmlFor={id}

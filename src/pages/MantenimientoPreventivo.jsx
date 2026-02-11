@@ -45,11 +45,11 @@ export default function MantenimientoPreventivo() {
       case 'time':
         return /^\d{2}:\d{2}$/.test(String(v))
       case 'photo':
-        // Puede venir como string (dataUrl/blob/url) o como objeto (metadatos de subida a Supabase)
+        // Puede venir como string (dataUrl/blob/url/placeholder) o como objeto (metadatos de subida a Supabase)
         if (!v) return false
         if (typeof v === 'string') {
           const s = v.trim()
-          return s.startsWith('data:image') || s.startsWith('blob:') || s.startsWith('http')
+          return s.startsWith('data:image') || s.startsWith('blob:') || s.startsWith('http') || s === '__photo__'
         }
         if (typeof v === 'object') {
           return Boolean(v.dataUrl || v.publicUrl || v.url || v.path || v.key || v.storageKey)
@@ -185,7 +185,7 @@ export default function MantenimientoPreventivo() {
       }
     } catch (e) {
       console.error('[MantenimientoPreventivo] handleNext error:', e)
-      showToast(`Error: ${e?.message || 'desconocido'}`, 'error')
+      showToast('Error al avanzar. Intente de nuevo.', 'error')
     }
   }
 
