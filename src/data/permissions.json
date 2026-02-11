@@ -17,7 +17,6 @@
       "forms": [
         "mantenimiento",
         "mantenimiento-ejecutado",
-        "equipment",
         "sistema-ascenso",
         "grounding-system-test"
       ]
