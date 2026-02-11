@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { isDisplayablePhoto } from '../../hooks/useAppStore'
 
 export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {} }) {
   const [expandedItems, setExpandedItems] = useState({})
@@ -37,16 +38,22 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
 
   const getItemStatus = (itemId) => {
     const data = checklistData[itemId] || {}
-    const beforePhoto = photos[`${itemId}-before`]
-    const afterPhoto = photos[`${itemId}-after`]
+    const beforeRaw = photos[`${itemId}-before`]
+    const afterRaw = photos[`${itemId}-after`]
+    // A photo "exists" (for progress) if it has any truthy value (including placeholder)
+    const hasBeforeValue = !!beforeRaw
+    const hasAfterValue = !!afterRaw
+    // But only displayable photos can be rendered as <img>
+    const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw : null
+    const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw : null
     
     const hasStatus = !!data.status
     const isNA = data.status === 'na'
-    const hasBothPhotos = beforePhoto && afterPhoto
+    const hasBothPhotos = hasBeforeValue && hasAfterValue
     const isComplete = hasStatus && (isNA || hasBothPhotos)
     const needsPhotos = hasStatus && !isNA && !hasBothPhotos
 
-    return { hasStatus, isNA, hasBothPhotos, isComplete, needsPhotos, beforePhoto, afterPhoto }
+    return { hasStatus, isNA, hasBothPhotos, isComplete, needsPhotos, beforePhoto, afterPhoto, hasBeforeValue, hasAfterValue }
   }
 
   const completedCount = visibleItems.filter(item => getItemStatus(item.id).isComplete).length
@@ -217,6 +224,15 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                               <X size={10} />
                             </button>
                           </div>
+                        ) : status.hasBeforeValue ? (
+                          <label
+                            htmlFor={`photo-before-${item.id}`}
+                            className="aspect-[4/3] rounded-xl border-2 border-blue-500 bg-blue-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-blue-500">Antes</span>
+                            <span className="text-[10px] text-blue-600 font-semibold">📷 Subida</span>
+                            <span className="text-[9px] text-blue-400">Toque para reemplazar</span>
+                          </label>
                         ) : (
                           <label
                             htmlFor={`photo-before-${item.id}`}
@@ -254,6 +270,15 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                               <X size={10} />
                             </button>
                           </div>
+                        ) : status.hasAfterValue ? (
+                          <label
+                            htmlFor={`photo-after-${item.id}`}
+                            className="aspect-[4/3] rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-green-500">Después</span>
+                            <span className="text-[10px] text-green-600 font-semibold">📷 Subida</span>
+                            <span className="text-[9px] text-green-400">Toque para reemplazar</span>
+                          </label>
                         ) : (
                           <label
                             htmlFor={`photo-after-${item.id}`}

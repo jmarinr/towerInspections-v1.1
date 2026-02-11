@@ -1,7 +1,7 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { queueSubmissionSync, queueAssetUpload, flushSupabaseQueues, clearSupabaseLocalForForm } from '../lib/supabaseSync'
 import { getDeviceId } from '../lib/deviceId'
-import { persist } from 'zustand/middleware'
 
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
@@ -11,6 +11,41 @@ const APP_VERSION_DISPLAY = '1.8'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
+
+// ---- Helpers to strip large data URLs before persisting to localStorage ----
+// Photos are already synced to Supabase Storage, so we only keep a small marker
+// in localStorage to remember that a photo exists (without the heavy base64 payload).
+const PHOTO_PLACEHOLDER = '__photo__'
+
+function stripSingle(val) {
+  if (typeof val === 'string' && val.startsWith('data:')) return PHOTO_PLACEHOLDER
+  return val
+}
+
+function stripDataUrls(obj) {
+  if (!obj || typeof obj !== 'object') return obj
+  const out = {}
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = stripSingle(v)
+  }
+  return out
+}
+
+function stripDataUrlFields(obj) {
+  if (!obj || typeof obj !== 'object') return obj
+  const out = {}
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = (typeof v === 'string' && v.startsWith('data:')) ? PHOTO_PLACEHOLDER : v
+  }
+  return out
+}
+
+/** Returns true if the value is a renderable image source (data URL, blob URL, or http URL) */
+export function isDisplayablePhoto(val) {
+  if (!val || typeof val !== 'string') return false
+  if (val === PHOTO_PLACEHOLDER) return false
+  return val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http')
+}
 
 // Datos por defecto para mantenimiento v1.1.4
 const getDefaultMaintenanceData = () => ({
@@ -140,9 +175,22 @@ export const useAppStore = create(
     (set, get) => ({
       // ============ TOAST ============
       toast: { show: false, message: '', type: 'info' },
+      _toastTimer: null,
       showToast: (message, type = 'info') => {
+        // Clear any existing timer to prevent race conditions
+        const prev = get()._toastTimer
+        if (prev) clearTimeout(prev)
+
         set({ toast: { show: true, message, type } })
-        setTimeout(() => set({ toast: { show: false, message: '', type: 'info' } }), 2500)
+        const timer = setTimeout(() => {
+          try {
+            set({ toast: { show: false, message: '', type: 'info' }, _toastTimer: null })
+          } catch (_) {
+            // If set() fails (e.g. persist/localStorage error), force-hide via DOM
+          }
+        }, 3000)
+        // Store timer id (best effort, don't let this fail)
+        try { set({ _toastTimer: timer }) } catch (_) {}
       },
       hideToast: () => set({ toast: { show: false, message: '', type: 'info' } }),
 
@@ -776,6 +824,75 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
     { 
       name: 'pti-inspect-storage',
       version: 5, // v1.1.9+: normalizar tipos (steps numéricos)
+      // Safe localStorage wrapper: silently ignores QuotaExceededError so set() never throws
+      storage: createJSONStorage(() => ({
+        getItem: (name) => {
+          try { return localStorage.getItem(name) } catch (_) { return null }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, value)
+          } catch (e) {
+            console.warn('[Persist] localStorage.setItem failed (quota?)', e?.name)
+          }
+        },
+        removeItem: (name) => {
+          try { localStorage.removeItem(name) } catch (_) {}
+        },
+      })),
+      // Exclude large binary data (photos as data URLs) from localStorage.
+      // Photos are uploaded to Supabase Storage via queueAssetUpload and don't
+      // need to survive a page reload from localStorage.
+      partialize: (state) => {
+        // Strip data URL photos from inspectionData
+        const inspectionData = state.inspectionData ? {
+          ...state.inspectionData,
+          photos: stripDataUrls(state.inspectionData.photos),
+        } : state.inspectionData
+
+        // Strip data URL photos from maintenanceData
+        const maintenanceData = state.maintenanceData ? {
+          ...state.maintenanceData,
+          photos: stripDataUrls(state.maintenanceData.photos),
+          formData: state.maintenanceData.formData ? stripDataUrlFields(state.maintenanceData.formData) : state.maintenanceData.formData,
+        } : state.maintenanceData
+
+        // Strip data URL photos from pmExecutedData
+        const pmExecutedData = state.pmExecutedData ? {
+          ...state.pmExecutedData,
+          photos: stripDataUrls(state.pmExecutedData.photos),
+        } : state.pmExecutedData
+
+        // Strip large binary data from equipmentInventoryData
+        const equipmentInventoryData = state.equipmentInventoryData ? {
+          ...state.equipmentInventoryData,
+          distribucionTorre: state.equipmentInventoryData.distribucionTorre ? {
+            ...state.equipmentInventoryData.distribucionTorre,
+            pngDataUrl: stripSingle(state.equipmentInventoryData.distribucionTorre.pngDataUrl),
+            fotoTorreDataUrl: stripSingle(state.equipmentInventoryData.distribucionTorre.fotoTorreDataUrl),
+          } : state.equipmentInventoryData.distribucionTorre,
+          croquisEsquematico: state.equipmentInventoryData.croquisEsquematico ? {
+            ...state.equipmentInventoryData.croquisEsquematico,
+            pngDataUrl: stripSingle(state.equipmentInventoryData.croquisEsquematico.pngDataUrl),
+          } : state.equipmentInventoryData.croquisEsquematico,
+          planoPlanta: state.equipmentInventoryData.planoPlanta ? {
+            ...state.equipmentInventoryData.planoPlanta,
+            pngDataUrl: stripSingle(state.equipmentInventoryData.planoPlanta.pngDataUrl),
+          } : state.equipmentInventoryData.planoPlanta,
+        } : state.equipmentInventoryData
+
+        return {
+          ...state,
+          inspectionData,
+          maintenanceData,
+          pmExecutedData,
+          equipmentInventoryData,
+          // Never persist transient UI state
+          toast: undefined,
+          _toastTimer: undefined,
+          showAutosave: undefined,
+        }
+      },
       migrate: (persistedState, version) => {
         // Migraciones simples para mantener compatibilidad
         let state = { ...persistedState }

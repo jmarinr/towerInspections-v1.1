@@ -185,7 +185,7 @@ export default function MantenimientoPreventivo() {
       }
     } catch (e) {
       console.error('[MantenimientoPreventivo] handleNext error:', e)
-      showToast('Error al avanzar. Intente de nuevo.', 'error')
+      showToast(`Error: ${e?.message || 'desconocido'}`, 'error')
     }
   }
 
