@@ -917,6 +917,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
         state = { ...state, groundingSystemData: state.groundingSystemData || {} }
         state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
+        state = { ...state, safetyClimbingStep: state.safetyClimbingStep || 1 }
 
         // Normalizar maintenanceData.currentStep a número (algunas versiones antiguas lo guardaban como string)
         const md = state.maintenanceData || getDefaultMaintenanceData()

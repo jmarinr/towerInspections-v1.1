@@ -73,9 +73,7 @@ function App() {
           <Route path="/inventario-equipos/:step" element={<InventarioEquipos />} />
 
           <Route path="/safety-climbing-device" element={<SafetyClimbingDevice />} />
-          <Route path="/safety-climbing-device/:sectionId" element={<SafetyClimbingDevice />} />
           <Route path="/sistema-ascenso" element={<SafetyClimbingDevice />} />
-          <Route path="/sistema-ascenso/:sectionId" element={<SafetyClimbingDevice />} />
 
           <Route path="/grounding-system-test" element={<GroundingSystemTest />} />
           <Route path="/grounding-system-test/:sectionId" element={<GroundingSystemTest />} />
