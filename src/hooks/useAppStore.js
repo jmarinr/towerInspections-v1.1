@@ -742,21 +742,16 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         set((state) => {
           const currentData = state.maintenanceData || getDefaultMaintenanceData()
           const completed = currentData.completedSteps || []
-          if (!completed.includes(stepId)) {
-            return {
-              maintenanceData: {
-                ...currentData,
-                completedSteps: [...completed, stepId]
-              }
+          if (completed.includes(stepId)) {
+            // Already completed – no-op
+            return {}
+          }
+          return {
+            maintenanceData: {
+              ...currentData,
+              completedSteps: [...completed, stepId]
             }
           }
-  
-        // v4: asegurar nuevos estados
-        state = { ...state, formMeta: state.formMeta || {} }
-        state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
-        state = { ...state, groundingSystemData: state.groundingSystemData || {} }
-        state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
-        return state
         })
       },
 

@@ -164,23 +164,28 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleNext = async () => {
-    const stepCfg = currentStepData
-    const missing = getMissingForStep(stepCfg)
+    try {
+      const stepCfg = currentStepData
+      const missing = getMissingForStep(stepCfg)
 
-    if (missing.length) {
-      const preview = missing.slice(0, 8).join(', ')
-      const suffix = missing.length > 8 ? ` (+${missing.length - 8})` : ''
-      showToast(`Pendientes para continuar: ${preview}${suffix}`, 'error')
-      return
-    }
+      if (missing.length) {
+        const preview = missing.slice(0, 8).join(', ')
+        const suffix = missing.length > 8 ? ` (+${missing.length - 8})` : ''
+        showToast(`Pendientes para continuar: ${preview}${suffix}`, 'error')
+        return
+      }
 
-    // Marcar step actual como completado
-    completeMaintenanceStep(currentStep)
+      // Marcar step actual como completado
+      completeMaintenanceStep(currentStep)
 
-    if (currentStep < totalSteps) {
-      setMaintenanceStep(currentStep + 1)
-    } else {
-      handleFinish()
+      if (currentStep < totalSteps) {
+        setMaintenanceStep(currentStep + 1)
+      } else {
+        handleFinish()
+      }
+    } catch (e) {
+      console.error('[MantenimientoPreventivo] handleNext error:', e)
+      showToast('Error al avanzar. Intente de nuevo.', 'error')
     }
   }
 
