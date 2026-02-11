@@ -382,13 +382,23 @@ export const useAppStore = create(
       },
 
       updatePMExecutedPhoto: (activityId, photoType, photoData) => {
+        // Guard against invalid photo data
+        if (photoData != null && !isDataUrlString(photoData)) {
+          console.warn('[Photo] Captura inválida en PM ejecutado (no es Data URL).', {
+            activityId,
+            photoType,
+            receivedType: typeof photoData,
+          })
+          return
+        }
+
         set((state) => {
           const currentData = state.pmExecutedData || getDefaultPMExecutedData()
           return {
             pmExecutedData: {
               ...currentData,
-              checklistPhotos: {
-                ...(currentData.checklistPhotos || {}),
+              photos: {
+                ...(currentData.photos || {}),
                 [`${activityId}-${photoType}`]: photoData
               }
             }
@@ -396,10 +406,12 @@ export const useAppStore = create(
         })
 
         // Upload photo in background (best effort)
-        try {
-          queueAssetUpload('executed-maintenance', `executed:${activityId}:${photoType}`, photoData)
-          flushSupabaseQueues({ formCode: 'executed-maintenance' })
-        } catch (e) {}
+        if (photoData) {
+          try {
+            queueAssetUpload('executed-maintenance', `executed:${activityId}:${photoType}`, photoData)
+            flushSupabaseQueues({ formCode: 'executed-maintenance' })
+          } catch (e) {}
+        }
 
         get().triggerAutosave('executed-maintenance')
       },
@@ -680,13 +692,23 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
 
       // Actualizar foto de checklist
       updateChecklistPhoto: (itemId, photoType, photoData) => {
+        // Guard against invalid photo data
+        if (photoData != null && !isDataUrlString(photoData)) {
+          console.warn('[Photo] Captura inválida en checklist (no es Data URL).', {
+            itemId,
+            photoType,
+            receivedType: typeof photoData,
+          })
+          return
+        }
+
         set((state) => {
           const currentData = state.maintenanceData || getDefaultMaintenanceData()
           return {
             maintenanceData: {
               ...currentData,
-              checklistPhotos: {
-                ...(currentData.checklistPhotos || {}),
+              photos: {
+                ...(currentData.photos || {}),
                 [`${itemId}-${photoType}`]: photoData
               }
             }
@@ -694,10 +716,12 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         })
 
         // Upload photo in background (best effort)
-        try {
-          queueAssetUpload('preventive-maintenance', `maintenance:${itemId}:${photoType}`, photoData)
-          flushSupabaseQueues({ formCode: 'preventive-maintenance' })
-        } catch (e) {}
+        if (photoData) {
+          try {
+            queueAssetUpload('preventive-maintenance', `maintenance:${itemId}:${photoType}`, photoData)
+            flushSupabaseQueues({ formCode: 'preventive-maintenance' })
+          } catch (e) {}
+        }
 
         get().triggerAutosave('preventive-maintenance')
       },

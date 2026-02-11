@@ -32,6 +32,9 @@ const SUBMISSION_IDS_KEY = 'pti_submission_ids_v1';
 const PENDING_SYNC_KEY = 'pti_pending_sync_v1';
 const PENDING_ASSETS_KEY = 'pti_pending_assets_v1';
 
+// Concurrency guard – prevents overlapping flushSupabaseQueues calls
+let _flushing = false;
+
 function safeJsonParse(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
@@ -91,9 +94,6 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
     form_version: formVersion,
     app_version: getAppVersion(),
     payload: {},
-    // `last_saved_at` column is not guaranteed to exist in every demo DB.
-    // We keep the timestamp inside the JSON payload instead of relying on a
-    // dedicated column (avoids PostgREST 400 errors when the column is missing).
   };
 
   const { data, error } = await supabase
@@ -175,151 +175,175 @@ async function uploadToStorage(path, blob) {
   return data?.publicUrl || null;
 }
 
+/**
+ * Upsert a row in submission_assets.
+ * Strategy: DELETE any existing rows for the same (submission_id, asset_type),
+ * then INSERT the new row. This avoids 409 Conflict errors regardless of which
+ * unique constraints exist on the table (asset_key, submission_id+asset_type, etc.).
+ */
+async function upsertSubmissionAsset(row) {
+  // 1) Delete any existing rows for this slot
+  try {
+    await supabase
+      .from('submission_assets')
+      .delete()
+      .eq('submission_id', row.submission_id)
+      .eq('asset_type', row.asset_type)
+  } catch (_) {
+    // Ignore delete errors – row may not exist yet
+  }
+
+  // Also delete by asset_key in case asset_type changed but path is the same
+  if (row.asset_key) {
+    try {
+      await supabase
+        .from('submission_assets')
+        .delete()
+        .eq('asset_key', row.asset_key)
+    } catch (_) {}
+  }
+
+  // 2) INSERT the new row (should always succeed now)
+  const { error: insErr } = await supabase
+    .from('submission_assets')
+    .insert([row])
+
+  if (insErr) throw insErr
+}
+
 export async function flushSupabaseQueues({ formCode } = {}) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
 
-  // 1) submissions
-  const pending = loadMap(PENDING_SYNC_KEY);
-  const codes = formCode ? [formCode] : Object.keys(pending);
+  // Concurrency guard – if already flushing, skip this call
+  if (_flushing) return;
+  _flushing = true;
 
-  for (const code of codes) {
-    const item = pending[code];
-    if (!item) continue;
+  try {
+    // 1) submissions
+    const pending = loadMap(PENDING_SYNC_KEY);
+    const codes = formCode ? [formCode] : Object.keys(pending);
 
-    try {
-      await ensureSubmissionId(code, item.formVersion);
+    for (const code of codes) {
+      const item = pending[code];
+      if (!item) continue;
 
-      const deviceId = getDeviceId();
-      const row = {
-        org_code: ORG_CODE,
-        device_id: deviceId,
-        form_code: code,
-        form_version: item.formVersion,
-        app_version: getAppVersion(),
-        // We store the save timestamp inside the JSON payload to avoid
-        // requiring an additional SQL column in the demo DB.
-        payload: {
-          ...item.payload,
-          _meta: {
-            ...(item.payload?._meta || {}),
-            last_saved_at: new Date().toISOString(),
+      try {
+        await ensureSubmissionId(code, item.formVersion);
+
+        const deviceId = getDeviceId();
+        const row = {
+          org_code: ORG_CODE,
+          device_id: deviceId,
+          form_code: code,
+          form_version: item.formVersion,
+          app_version: getAppVersion(),
+          payload: {
+            ...item.payload,
+            _meta: {
+              ...(item.payload?._meta || {}),
+              last_saved_at: new Date().toISOString(),
+            },
           },
-        },
-      };
+        };
 
-      const { error } = await supabase
-        .from('submissions')
-        .upsert(row, { onConflict: 'org_code,device_id,form_code' });
+        const { error } = await supabase
+          .from('submissions')
+          .upsert(row, { onConflict: 'org_code,device_id,form_code' });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // remove from queue only if success
-      const fresh = loadMap(PENDING_SYNC_KEY);
-      delete fresh[code];
-      saveMap(PENDING_SYNC_KEY, fresh);
-    } catch (e) {
-      // keep queued
-      // eslint-disable-next-line no-console
-      console.warn('[Supabase] submission sync failed', code, e?.message || e);
+        // remove from queue only if success
+        const fresh = loadMap(PENDING_SYNC_KEY);
+        delete fresh[code];
+        saveMap(PENDING_SYNC_KEY, fresh);
+      } catch (e) {
+        console.warn('[Supabase] submission sync failed', code, e?.message || e);
+      }
     }
-  }
 
-  // 2) assets
-  const assetsMap = loadMap(PENDING_ASSETS_KEY)
-  for (const [formCode, pendingAssetsRaw] of Object.entries(assetsMap)) {
-    const pendingAssets = Array.isArray(pendingAssetsRaw) ? pendingAssetsRaw : []
-    if (!pendingAssets.length) continue
+    // 2) assets
+    const assetsMap = loadMap(PENDING_ASSETS_KEY)
+    const assetFormCodes = formCode ? [formCode] : Object.keys(assetsMap)
 
-    // Ensure we have a submission_id for this form so we can attach assets (or delete DB rows)
-    const submissionId = await ensureSubmissionId(formCode)
+    for (const fc of assetFormCodes) {
+      const pendingAssetsRaw = assetsMap[fc]
+      const pendingAssets = Array.isArray(pendingAssetsRaw) ? pendingAssetsRaw : []
+      if (!pendingAssets.length) continue
 
-    // Process items one-by-one so we can persist progress and retry cleanly
-    for (const asset of pendingAssets) {
-      const action = asset?.action || 'upload'
-
-      // DELETE: remove the DB record for this asset slot, keep Storage object (Option A)
-      if (action === 'delete' || !asset?.dataUrl) {
-        const { error: delErr } = await supabase
-          .from('submission_assets')
-          .delete()
-          .eq('submission_id', submissionId)
-          .eq('asset_type', asset.assetType)
-
-        if (delErr) {
-          console.warn('[Supabase] asset delete failed', formCode, asset?.assetType, delErr?.message || delErr)
-          break
-        }
-
-        // remove from queue
-        assetsMap[formCode] = (assetsMap[formCode] || []).filter(a => a.assetType !== asset.assetType)
-        saveMap(PENDING_ASSETS_KEY, assetsMap)
+      let submissionId
+      try {
+        submissionId = await ensureSubmissionId(fc)
+      } catch (e) {
+        console.warn('[Supabase] ensureSubmissionId failed for assets', fc, e?.message || e)
         continue
       }
 
-      // UPLOAD
-      try {
-        const blob = await toBlobAny(asset.dataUrl)
+      // Process items one-by-one so we can persist progress and retry cleanly
+      for (const asset of pendingAssets) {
+        const action = asset?.action || 'upload'
 
-        const extFromMime = (blob.type || '').split('/')[1] || 'jpg'
-        const ext = String(extFromMime).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-        const safeType = String(asset.assetType).replace(/[^a-zA-Z0-9\-_.:]/g, '_')
-
-        const objectPath = `${ORG_CODE}/${getDeviceId()}/${formCode}/${submissionId}/${safeType}.${ext}`
-
-        const { error: upErr } = await supabase.storage
-          .from('pti-inspect')
-          .upload(objectPath, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
-
-        if (upErr) throw upErr
-
-        const { data: pub } = supabase.storage.from('pti-inspect').getPublicUrl(objectPath)
-        const publicUrl = pub?.publicUrl || null
-
-        const row = {
-          submission_id: submissionId,
-          asset_key: objectPath,
-          asset_type: asset.assetType,
-          bucket: 'pti-inspect',
-          path: objectPath,
-          public_url: publicUrl,
-          mime: blob.type || null,
-          size_bytes: typeof blob.size === 'number' ? blob.size : null
-        }
-
-        // Prefer UPDATE by slot first (works even if unique constraint is not on asset_key)
-        const { data: updRows, error: updErr } = await supabase
-          .from('submission_assets')
-          .update(row)
-          .eq('submission_id', submissionId)
-          .eq('asset_type', asset.assetType)
-          .select('id')
-
-        if (updErr) throw updErr
-
-        if (!updRows || updRows.length === 0) {
-          const { error: insErr } = await supabase
-            .from('submission_assets')
-            .insert([row])
-
-          if (insErr) {
-            // If a unique constraint fires (asset_key or otherwise), fall back to UPDATE by asset_key
-            const { error: upd2Err } = await supabase
+        // DELETE: remove the DB record for this asset slot
+        if (action === 'delete' || !asset?.dataUrl) {
+          try {
+            await supabase
               .from('submission_assets')
-              .update(row)
-              .eq('asset_key', objectPath)
+              .delete()
+              .eq('submission_id', submissionId)
+              .eq('asset_type', asset.assetType)
+          } catch (_) {}
 
-            if (upd2Err) throw insErr
-          }
+          // remove from queue
+          assetsMap[fc] = (assetsMap[fc] || []).filter(a => a.assetType !== asset.assetType)
+          saveMap(PENDING_ASSETS_KEY, assetsMap)
+          continue
         }
 
-        // remove from queue on success
-        assetsMap[formCode] = (assetsMap[formCode] || []).filter(a => a.assetType !== asset.assetType)
-        saveMap(PENDING_ASSETS_KEY, assetsMap)
-      } catch (e) {
-        console.warn('[Supabase] asset upload failed', formCode, asset?.assetType, e?.message || e)
-        break
+        // UPLOAD
+        try {
+          const blob = await toBlobAny(asset.dataUrl)
+
+          const mimeExt = (blob.type || '').split('/')[1] || 'jpg'
+          const ext = String(mimeExt).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+          const safeType = String(asset.assetType).replace(/[^a-zA-Z0-9\-_.:]/g, '_')
+
+          const objectPath = `${ORG_CODE}/${getDeviceId()}/${fc}/${submissionId}/${safeType}.${ext}`
+
+          // Upload to Storage (upsert: true replaces existing file)
+          const { error: upErr } = await supabase.storage
+            .from('pti-inspect')
+            .upload(objectPath, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
+
+          if (upErr) throw upErr
+
+          const { data: pub } = supabase.storage.from('pti-inspect').getPublicUrl(objectPath)
+          const publicUrl = pub?.publicUrl || null
+
+          const row = {
+            submission_id: submissionId,
+            asset_key: objectPath,
+            asset_type: asset.assetType,
+            bucket: 'pti-inspect',
+            path: objectPath,
+            public_url: publicUrl,
+            mime: blob.type || null,
+            size_bytes: typeof blob.size === 'number' ? blob.size : null
+          }
+
+          // Use the safe upsert (DELETE + INSERT) to avoid 409 Conflict
+          await upsertSubmissionAsset(row)
+
+          // remove from queue on success
+          assetsMap[fc] = (assetsMap[fc] || []).filter(a => a.assetType !== asset.assetType)
+          saveMap(PENDING_ASSETS_KEY, assetsMap)
+        } catch (e) {
+          console.warn('[Supabase] asset upload failed', fc, asset?.assetType, e?.message || e)
+          // Continue with next asset instead of breaking the whole loop
+          continue
+        }
       }
     }
+  } finally {
+    _flushing = false;
   }
 }
 

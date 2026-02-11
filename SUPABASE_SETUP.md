@@ -41,6 +41,31 @@ create table if not exists public.submission_assets (
 );
 
 create index if not exists idx_submission_assets_submission on public.submission_assets(submission_id);
+
+-- Optional unique constraint on (submission_id, asset_type) to prevent duplicates.
+-- The app code uses DELETE+INSERT instead of upsert, so this is a safety net.
+do $$ begin
+  alter table public.submission_assets
+    add constraint submission_assets_unique_slot unique (submission_id, asset_type);
+exception when duplicate_object then null; end $$;
+```
+
+### Migration: fix duplicate rows (run if you already have data)
+
+If your `submission_assets` table already has duplicate `(submission_id, asset_type)` rows
+from the 409 bug, run this to clean them up before adding the unique constraint:
+
+```sql
+-- Remove duplicate submission_assets rows keeping only the most recent
+DELETE FROM public.submission_assets a
+USING public.submission_assets b
+WHERE a.submission_id = b.submission_id
+  AND a.asset_type = b.asset_type
+  AND a.created_at < b.created_at;
+
+-- Now add the constraint
+ALTER TABLE public.submission_assets
+  ADD CONSTRAINT submission_assets_unique_slot UNIQUE (submission_id, asset_type);
 ```
 
 ## 2) Storage bucket
