@@ -916,6 +916,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         state = { ...state, formMeta: state.formMeta || {} }
         state = { ...state, pmExecutedData: state.pmExecutedData || getDefaultPMExecutedData() }
         state = { ...state, groundingSystemData: state.groundingSystemData || {} }
+        state = { ...state, groundingStep: state.groundingStep || 1 }
         state = { ...state, safetyClimbingData: state.safetyClimbingData || {} }
         state = { ...state, safetyClimbingStep: state.safetyClimbingStep || 1 }
 

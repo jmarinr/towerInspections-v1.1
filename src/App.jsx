@@ -76,7 +76,6 @@ function App() {
           <Route path="/sistema-ascenso" element={<SafetyClimbingDevice />} />
 
           <Route path="/grounding-system-test" element={<GroundingSystemTest />} />
-          <Route path="/grounding-system-test/:sectionId" element={<GroundingSystemTest />} />
 
           {/* Fallback para evitar pantalla en blanco en rutas no registradas */}
           <Route path="*" element={<NotFound />} />
