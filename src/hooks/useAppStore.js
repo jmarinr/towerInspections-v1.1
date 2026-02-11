@@ -6,6 +6,12 @@ import { persist } from 'zustand/middleware'
 const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
+// Versión mostrada en UI y enviada como metadata a Supabase
+const APP_VERSION_DISPLAY = '1.8'
+
+const isDataUrlString = (value) =>
+  typeof value === 'string' && value.startsWith('data:')
+
 // Datos por defecto para mantenimiento v1.1.4
 const getDefaultMaintenanceData = () => ({
   currentStep: 1,
@@ -151,7 +157,7 @@ export const useAppStore = create(
           if (formCode) {
             const payload = get().getSupabasePayloadForForm(formCode)
             if (payload) {
-              queueSubmissionSync(formCode, payload, '1.2.1')
+              queueSubmissionSync(formCode, payload, APP_VERSION_DISPLAY)
               flushSupabaseQueues({ formCode })
             }
           }
@@ -205,7 +211,7 @@ export const useAppStore = create(
         const cfg = map[formKey]
         if (!cfg) throw new Error('unknown form')
         const payload = get().getSupabasePayloadForForm(cfg.code)
-        if (payload) queueSubmissionSync(cfg.code, payload, '1.2.2')
+        if (payload) queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
         await flushSupabaseQueues({ formCode: cfg.code })
         try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
         get().resetFormDraft(formKey)
@@ -258,7 +264,7 @@ export const useAppStore = create(
       org_code: 'PTI',
       device_id: getDeviceId(),
       form_code: canonicalFormCode,
-      app_version: '1.2.1',
+      app_version: APP_VERSION_DISPLAY,
       form_version: '1',
       payload: {
         meta,
@@ -308,15 +314,35 @@ export const useAppStore = create(
       })),
 
       updateItemPhoto: (itemId, photoType, photoData) => {
+        // Evita encolar uploads con datos inválidos (algunos navegadores pueden entregar null/ArrayBuffer)
+        if (photoData != null && !isDataUrlString(photoData)) {
+          console.warn('[Photo] Captura inválida (no es Data URL).', {
+            itemId,
+            photoType,
+            receivedType: typeof photoData,
+          })
+          return
+        }
+
         set((state) => ({
-          inspectionData: { ...state.inspectionData, photos: { ...state.inspectionData.photos, [`${itemId}-${photoType}`]: photoData } }
+          inspectionData: {
+            ...state.inspectionData,
+            photos: {
+              ...state.inspectionData.photos,
+              [`${itemId}-${photoType}`]: photoData,
+            },
+          },
         }))
 
         // Upload photo in background (best effort)
-        try {
-          queueAssetUpload('inspection-general', `inspection:${itemId}:${photoType}`, photoData)
-          flushSupabaseQueues({ formCode: 'inspection-general' })
-        } catch (e) {}
+        if (photoData) {
+          try {
+            queueAssetUpload('inspection-general', `inspection:${itemId}:${photoType}`, photoData)
+            flushSupabaseQueues({ formCode: 'inspection-general' })
+          } catch (e) {
+            // best-effort
+          }
+        }
 
         get().triggerAutosave('inspection-general')
       },

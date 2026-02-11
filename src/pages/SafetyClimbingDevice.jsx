@@ -1,150 +1,185 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import AppHeader from '../components/layout/AppHeader'
-import BottomNav from '../components/layout/BottomNav'
-import FormMetaBar from '../components/layout/FormMetaBar'
-import AutosaveIndicator from '../components/ui/AutosaveIndicator'
-import DynamicForm from '../components/forms/DynamicForm'
-import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
-import { useAppStore } from '../hooks/useAppStore'
 
-import safety1 from '../assets/safety/safety_1.png'
-import safety2 from '../assets/safety/safety_2.png'
-import safety3 from '../assets/safety/safety_3.png'
+import AppHeader from '../components/layout/AppHeader'
+import FormMetaBar from '../components/layout/FormMetaBar'
+import DynamicForm from '../components/forms/DynamicForm'
+import useAppStore from '../hooks/useAppStore'
+import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
+
+function isFilled(value) {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'string') return value.trim().length > 0
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === 'object') return Object.keys(value).length > 0
+  return true
+}
+
+function getSectionCompletion(sectionId, sectionData) {
+  const fields = safetySectionFields?.[sectionId] ?? []
+  const required = fields.filter((f) => f?.required)
+  if (!required.length) return true
+  const data = sectionData ?? {}
+  return required.every((f) => isFilled(data[f.id]))
+}
 
 export default function SafetyClimbingDevice() {
   const navigate = useNavigate()
   const { sectionId } = useParams()
 
-  const safetyData = useAppStore(s => s.safetyClimbingData)
-  const setSafetyField = useAppStore(s => s.setSafetyField)
-  const lastSavedAt = useAppStore(s => s.lastSavedAt)
-  const showToast = useAppStore(s => s.showToast)
-  const formMeta = useAppStore(s => s.formMeta)
+  const safetyData = useAppStore((s) => s.draft?.safetyClimbingData || {})
+  const setSafetyField = useAppStore((s) => s.setSafetyField)
+  const triggerAutosave = useAppStore((s) => s.triggerAutosave)
+  const resetFormDraft = useAppStore((s) => s.resetFormDraft)
+  const finalizeForm = useAppStore((s) => s.finalizeForm)
+  const showToast = useAppStore((s) => s.showToast)
 
-  const currentSection = useMemo(() => safetyClimbingSections.find(s => s.id === sectionId), [sectionId])
+  const currentSection = useMemo(() => {
+    if (!sectionId) return null
+    return safetyClimbingSections.find((s) => s.id === sectionId) || null
+  }, [sectionId])
 
-  const openSection = (id) => navigate(`/sistema-ascenso/${id}`)
+  const completedCount = useMemo(() => {
+    return safetyClimbingSections.filter((s) => getSectionCompletion(s.id, safetyData?.[s.id])).length
+  }, [safetyData])
+
+  const progressPct = useMemo(() => {
+    if (!safetyClimbingSections.length) return 0
+    return Math.round((completedCount / safetyClimbingSections.length) * 100)
+  }, [completedCount])
+
+  const handleFieldChange = (fieldId, value) => {
+    if (!sectionId) return
+    setSafetyField(sectionId, fieldId, value)
+    triggerAutosave('safety-system')
+  }
+
+  const handleReset = () => {
+    resetFormDraft('safety-system')
+    showToast('Formulario reiniciado.', 'success')
+    navigate('/sistema-ascenso')
+  }
+
+  const handleFinalize = async () => {
+    try {
+      // Validación mínima: requeridos por sección
+      const incomplete = safetyClimbingSections.filter(
+        (s) => !getSectionCompletion(s.id, safetyData?.[s.id])
+      )
+
+      if (incomplete.length) {
+        showToast('Faltan campos requeridos. Completa las secciones pendientes.', 'error')
+        return
+      }
+
+      await finalizeForm('safety-system')
+      showToast('¡Formulario enviado y cerrado!', 'success')
+      navigate('/')
+    } catch (e) {
+      console.error(e)
+      showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader title="Sistema de ascenso" showBack={!!sectionId} onBack={async () => { try {
-                    await finalizeForm('safety-system')
-                    showToast('¡Formulario enviado y cerrado!', 'success')
-                    navigate('/')
-                  } catch (e) {
-                    showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
-                    return;
-                  }
-                }} />
+      <AppHeader title="Sistema de ascenso" />
 
-      <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
-        <AutosaveIndicator lastSavedAt={lastSavedAt} />
-        <FormMetaBar meta={formMeta?.['sistema-ascenso']} />
+      <FormMetaBar
+        title="Sistema de ascenso"
+        subtitle="Checklist de seguridad"
+        progress={progressPct}
+      />
 
-        {!sectionId && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {safetyClimbingSections.map((s) => (
-              <button
-                key={s.id}
-                className="text-left bg-white rounded-2xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition"
-                onClick={() => openSection(s.id)}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gray-900 text-white flex items-center justify-center flex-shrink-0">
-                    <s.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-extrabold text-gray-900">{s.title}</div>
-                    <div className="text-sm text-gray-600 mt-1">{s.description}</div>
-                    <div className="text-xs text-gray-500 mt-2">
-                      {s.items} ítems · {s.steps} paso
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
+      {/* Vista de una sección */}
+      {sectionId && currentSection ? (
+        <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <button
+              type="button"
+              className="text-sm text-gray-700 underline"
+              onClick={() => navigate('/sistema-ascenso')}
+            >
+              Volver a secciones
+            </button>
+
+            <button
+              type="button"
+              className="text-sm text-red-600 underline"
+              onClick={handleReset}
+            >
+              Reiniciar
+            </button>
           </div>
-        )}
 
-        {sectionId && currentSection && (
-          <div className="space-y-4">
-            {/* Referencias (solo en la sección correspondiente) */}
-            {sectionId === 'prensacables' && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="font-extrabold text-gray-900">Guía de referencia</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Úsala como apoyo visual durante la inspección.</div>
-                </div>
-                <div className="p-3 bg-gray-50 grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {[safety1, safety2, safety3].map((src, idx) => (
-                    <div key={idx} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                      <img src={src} alt={`Referencia ${idx + 1}`} className="w-full h-auto block" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="bg-white rounded-2xl shadow p-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">{currentSection.title}</h2>
+            {currentSection.description ? (
+              <p className="text-sm text-gray-600 mb-4">{currentSection.description}</p>
+            ) : null}
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <div className="font-extrabold text-gray-900">{currentSection.title}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{currentSection.description}</div>
-              </div>
-
-              <div className="p-4">
-                <DynamicForm
-                  fields={safetySectionFields[sectionId] || []}
-                  data={safetyData?.[sectionId] || {}}
-                  onChange={(fieldId, value) => setSafetyField(sectionId, fieldId, value)}
-                  formCode="safety-climbing-device"
-                />
-              </div>
-
-              <div className="px-4 pb-4">
+            <DynamicForm
+              formCode="safety-system"
+              fields={safetySectionFields?.[sectionId] ?? []}
+              data={safetyData?.[sectionId] ?? {}}
+              onFieldChange={handleFieldChange}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Vista lista de secciones */
+        <div className="max-w-5xl mx-auto px-4 pb-28 pt-4">
+          <div className="grid gap-3">
+            {safetyClimbingSections.map((s) => {
+              const done = getSectionCompletion(s.id, safetyData?.[s.id])
+              return (
                 <button
+                  key={s.id}
                   type="button"
-                  className="w-full px-4 py-3 rounded-2xl bg-gray-900 text-white font-semibold shadow-sm active:scale-[0.99]"
-                  onClick={() => {
-                    const fields = safetySectionFields[sectionId] || []
-                    const data = safetyData?.[sectionId] || {}
-                    const missing = fields
-                      .filter(f => f.required)
-                      .filter(f => {
-                        const v = data[f.id]
-                        const isEmpty = String(v ?? '').trim().length === 0
-                        if (isEmpty) return true
-                        if (f.type === 'number') return !Number.isFinite(Number(v))
-                        if (f.type === 'photo') return !String(v).startsWith('data:image')
-                        if (f.type === 'date') return !/^\d{4}-\d{2}-\d{2}$/.test(String(v))
-                        if (f.type === 'time') return !/^\d{2}:\d{2}$/.test(String(v))
-                        return false
-                      })
-                      .map(f => f.label)
-
-                    if (missing.length) {
-                      showToast(`Campos requeridos pendientes: ${missing.join(', ')}`, 'error')
-                      return;
-                    }
-                    try {
-                    await finalizeForm('safety-system')
-                    showToast('¡Formulario enviado y cerrado!', 'success')
-                    navigate('/')
-                  } catch (e) {
-                    showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
-                    return;
-                  }
-                  }}
+                  onClick={() => navigate(`/sistema-ascenso/${s.id}`)}
+                  className={`w-full text-left bg-white rounded-2xl shadow p-4 border ${
+                    done ? 'border-green-200' : 'border-gray-200'
+                  }`}
                 >
-                  Guardar y volver al menú
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-semibold text-gray-900">{s.title}</div>
+                      {s.description ? (
+                        <div className="text-sm text-gray-600 mt-1">{s.description}</div>
+                      ) : null}
+                    </div>
+                    <div
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        done ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {done ? 'Completo' : 'Pendiente'}
+                    </div>
+                  </div>
                 </button>
-              </div>
-            </div>
+              )
+            })}
           </div>
-        )}
-      </div>
 
-      <BottomNav />
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="w-full sm:w-auto px-4 py-3 rounded-xl border border-red-200 text-red-700 bg-white"
+            >
+              Reiniciar formulario
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFinalize}
+              className="w-full sm:w-auto px-4 py-3 rounded-xl bg-blue-600 text-white"
+            >
+              Enviar y cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

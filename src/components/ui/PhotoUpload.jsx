@@ -6,7 +6,14 @@ export default function PhotoUpload({ type, photo, onCapture, onRemove }) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => onCapture(ev.target.result)
+    reader.onload = (ev) => {
+      const result = ev?.target?.result
+      if (typeof result !== 'string' || !result.trimStart().startsWith('data:')) {
+        console.warn('[PhotoUpload] Resultado inválido al leer archivo.', { resultType: typeof result })
+        return
+      }
+      onCapture(result)
+    }
     reader.readAsDataURL(file)
   }
   const id = `photo-${type}-${Math.random().toString(36).substr(2, 9)}`

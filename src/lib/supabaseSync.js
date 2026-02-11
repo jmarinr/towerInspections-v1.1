@@ -127,8 +127,22 @@ export function queueAssetUpload(formCode, assetType, dataUrl) {
   const now = Date.now()
 
   const isBlob = typeof Blob !== 'undefined' && dataUrl instanceof Blob
-  const isNonEmptyString = typeof dataUrl === 'string' && dataUrl.trim().length > 0
-  const action = (isBlob || isNonEmptyString) ? 'upload' : 'delete'
+  const isDataUrlString =
+    typeof dataUrl === 'string' &&
+    dataUrl.trim().length > 0 &&
+    dataUrl.trimStart().startsWith('data:')
+
+  // Si recibimos un string que no es Data URL, lo ignoramos (evita errores de build/runtime)
+  if (typeof dataUrl === 'string' && dataUrl.trim().length > 0 && !isDataUrlString) {
+    console.warn('[Supabase] Ignorando asset inválido (string no es Data URL).', {
+      formCode,
+      assetType,
+      preview: dataUrl.slice(0, 30),
+    })
+    return
+  }
+
+  const action = (isBlob || isDataUrlString) ? 'upload' : 'delete'
 
   const item = action === 'upload'
     ? { assetType, action, dataUrl, ts: now }
