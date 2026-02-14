@@ -47,6 +47,30 @@ export function isDisplayablePhoto(val) {
   return val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http')
 }
 
+/**
+ * Deep-strip data URLs from any object/nested structure before sending to Supabase.
+ * Replaces data:image/... strings with '__photo_uploaded__' marker.
+ * This prevents Supabase JSONB column overflow (data URLs can be 1-3MB each).
+ */
+function stripPayloadPhotos(obj) {
+  if (obj === null || obj === undefined) return obj
+  if (typeof obj === 'string') {
+    if (obj.startsWith('data:')) return '__photo_uploaded__'
+    if (obj.startsWith('blob:')) return '__photo_uploaded__'
+    return obj
+  }
+  if (typeof obj === 'number' || typeof obj === 'boolean') return obj
+  if (Array.isArray(obj)) return obj.map(stripPayloadPhotos)
+  if (typeof obj === 'object') {
+    const out = {}
+    for (const [k, v] of Object.entries(obj)) {
+      out[k] = stripPayloadPhotos(v)
+    }
+    return out
+  }
+  return obj
+}
+
 // Datos por defecto para mantenimiento v1.1.4
 const getDefaultMaintenanceData = () => ({
   currentStep: 1,
@@ -262,10 +286,20 @@ export const useAppStore = create(
           'safety-system': { code: 'safety-system' },
         }
         const cfg = map[formKey]
-        if (!cfg) throw new Error('unknown form')
+        if (!cfg) throw new Error('unknown form: ' + formKey)
+
+        // Build payload (photos are stripped automatically)
         const payload = get().getSupabasePayloadForForm(cfg.code)
         if (payload) queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
-        await flushSupabaseQueues({ formCode: cfg.code })
+
+        // Try to flush to Supabase — if it fails, data stays in queue for retry
+        try {
+          await flushSupabaseQueues({ formCode: cfg.code })
+        } catch (e) {
+          console.warn('[finalizeForm] flush failed (will retry in background):', e?.message || e)
+        }
+
+        // Always clean up local state and reset form
         try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
         get().resetFormDraft(formKey)
       },
@@ -275,7 +309,6 @@ export const useAppStore = create(
   getSupabasePayloadForForm: (formCode) => {
     const state = get()
 
-    // Map internal autosave buckets to a canonical PTI form_code (used in DB uniqueness)
     const toFormCode = (code) => {
       if (!code) return 'unknown'
       if (code.startsWith('inspection')) return 'inspeccion'
@@ -289,12 +322,20 @@ export const useAppStore = create(
 
     const canonicalFormCode = toFormCode(formCode)
 
-    const metaKey = canonicalFormCode
-
+    // FormMeta keys match the formId from FormIntro
+    const metaKeyMap = {
+      'inspeccion': 'inspeccion',
+      'mantenimiento': 'mantenimiento',
+      'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+      'inventario': 'equipment',
+      'puesta-tierra': 'grounding-system-test',
+      'sistema-ascenso': 'sistema-ascenso',
+    }
+    const metaKey = metaKeyMap[canonicalFormCode] || canonicalFormCode
     const meta = (state.formMeta && state.formMeta[metaKey]) ? state.formMeta[metaKey] : null
 
     // Pick the full form snapshot from the store
-    const snapshot =
+    const rawSnapshot =
       canonicalFormCode === 'inspeccion' ? state.inspectionData
       : canonicalFormCode === 'mantenimiento' ? state.maintenanceData
       : canonicalFormCode === 'mantenimiento-ejecutado' ? state.pmExecutedData
@@ -303,7 +344,11 @@ export const useAppStore = create(
       : canonicalFormCode === 'sistema-ascenso' ? state.safetyClimbingData
       : null
 
-    // Collect any queued assets that belong to this form (photos uploaded to Storage)
+    // CRITICAL: Strip all data URLs from payload to avoid Supabase JSONB overflow
+    // Photos are already uploaded separately via queueAssetUpload → submission_assets
+    const snapshot = stripPayloadPhotos(rawSnapshot)
+
+    // Collect any queued assets that belong to this form
     const queuedAssets = Array.isArray(state.assetUploadQueue)
       ? state.assetUploadQueue.filter(a => a && a.formCode === formCode)
       : []
@@ -315,11 +360,15 @@ export const useAppStore = create(
       app_version: APP_VERSION_DISPLAY,
       form_version: '1',
       payload: {
-        meta,
+        meta: meta ? {
+          ...meta,
+          finishedAt: new Date().toISOString(),
+        } : {
+          startedAt: null,
+          finishedAt: new Date().toISOString(),
+        },
         autosave_bucket: formCode,
         data: snapshot,
-        validation: state.validationState || null,
-        profile: state.profile || null,
         submitted_by: state.session ? {
           username: state.session.username,
           name: state.session.name,
@@ -331,7 +380,6 @@ export const useAppStore = create(
         key: a.storageKey,
         type: a.assetType || 'photo',
         bucket: a.bucket || 'pti-inspect',
-        // optional metadata
         meta: {
           field: a.field || null,
           capturedAt: a.capturedAt || null

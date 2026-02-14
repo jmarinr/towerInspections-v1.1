@@ -228,13 +228,14 @@ export async function flushSupabaseQueues({ formCode } = {}) {
       if (!item) continue;
 
       try {
-        await ensureSubmissionId(code, item.formVersion);
+        const canonicalFormCode = item.payload?.form_code || code;
+        await ensureSubmissionId(canonicalFormCode, item.formVersion);
 
         const deviceId = getDeviceId();
         const row = {
           org_code: ORG_CODE,
           device_id: deviceId,
-          form_code: code,
+          form_code: canonicalFormCode,
           form_version: item.formVersion,
           app_version: getAppVersion(),
           payload: {
