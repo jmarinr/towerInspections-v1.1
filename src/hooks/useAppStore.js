@@ -200,7 +200,12 @@ export const useAppStore = create(
       // ============ SESSION / AUTH ============
       session: null, // { username, name, role, roleLabel }
       setSession: (user) => set({ session: user }),
-      logout: () => set({ session: null }),
+      logout: () => set({ session: null, activeVisit: null }),
+
+      // ============ ACTIVE VISIT (ORDER) ============
+      activeVisit: null, // site_visits row from Supabase
+      setActiveVisit: (visit) => set({ activeVisit: visit }),
+      clearActiveVisit: () => set({ activeVisit: null }),
 
       // ============ TOAST ============
       toast: { show: false, message: '', type: 'info' },

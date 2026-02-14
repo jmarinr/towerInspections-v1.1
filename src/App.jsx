@@ -8,6 +8,7 @@ import SafetyClimbingDevice from './pages/SafetyClimbingDevice'
 import GroundingSystemTest from './pages/GroundingSystemTest'
 import PreventiveMaintenanceExecuted from './pages/PreventiveMaintenanceExecuted'
 import Login from './pages/Login'
+import OrderScreen from './pages/OrderScreen'
 import FormIntro from './pages/FormIntro'
 import SplashScreen from './components/ui/SplashScreen'
 import Toast from './components/ui/Toast'
@@ -54,6 +55,7 @@ function App() {
 
         {/* Rutas protegidas */}
         <Route element={<RequireAuth />}>
+          <Route path="/order" element={<OrderScreen />} />
           <Route path="/" element={<Home />} />
           <Route path="/intro/:formId" element={<FormIntro />} />
 

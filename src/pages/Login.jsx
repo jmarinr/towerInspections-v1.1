@@ -40,7 +40,7 @@ export default function Login() {
 
       setSession(result.user)
       setLoading(false)
-      navigate('/')
+      navigate('/order')
     }, 300)
   }
 

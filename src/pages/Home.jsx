@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User } from 'lucide-react'
 import { useAppStore } from '../hooks/useAppStore'
 import { filterFormsByRole } from '../lib/auth'
+import { closeSiteVisit } from '../lib/siteVisitService'
 
 const ALL_FORMS = [
   {
@@ -65,6 +66,16 @@ export default function Home() {
   const navigate = useNavigate()
   const session = useAppStore((s) => s.session)
   const logout = useAppStore((s) => s.logout)
+  const activeVisit = useAppStore((s) => s.activeVisit)
+  const clearActiveVisit = useAppStore((s) => s.clearActiveVisit)
+  const showToast = useAppStore((s) => s.showToast)
+
+  // Redirect to order screen if no active visit
+  useEffect(() => {
+    if (!activeVisit) {
+      navigate('/order', { replace: true })
+    }
+  }, [activeVisit, navigate])
 
   const visibleForms = useMemo(() => {
     if (!session) return []
@@ -75,6 +86,40 @@ export default function Home() {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const handleCloseOrder = async () => {
+    if (!activeVisit) return
+    const confirmed = window.confirm(`¿Cerrar la orden ${activeVisit.order_number}? Podrá crear o continuar otra orden.`)
+    if (!confirmed) return
+
+    try {
+      // Try to capture GPS at close time
+      let geo = { lat: null, lng: null }
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 5000, maximumAge: 0
+          })
+        })
+        geo = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      } catch (_) {}
+
+      await closeSiteVisit(activeVisit.id, geo)
+      clearActiveVisit()
+      showToast('Orden cerrada exitosamente', 'success')
+      navigate('/order', { replace: true })
+    } catch (e) {
+      console.error('Error closing visit:', e)
+      showToast('Error al cerrar la orden', 'error')
+    }
+  }
+
+  const handleChangeOrder = () => {
+    clearActiveVisit()
+    navigate('/order', { replace: true })
+  }
+
+  if (!activeVisit) return null
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -105,6 +150,31 @@ export default function Home() {
               <span className="text-xs font-semibold">{session.name}</span>
               <span className="text-[10px] text-white/60">·</span>
               <span className="text-[10px] text-white/70">{session.roleLabel}</span>
+            </div>
+          )}
+
+          {/* Active Order Banner */}
+          {activeVisit && (
+            <div className="mt-3 w-full bg-white/10 rounded-xl p-3 border border-white/15">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider">Orden activa</p>
+                  <p className="text-sm font-extrabold text-white mt-0.5">{activeVisit.order_number}</p>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-400/15 text-green-300 border border-green-400/20">
+                  Abierta
+                </span>
+              </div>
+              <div className="flex gap-4 mt-2 pt-2 border-t border-white/10">
+                <div>
+                  <p className="text-[10px] text-white/40">Sitio</p>
+                  <p className="text-xs font-bold text-white/90">{activeVisit.site_name}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40">ID</p>
+                  <p className="text-xs font-bold text-white/90">{activeVisit.site_id}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -159,6 +229,24 @@ export default function Home() {
           )}
         </section>
       </main>
+
+      {/* Order actions */}
+      {activeVisit && (
+        <div className="px-4 pb-2 space-y-2">
+          <button
+            onClick={handleChangeOrder}
+            className="w-full py-3 rounded-xl border-2 border-gray-300 text-gray-600 text-sm font-bold active:scale-[0.98] transition-all"
+          >
+            Cambiar Orden
+          </button>
+          <button
+            onClick={handleCloseOrder}
+            className="w-full py-3 rounded-xl border-2 border-red-300 bg-red-50 text-red-600 text-sm font-bold active:scale-[0.98] transition-all"
+          >
+            Cerrar Orden
+          </button>
+        </div>
+      )}
 
       <footer className="px-6 py-4 text-center">
         <p className="text-xs text-gray-400">© 2026</p>
