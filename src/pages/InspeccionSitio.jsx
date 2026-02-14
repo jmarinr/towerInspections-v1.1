@@ -64,7 +64,8 @@ export default function InspeccionSitio() {
     else {
       try {
         await finalizeForm('inspeccion')
-        showToast('¡Inspección enviada y cerrada!', 'success')
+        showToast('¡Inspección enviada!', 'success')
+        navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
         return

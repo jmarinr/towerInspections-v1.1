@@ -232,17 +232,17 @@ export const useAppStore = create(
       // ============ RESET / FINALIZE ============
       resetFormDraft: (formKey) => {
         const map = {
-          'inspeccion': { code: 'inspection-general', reset: 'resetInspectionData' },
-          'mantenimiento': { code: 'preventive-maintenance', reset: 'resetMaintenanceData' },
-          'inventario': { code: 'equipment', reset: 'resetEquipmentInventoryData' },
-          'mantenimiento-ejecutado': { code: 'executed-maintenance', reset: 'resetPMExecutedData' },
-          'puesta-tierra': { code: 'grounding-system-test', reset: 'resetGroundingSystemData' },
-          'safety-system': { code: 'safety-system', reset: 'resetSafetyClimbingData' },
+          'inspeccion': { code: 'inspection-general', reset: 'resetInspectionData', metaKey: 'inspeccion' },
+          'mantenimiento': { code: 'preventive-maintenance', reset: 'resetMaintenanceData', metaKey: 'mantenimiento' },
+          'inventario': { code: 'equipment', reset: 'resetEquipmentInventoryData', metaKey: 'equipment' },
+          'mantenimiento-ejecutado': { code: 'executed-maintenance', reset: 'resetPMExecutedData', metaKey: 'mantenimiento-ejecutado' },
+          'puesta-tierra': { code: 'grounding-system-test', reset: 'resetGroundingSystemData', metaKey: 'grounding-system-test' },
+          'safety-system': { code: 'safety-system', reset: 'resetSafetyClimbingData', metaKey: 'sistema-ascenso' },
         }
         const cfg = map[formKey]
         if (!cfg) return
         try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
-        get().clearFormMeta(formKey)
+        get().clearFormMeta(cfg.metaKey)
         const fn = get()[cfg.reset]
         if (typeof fn === 'function') fn()
 
@@ -278,24 +278,18 @@ export const useAppStore = create(
     // Map internal autosave buckets to a canonical PTI form_code (used in DB uniqueness)
     const toFormCode = (code) => {
       if (!code) return 'unknown'
-      if (code.startsWith('inspection') || code === 'safety-system') return 'inspeccion'
+      if (code.startsWith('inspection')) return 'inspeccion'
       if (code === 'preventive-maintenance') return 'mantenimiento'
       if (code === 'executed-maintenance' || code === 'pm-executed') return 'mantenimiento-ejecutado'
       if (code === 'equipment-inventory' || code === 'equipment') return 'inventario'
       if (code === 'grounding-system-test') return 'puesta-tierra'
+      if (code === 'safety-system') return 'sistema-ascenso'
       return code
     }
 
     const canonicalFormCode = toFormCode(formCode)
 
-    // Form meta is stored using the public form ids (inspeccion, mantenimiento, etc.)
-    const metaKey =
-      canonicalFormCode === 'inspeccion' ? 'inspeccion'
-      : canonicalFormCode === 'mantenimiento' ? 'mantenimiento'
-      : canonicalFormCode === 'mantenimiento-ejecutado' ? 'mantenimiento-ejecutado'
-      : canonicalFormCode === 'inventario' ? 'inventario'
-      : canonicalFormCode === 'puesta-tierra' ? 'puesta-tierra'
-      : canonicalFormCode
+    const metaKey = canonicalFormCode
 
     const meta = (state.formMeta && state.formMeta[metaKey]) ? state.formMeta[metaKey] : null
 
@@ -306,6 +300,7 @@ export const useAppStore = create(
       : canonicalFormCode === 'mantenimiento-ejecutado' ? state.pmExecutedData
       : canonicalFormCode === 'inventario' ? state.equipmentInventoryData
       : canonicalFormCode === 'puesta-tierra' ? state.groundingSystemData
+      : canonicalFormCode === 'sistema-ascenso' ? state.safetyClimbingData
       : null
 
     // Collect any queued assets that belong to this form (photos uploaded to Storage)
@@ -321,14 +316,16 @@ export const useAppStore = create(
       form_version: '1',
       payload: {
         meta,
-        // raw autosave bucket (helps debugging)
         autosave_bucket: formCode,
-        // full snapshot of the form state
         data: snapshot,
-        // include current validation status if present
         validation: state.validationState || null,
-        // include any other global state you want to preserve
-        profile: state.profile || null
+        profile: state.profile || null,
+        submitted_by: state.session ? {
+          username: state.session.username,
+          name: state.session.name,
+          role: state.session.role,
+        } : null,
+        submitted_at: new Date().toISOString(),
       },
       assets: queuedAssets.map(a => ({
         key: a.storageKey,
@@ -693,8 +690,7 @@ export const useAppStore = create(
         get().triggerAutosave('grounding-system-test')
       },
       resetGroundingSystemData: () => {
-        set({ groundingSystemData: {} })
-        get().triggerAutosave('grounding-system-test')
+        set({ groundingSystemData: {}, groundingStep: 1 })
       },
 
 
@@ -711,7 +707,7 @@ setSafetyField: (sectionId, fieldId, value) => {
   }))
   get().triggerAutosave('safety-system')
 },
-resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData() }),
+resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData(), safetyClimbingStep: 1 }),
 
 
       // Actualizar campo de formulario

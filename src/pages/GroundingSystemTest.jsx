@@ -60,6 +60,8 @@ export default function GroundingSystemTest() {
   const setGroundingField = useAppStore((s) => s.setGroundingField)
   const showToast = useAppStore((s) => s.showToast)
   const formMeta = useAppStore((s) => s.formMeta)
+  const resetFormDraft = useAppStore((s) => s.resetFormDraft)
+  const finalizeForm = useAppStore((s) => s.finalizeForm)
 
   const sections = groundingSystemTestConfig.sections
 
@@ -142,8 +144,14 @@ export default function GroundingSystemTest() {
       if (currentStep < totalSteps) {
         setStep(currentStep + 1)
       } else {
-        showToast('¡Formulario completado!', 'success')
-        navigate('/')
+        try {
+          await finalizeForm('puesta-tierra')
+          showToast('¡Formulario enviado!', 'success')
+          navigate('/')
+        } catch (e) {
+          console.error('[Grounding] finalize error:', e)
+          showToast('Error al enviar. Intente de nuevo.', 'error')
+        }
       }
     } catch (e) {
       console.error('[Grounding] handleNext error:', e)
@@ -210,7 +218,21 @@ export default function GroundingSystemTest() {
       </div>
 
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
-        <FormMetaBar meta={formMeta?.['grounding-system-test']} />
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <FormMetaBar meta={formMeta?.['grounding-system-test']} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95 flex-shrink-0"
+            onClick={() => {
+              if (confirm('¿Reiniciar formulario? Se borrarán los datos.')) {
+                resetFormDraft('puesta-tierra')
+                setStep(1)
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
 
         {/* Section header */}
         <div className="mb-4">

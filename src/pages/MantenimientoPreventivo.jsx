@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
 import BottomNav from '../components/layout/BottomNav'
@@ -11,6 +12,7 @@ import { useAppStore } from '../hooks/useAppStore'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
 export default function MantenimientoPreventivo() {
+  const navigate = useNavigate()
   const { maintenanceData, 
     updateMaintenanceField, 
     updateChecklistItem,
@@ -190,7 +192,6 @@ export default function MantenimientoPreventivo() {
   }
 
   const handleFinish = async () => {
-    // Validar todo el formulario antes de finalizar
     const allMissing = []
     maintenanceFormConfig.steps.forEach(stepCfg => {
       const miss = getMissingForStep(stepCfg)
@@ -200,11 +201,18 @@ export default function MantenimientoPreventivo() {
     if (allMissing.length) {
       const preview = allMissing.slice(0, 10).join(' | ')
       const suffix = allMissing.length > 10 ? ` (+${allMissing.length - 10})` : ''
-      showToast(`Pendientes para finalizar: ${preview}${suffix}`, 'error')
+      showToast(`Pendientes: ${preview}${suffix}`, 'error')
       return
     }
 
-    showToast('¡Mantenimiento completado!', 'success')
+    try {
+      await finalizeForm('mantenimiento')
+      showToast('¡Mantenimiento enviado!', 'success')
+      navigate('/')
+    } catch (e) {
+      console.error('[Mantenimiento] finalize error:', e)
+      showToast('Error al enviar. Intente de nuevo.', 'error')
+    }
   }
 
   const handleStepChange = (stepId) => {

@@ -78,7 +78,8 @@ export default function InventarioEquipos() {
     else {
       try {
         await finalizeForm('inventario')
-        showToast('¡Formulario enviado y cerrado!', 'success')
+        showToast('¡Inventario enviado!', 'success')
+        navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
         return
@@ -254,7 +255,21 @@ case 'drawing-template':
       <AutosaveIndicator show={showAutosaveIndicator} />
 
       <div className="px-4 pb-32">
-        <FormMetaBar meta={formMeta?.equipment} />
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <FormMetaBar meta={formMeta?.equipment} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95 flex-shrink-0"
+            onClick={() => {
+              if (confirm('¿Reiniciar formulario? Se borrarán los datos.')) {
+                resetFormDraft('inventario')
+                showToast('Formulario reiniciado', 'info')
+                navigate('/inventario-equipos')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
         <div className="mb-4">
           <div className="text-lg font-extrabold text-gray-900">{currentStep.icon} {currentStep.title}</div>
           <div className="text-sm text-gray-600 mt-1">{currentStep.description}</div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
@@ -17,12 +18,16 @@ function normalizeSiteType(value) {
 }
 
 export default function PreventiveMaintenanceExecuted() {
+  const navigate = useNavigate()
   const {
     pmExecutedData,
     updatePMExecutedField,
     updatePMExecutedPhoto,
     showAutosave,
     showToast,
+    resetFormDraft,
+    finalizeForm,
+    formMeta,
   } = useAppStore()
 
   const siteInfo = pmExecutedData?.siteInfo || {}
@@ -74,6 +79,21 @@ export default function PreventiveMaintenanceExecuted() {
       />
 
       <main className="px-4 py-4 max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <FormMetaBar meta={formMeta?.['mantenimiento-ejecutado']} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95 flex-shrink-0"
+            onClick={() => {
+              if (confirm('¿Reiniciar formulario? Se borrarán todos los datos y fotos.')) {
+                resetFormDraft('mantenimiento-ejecutado')
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
+
         {/* Datos del sitio */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <h2 className="text-base font-bold text-gray-800">Datos del sitio</h2>
@@ -271,6 +291,39 @@ export default function PreventiveMaintenanceExecuted() {
               )
             })}
           </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            className="w-full sm:w-auto px-4 py-3 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95"
+            onClick={() => {
+              if (confirm('¿Reiniciar formulario? Se borrarán todos los datos y fotos.')) {
+                resetFormDraft('mantenimiento-ejecutado')
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar formulario
+          </button>
+
+          <button
+            type="button"
+            className="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white font-bold text-sm active:scale-95 shadow-sm"
+            onClick={async () => {
+              try {
+                await finalizeForm('mantenimiento-ejecutado')
+                showToast('¡Mantenimiento ejecutado enviado!', 'success')
+                navigate('/')
+              } catch (e) {
+                console.error('[PMExecuted] finalize error:', e)
+                showToast('Error al enviar. Intente de nuevo.', 'error')
+              }
+            }}
+          >
+            Enviar y cerrar
+          </button>
         </div>
       </main>
 
