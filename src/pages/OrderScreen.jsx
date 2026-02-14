@@ -170,7 +170,7 @@ export default function OrderScreen() {
       </header>
 
       {/* Tabs */}
-      <div className="px-4 -mt-3">
+      <div className="px-4 mt-4">
         <div className="flex gap-1 bg-gray-200 rounded-xl p-1">
           <button
             onClick={() => setTab('new')}
