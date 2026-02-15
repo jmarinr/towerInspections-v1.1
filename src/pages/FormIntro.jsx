@@ -80,6 +80,7 @@ export default function FormIntro() {
   const navigate = useNavigate()
   const { formId } = useParams()
   const [loading, setLoading] = useState(false)
+  const [showResumeDialog, setShowResumeDialog] = useState(false)
 
   const cfg = useMemo(() => FORM_MAP[formId], [formId])
 
@@ -92,7 +93,30 @@ export default function FormIntro() {
     updatePMExecutedField,
     setSafetyField,
     setGroundingField,
+    resetFormDraft,
+    formMeta,
   } = useAppStore()
+
+  // Check if this form has previous data
+  const normalizedId = useMemo(() => {
+    if (!formId) return ''
+    return formId === 'pm-executed' ? 'mantenimiento-ejecutado' : formId
+  }, [formId])
+
+  const hasPreviousData = useMemo(() => {
+    if (!normalizedId) return false
+    return !!formMeta?.[normalizedId]?.startedAt
+  }, [formMeta, normalizedId])
+
+  // Map normalizedId → resetFormDraft key
+  const resetKeyMap = {
+    'inspeccion': 'inspeccion',
+    'mantenimiento': 'mantenimiento',
+    'equipment': 'inventario',
+    'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+    'sistema-ascenso': 'safety-system',
+    'grounding-system-test': 'puesta-tierra',
+  }
 
   if (!cfg) {
     return (
@@ -108,11 +132,33 @@ export default function FormIntro() {
     )
   }
 
+  // Called when user taps "Iniciar Formulario"
+  const handleStart = () => {
+    if (hasPreviousData) {
+      setShowResumeDialog(true)
+      return
+    }
+    start()
+  }
+
+  // Continue with existing data
+  const handleResume = () => {
+    setShowResumeDialog(false)
+    navigate(cfg.route)
+  }
+
+  // Reset and start fresh
+  const handleRestart = () => {
+    setShowResumeDialog(false)
+    const resetKey = resetKeyMap[normalizedId]
+    if (resetKey) resetFormDraft(resetKey)
+    start()
+  }
+
   const start = async () => {
     if (loading) return
     setLoading(true)
 
-    const normalizedId = formId === 'pm-executed' ? 'mantenimiento-ejecutado' : formId
     const base = getDateTime()
 
     // 1) Guardar meta base (fecha/hora) inmediatamente
@@ -136,7 +182,6 @@ export default function FormIntro() {
         updatePMExecutedField('hora', base.time)
       }
       if (normalizedId === 'sistema-ascenso') {
-        // Guardar en la sección "datos" del formulario (si existe)
         setSafetyField('datos', 'fechaInicio', base.date)
       }
       if (normalizedId === 'grounding-system-test') {
@@ -218,13 +263,66 @@ export default function FormIntro() {
           <button
             type="button"
             className="mt-6 w-full px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 text-white font-semibold shadow-sm active:scale-[0.99] disabled:opacity-70"
-            onClick={start}
+            onClick={handleStart}
             disabled={loading}
           >
-            {loading ? 'Iniciando…' : 'Iniciar Formulario →'}
+            {loading ? 'Iniciando…' : hasPreviousData ? 'Continuar / Reiniciar →' : 'Iniciar Formulario →'}
           </button>
         </div>
       </div>
+
+      {/* Resume Dialog */}
+      {showResumeDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-5">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📋</span>
+              </div>
+              <h3 className="text-base font-extrabold text-gray-900 text-center">
+                Datos previos encontrados
+              </h3>
+              <p className="text-sm text-gray-500 text-center mt-2 leading-relaxed">
+                Este formulario tiene datos ingresados previamente.
+                ¿Desea continuar donde se quedó o iniciar desde cero?
+              </p>
+
+              {formMeta?.[normalizedId]?.startedAt && (
+                <div className="mt-3 bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-400">Iniciado</p>
+                  <p className="text-sm font-bold text-gray-700">
+                    {new Date(formMeta[normalizedId].startedAt).toLocaleDateString('es', {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-100 p-4 space-y-2">
+              <button
+                onClick={handleResume}
+                className="w-full py-3 rounded-xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-all"
+              >
+                Continuar con datos previos
+              </button>
+              <button
+                onClick={handleRestart}
+                className="w-full py-3 rounded-xl border-2 border-red-300 bg-red-50 text-red-600 text-sm font-bold active:scale-[0.98] transition-all"
+              >
+                Reiniciar formulario
+              </button>
+              <button
+                onClick={() => setShowResumeDialog(false)}
+                className="w-full py-2.5 text-sm font-semibold text-gray-400 active:scale-[0.98]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
