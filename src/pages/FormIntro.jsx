@@ -95,6 +95,7 @@ export default function FormIntro() {
     setGroundingField,
     resetFormDraft,
     formMeta,
+    activeVisit,
   } = useAppStore()
 
   // Check if this form has previous data
@@ -189,6 +190,40 @@ export default function FormIntro() {
       }
     } catch (e) {
       // no bloquear
+    }
+
+    // 2b) Auto-fill site data from active order
+    if (activeVisit) {
+      const sId = activeVisit.site_id || ''
+      const sName = activeVisit.site_name || ''
+      try {
+        if (normalizedId === 'inspeccion') {
+          updateSiteInfo('idSitio', sId)
+          updateSiteInfo('nombreSitio', sName)
+        }
+        if (normalizedId === 'mantenimiento') {
+          updateMaintenanceField('idSitio', sId)
+          updateMaintenanceField('nombreSitio', sName)
+        }
+        if (normalizedId === 'equipment') {
+          updateEquipmentSiteField('idSitio', sId)
+          updateEquipmentSiteField('nombreSitio', sName)
+        }
+        if (normalizedId === 'mantenimiento-ejecutado') {
+          updatePMExecutedField('idSitio', sId)
+          updatePMExecutedField('nombreSitio', sName)
+        }
+        if (normalizedId === 'sistema-ascenso') {
+          setSafetyField('datos', 'idSitio', sId)
+          setSafetyField('datos', 'nombreSitio', sName)
+        }
+        if (normalizedId === 'grounding-system-test') {
+          setGroundingField('datos', 'idSitio', sId)
+          setGroundingField('datos', 'nombreSitio', sName)
+        }
+      } catch (e) {
+        // no bloquear
+      }
     }
 
     // 3) Capturar GPS (si el usuario permite)
