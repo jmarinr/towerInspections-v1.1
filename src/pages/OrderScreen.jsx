@@ -103,6 +103,26 @@ export default function OrderScreen() {
     } catch (e) {
       if (e?.code === '23505') {
         showToast('Ya existe una orden con ese número', 'error')
+      } else if (!navigator.onLine) {
+        // Offline fallback — create local visit object
+        const localVisit = {
+          id: `local-${Date.now()}`,
+          org_code: 'PTI',
+          order_number: orderNumber.trim(),
+          site_id: siteId.trim(),
+          site_name: siteName.trim(),
+          inspector_username: session.username,
+          inspector_name: session.name,
+          inspector_role: session.role,
+          start_lat: geo.lat,
+          start_lng: geo.lng,
+          started_at: new Date().toISOString(),
+          status: 'local',
+          _isLocal: true,
+        }
+        setActiveVisit(localVisit)
+        showToast('Orden creada localmente (sin conexión)', 'warning')
+        navigate('/', { replace: true })
       } else {
         console.error('Error creating visit:', e)
         showToast('Error al crear orden. Verifique su conexión.', 'error')
@@ -330,37 +350,46 @@ export default function OrderScreen() {
                   Órdenes abiertas ({openVisits.length})
                 </p>
                 <div className="space-y-2.5">
-                  {openVisits.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => handleContinueVisit(v)}
-                      className="w-full bg-white rounded-2xl border border-gray-200 p-4 text-left active:scale-[0.98] transition-all"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm font-extrabold text-gray-900">{v.order_number}</p>
-                          <p className="text-sm text-gray-600 mt-0.5">{v.site_name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">ID: {v.site_id}</p>
+                  {openVisits.map((v) => {
+                    const isLocal = v._isLocal || v.status === 'local'
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => handleContinueVisit(v)}
+                        className="w-full bg-white rounded-2xl border border-gray-200 p-4 text-left active:scale-[0.98] transition-all"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-extrabold text-gray-900">{v.order_number}</p>
+                            <p className="text-sm text-gray-600 mt-0.5">{v.site_name}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">ID: {v.site_id}</p>
+                          </div>
+                          {isLocal ? (
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                              Local
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-600 border border-green-200">
+                              Sincronizada
+                            </span>
+                          )}
                         </div>
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-600 border border-green-200">
-                          Abierta
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex gap-3">
-                          <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock size={12} />
-                            {new Date(v.started_at).toLocaleDateString('es', {
-                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                            })}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                          <div className="flex gap-3">
+                            <span className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock size={12} />
+                              {new Date(v.started_at).toLocaleDateString('es', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          <span className="flex items-center gap-1 text-xs font-bold text-primary">
+                            Continuar <ChevronRight size={14} />
                           </span>
                         </div>
-                        <span className="flex items-center gap-1 text-xs font-bold text-primary">
-                          Continuar <ChevronRight size={14} />
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    )
+                  })}
                 </div>
               </>
             ) : searchedOnce ? (

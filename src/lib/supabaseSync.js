@@ -41,7 +41,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '1.2.1';
+  return import.meta.env.VITE_APP_VERSION || '2.0';
 }
 
 function loadMap(key) {
@@ -238,6 +238,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           form_code: canonicalFormCode,
           form_version: item.formVersion,
           app_version: getAppVersion(),
+          site_visit_id: item.payload?.site_visit_id || null,
           payload: {
             ...item.payload,
             _meta: {
@@ -346,6 +347,24 @@ export async function flushSupabaseQueues({ formCode } = {}) {
   } finally {
     _flushing = false;
   }
+}
+
+/**
+ * Count pending items in sync queues
+ */
+export function getPendingSyncCount() {
+  let count = 0
+  try {
+    const syncMap = loadMap(PENDING_SYNC_KEY)
+    count += Object.keys(syncMap).length
+
+    const assetsMap = loadMap(PENDING_ASSETS_KEY)
+    for (const fc of Object.keys(assetsMap)) {
+      const list = Array.isArray(assetsMap[fc]) ? assetsMap[fc] : []
+      count += list.length
+    }
+  } catch (_) {}
+  return count
 }
 
 export function startSupabaseBackgroundSync() {

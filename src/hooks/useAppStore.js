@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '1.8'
+const APP_VERSION_DISPLAY = '2.0'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -204,8 +204,23 @@ export const useAppStore = create(
 
       // ============ ACTIVE VISIT (ORDER) ============
       activeVisit: null, // site_visits row from Supabase
-      setActiveVisit: (visit) => set({ activeVisit: visit }),
-      clearActiveVisit: () => set({ activeVisit: null }),
+      completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
+      setActiveVisit: (visit) => set({ activeVisit: visit, completedForms: [] }),
+      clearActiveVisit: () => set({ activeVisit: null, completedForms: [] }),
+      markFormCompleted: (formId) => set((state) => {
+        const list = state.completedForms || []
+        if (list.includes(formId)) return state
+        return { completedForms: [...list, formId] }
+      }),
+      isFormCompleted: (formId) => (get().completedForms || []).includes(formId),
+
+      // ============ CONNECTIVITY ============
+      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+      syncStatus: 'idle', // 'idle' | 'syncing' | 'error' | 'offline'
+      pendingSyncCount: 0,
+      setOnline: (online) => set({ isOnline: online, syncStatus: online ? 'idle' : 'offline' }),
+      setSyncStatus: (status) => set({ syncStatus: status }),
+      setPendingSyncCount: (count) => set({ pendingSyncCount: count }),
 
       // ============ TOAST ============
       toast: { show: false, message: '', type: 'info' },
@@ -283,12 +298,12 @@ export const useAppStore = create(
 
       finalizeForm: async (formKey) => {
         const map = {
-          'inspeccion': { code: 'inspection-general' },
-          'mantenimiento': { code: 'preventive-maintenance' },
-          'inventario': { code: 'equipment' },
-          'mantenimiento-ejecutado': { code: 'executed-maintenance' },
-          'puesta-tierra': { code: 'grounding-system-test' },
-          'safety-system': { code: 'safety-system' },
+          'inspeccion': { code: 'inspection-general', formId: 'inspeccion' },
+          'mantenimiento': { code: 'preventive-maintenance', formId: 'mantenimiento' },
+          'inventario': { code: 'equipment', formId: 'equipment' },
+          'mantenimiento-ejecutado': { code: 'executed-maintenance', formId: 'mantenimiento-ejecutado' },
+          'puesta-tierra': { code: 'grounding-system-test', formId: 'grounding-system-test' },
+          'safety-system': { code: 'safety-system', formId: 'sistema-ascenso' },
         }
         const cfg = map[formKey]
         if (!cfg) throw new Error('unknown form: ' + formKey)
@@ -298,8 +313,10 @@ export const useAppStore = create(
         if (payload) queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
 
         // Try to flush to Supabase — if it fails, data stays in queue for retry
+        let flushSuccess = false
         try {
           await flushSupabaseQueues({ formCode: cfg.code })
+          flushSuccess = true
         } catch (e) {
           console.warn('[finalizeForm] flush failed (will retry in background):', e?.message || e)
         }
@@ -307,6 +324,11 @@ export const useAppStore = create(
         // Always clean up local state and reset form
         try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
         get().resetFormDraft(formKey)
+
+        // Track form as completed in current visit
+        get().markFormCompleted(cfg.formId)
+
+        return { synced: flushSuccess }
       },
 
   // Build the full Supabase payload for a given autosave bucket (one submission per form)
@@ -364,6 +386,7 @@ export const useAppStore = create(
       form_code: canonicalFormCode,
       app_version: APP_VERSION_DISPLAY,
       form_version: '1',
+      site_visit_id: state.activeVisit?.id || null,
       payload: {
         meta: meta ? {
           ...meta,
@@ -883,7 +906,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 5, // v1.1.9+: normalizar tipos (steps numéricos)
+      version: 6, // v2.0: add activeVisit, completedForms, connectivity
       // Safe localStorage wrapper: silently ignores QuotaExceededError so set() never throws
       storage: createJSONStorage(() => ({
         getItem: (name) => {
@@ -951,6 +974,10 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
           toast: undefined,
           _toastTimer: undefined,
           showAutosave: undefined,
+          // Never persist transient connectivity state
+          isOnline: undefined,
+          syncStatus: undefined,
+          pendingSyncCount: undefined,
         }
       },
       migrate: (persistedState, version) => {
@@ -978,6 +1005,11 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
         const md = state.maintenanceData || getDefaultMaintenanceData()
         const stepNum = Number(md.currentStep)
         state = { ...state, maintenanceData: { ...md, currentStep: Number.isFinite(stepNum) && stepNum > 0 ? stepNum : 1 } }
+
+        // v6: add activeVisit and completedForms
+        state = { ...state, activeVisit: state.activeVisit || null }
+        state = { ...state, completedForms: state.completedForms || [] }
+
         return state
       }
     }

@@ -1,4 +1,4 @@
-# Supabase setup (PTI Inspect v1.2.1)
+# Supabase setup (PTI Inspect v2.0)
 
 This app can **insert without auth** (anon key). For production you should add Auth + RLS.
 For now, to make Option C work:

@@ -12,6 +12,7 @@ import OrderScreen from './pages/OrderScreen'
 import FormIntro from './pages/FormIntro'
 import SplashScreen from './components/ui/SplashScreen'
 import Toast from './components/ui/Toast'
+import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import RequireAuth from './components/auth/RequireAuth'
@@ -50,6 +51,7 @@ function App() {
   return (
     <>
       {showSplash && <SplashScreen />}
+      <ConnectivityBanner />
       <Routes>
         <Route path="/login" element={<Login />} />
 

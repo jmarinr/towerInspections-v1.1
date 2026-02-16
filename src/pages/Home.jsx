@@ -1,9 +1,9 @@
 import { useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
 import { useAppStore } from '../hooks/useAppStore'
 import { filterFormsByRole } from '../lib/auth'
-import { closeSiteVisit } from '../lib/siteVisitService'
+import { closeSiteVisit, fetchVisitSubmissions } from '../lib/siteVisitService'
 
 const ALL_FORMS = [
   {
@@ -69,6 +69,9 @@ export default function Home() {
   const activeVisit = useAppStore((s) => s.activeVisit)
   const clearActiveVisit = useAppStore((s) => s.clearActiveVisit)
   const showToast = useAppStore((s) => s.showToast)
+  const completedForms = useAppStore((s) => s.completedForms)
+  const markFormCompleted = useAppStore((s) => s.markFormCompleted)
+  const formMeta = useAppStore((s) => s.formMeta)
 
   // Redirect to order screen if no active visit
   useEffect(() => {
@@ -76,6 +79,28 @@ export default function Home() {
       navigate('/order', { replace: true })
     }
   }, [activeVisit, navigate])
+
+  // Sync completed forms from Supabase (Option B - works when online)
+  useEffect(() => {
+    if (!activeVisit?.id || !navigator.onLine) return
+    const CANONICAL_MAP = {
+      'inspeccion': 'inspeccion',
+      'mantenimiento': 'mantenimiento',
+      'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+      'inventario': 'equipment',
+      'puesta-tierra': 'grounding-system-test',
+      'sistema-ascenso': 'sistema-ascenso',
+    }
+    fetchVisitSubmissions(activeVisit.id)
+      .then((submissions) => {
+        submissions.forEach((s) => {
+          // Map DB form_code back to formId
+          const formId = Object.entries(CANONICAL_MAP).find(([_, v]) => v === s.form_code)?.[0] || s.form_code
+          markFormCompleted(formId)
+        })
+      })
+      .catch(() => {}) // Silent on error, local state is still valid
+  }, [activeVisit?.id, markFormCompleted])
 
   const visibleForms = useMemo(() => {
     if (!session) return []
@@ -141,7 +166,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v1.8</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.0</p>
 
           {/* User info pill */}
           {session && (
@@ -161,9 +186,15 @@ export default function Home() {
                   <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider">Orden activa</p>
                   <p className="text-sm font-extrabold text-white mt-0.5">{activeVisit.order_number}</p>
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-400/15 text-green-300 border border-green-400/20">
-                  Abierta
-                </span>
+                {activeVisit._isLocal || activeVisit.status === 'local' ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/15 text-amber-300 border border-amber-400/20">
+                    Local
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-400/15 text-green-300 border border-green-400/20">
+                    Sincronizada
+                  </span>
+                )}
               </div>
               <div className="flex gap-4 mt-2 pt-2 border-t border-white/10">
                 <div>
@@ -183,9 +214,14 @@ export default function Home() {
       {/* Content */}
       <main className="flex-1 px-4 -mt-3">
         <section>
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
-            Formularios
-          </h2>
+          <div className="flex justify-between items-center mb-3 px-1">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Formularios
+            </h2>
+            <span className="text-xs text-gray-400">
+              {(completedForms || []).length}/{visibleForms.length} completados
+            </span>
+          </div>
 
           {visibleForms.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
@@ -202,26 +238,54 @@ export default function Home() {
             <div className="space-y-3">
               {visibleForms.map((form) => {
                 const IconComponent = form.icon
+                const isCompleted = (completedForms || []).includes(form.id)
+                const hasProgress = !!formMeta?.[form.id]?.startedAt && !isCompleted
+
+                const getStatus = () => {
+                  if (isCompleted) return { label: 'Completado', badge: 'bg-green-50 text-green-600 border-green-200' }
+                  if (hasProgress) return { label: 'En progreso', badge: 'bg-amber-50 text-amber-600 border-amber-200' }
+                  return { label: 'Pendiente', badge: 'bg-gray-50 text-gray-500 border-gray-200' }
+                }
+                const status = getStatus()
+
                 return (
                   <button
                     key={form.id}
-                    onClick={() => navigate(form.route)}
-                    className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all text-left"
+                    onClick={() => !isCompleted && navigate(form.route)}
+                    disabled={isCompleted}
+                    className={`w-full rounded-2xl p-4 flex items-center gap-4 shadow-sm border text-left transition-all ${
+                      isCompleted
+                        ? 'bg-gray-50 border-gray-200 opacity-70 cursor-not-allowed'
+                        : 'bg-white border-gray-100 active:scale-[0.98]'
+                    }`}
                   >
-                    <div className={`w-14 h-14 ${form.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md`}>
-                      <IconComponent size={28} className="text-white" />
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
+                      isCompleted ? 'bg-green-500' : form.iconBg
+                    }`}>
+                      {isCompleted ? (
+                        <Check size={28} className="text-white" strokeWidth={3} />
+                      ) : (
+                        <IconComponent size={28} className="text-white" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 text-base">{form.title}</h3>
-                      <p className="text-gray-500 text-sm mt-0.5 line-clamp-2">{form.description}</p>
-                      <div className="flex items-center gap-1 mt-2">
-                        <span className={`w-4 h-4 ${form.iconBg} rounded flex items-center justify-center`}>
-                          <IconComponent size={10} className="text-white" />
+                      <h3 className={`font-bold text-base ${isCompleted ? 'text-gray-500' : 'text-gray-900'}`}>
+                        {form.title}
+                      </h3>
+                      <p className={`text-sm mt-0.5 line-clamp-2 ${isCompleted ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {form.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${status.badge}`}>
+                          {status.label}
                         </span>
-                        <span className="text-xs font-semibold text-gray-600">{form.stats}</span>
                       </div>
                     </div>
-                    <ChevronRight size={20} className="text-gray-300 flex-shrink-0" />
+                    {isCompleted ? (
+                      <Lock size={18} className="text-gray-300 flex-shrink-0" />
+                    ) : (
+                      <ChevronRight size={20} className="text-gray-300 flex-shrink-0" />
+                    )}
                   </button>
                 )
               })}
