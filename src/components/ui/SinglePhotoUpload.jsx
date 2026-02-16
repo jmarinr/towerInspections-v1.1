@@ -1,5 +1,7 @@
-import { Camera, X } from 'lucide-react'
+import { useState } from 'react'
+import { Camera, X, Loader2, AlertCircle } from 'lucide-react'
 import { isDisplayablePhoto } from '../../hooks/useAppStore'
+import { processImageFile } from '../../lib/photoUtils'
 
 export default function SinglePhotoUpload({
   id,
@@ -13,19 +15,34 @@ export default function SinglePhotoUpload({
   const displayablePhoto = isDisplayablePhoto(rawValue) ? rawValue : null
   const hasUploadedPhoto = !!rawValue && !displayablePhoto
 
-  const handleCapture = (e) => {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleCapture = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen debe ser menor a 5MB')
+
+    setLoading(true)
+    setError(null)
+
+    const result = await processImageFile(file)
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      setTimeout(() => setError(null), 6000)
       return
     }
-    const reader = new FileReader()
-    reader.onload = (ev) => onChange?.(ev.target.result)
-    reader.readAsDataURL(file)
+
+    onChange?.(result.dataUrl)
+    setLoading(false)
+    e.target.value = ''
   }
 
-  const handleRemove = () => onChange?.(null)
+  const handleRemove = () => {
+    setError(null)
+    onChange?.(null)
+  }
 
   return (
     <div className="mb-4">
@@ -46,7 +63,21 @@ export default function SinglePhotoUpload({
         className="hidden"
       />
 
-      {displayablePhoto ? (
+      {/* Error banner */}
+      {error && (
+        <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="w-full rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2 py-8">
+          <Loader2 size={24} className="animate-spin text-blue-500" />
+          <p className="text-sm font-semibold text-blue-600">Procesando foto...</p>
+          <p className="text-xs text-blue-400">Comprimiendo imagen</p>
+        </div>
+      ) : displayablePhoto ? (
         <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
           <img src={displayablePhoto} alt={label} className="w-full h-48 object-cover" />
           <button
