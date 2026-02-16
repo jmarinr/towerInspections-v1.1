@@ -120,6 +120,18 @@ export default function Login() {
       </form>
 
       <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.0</p>
+      <button
+        type="button"
+        onClick={() => {
+          if (window.confirm('¿Borrar todos los datos locales? Se perderán formularios no enviados.')) {
+            localStorage.clear()
+            window.location.reload()
+          }
+        }}
+        className="mt-2 text-[11px] text-gray-300 underline underline-offset-2 active:text-red-400"
+      >
+        Borrar datos locales
+      </button>
     </div>
   )
 }
