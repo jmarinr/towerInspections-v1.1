@@ -391,7 +391,9 @@ export const useAppStore = create(
       form_code: canonicalFormCode,
       app_version: APP_VERSION_DISPLAY,
       form_version: '1',
-      site_visit_id: state.activeVisit?.id || null,
+      site_visit_id: (state.activeVisit?.id && !String(state.activeVisit.id).startsWith('local-'))
+        ? state.activeVisit.id
+        : null,
       payload: {
         meta: meta ? {
           ...meta,
@@ -819,7 +821,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbin
             }
           }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('preventive-maintenance')
       },
 
       // Actualizar foto de checklist

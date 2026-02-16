@@ -238,7 +238,9 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           form_code: canonicalFormCode,
           form_version: item.formVersion,
           app_version: getAppVersion(),
-          site_visit_id: item.payload?.site_visit_id || null,
+          site_visit_id: (item.payload?.site_visit_id && !String(item.payload.site_visit_id).startsWith('local-'))
+            ? item.payload.site_visit_id
+            : null,
           payload: {
             ...item.payload,
             _meta: {
