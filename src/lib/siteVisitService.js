@@ -96,7 +96,7 @@ export async function closeSiteVisit(visitId, { lat, lng } = {}) {
 export async function fetchVisitSubmissions(visitId) {
   const { data, error } = await supabase
     .from('submissions')
-    .select('form_code, updated_at')
+    .select('form_code, payload, updated_at')
     .eq('site_visit_id', visitId)
 
   if (error) throw error

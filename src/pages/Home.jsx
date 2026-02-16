@@ -83,7 +83,8 @@ export default function Home() {
   // Sync completed forms from Supabase (Option B - works when online)
   useEffect(() => {
     if (!activeVisit?.id || !navigator.onLine) return
-    const CANONICAL_MAP = {
+    // Map DB form_code → formId used in completedForms
+    const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
       'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
@@ -94,12 +95,14 @@ export default function Home() {
     fetchVisitSubmissions(activeVisit.id)
       .then((submissions) => {
         submissions.forEach((s) => {
-          // Map DB form_code back to formId
-          const formId = Object.entries(CANONICAL_MAP).find(([_, v]) => v === s.form_code)?.[0] || s.form_code
-          markFormCompleted(formId)
+          // Only mark as completed if finalized flag is true in payload
+          if (s.payload?.finalized === true) {
+            const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
+            markFormCompleted(formId)
+          }
         })
       })
-      .catch(() => {}) // Silent on error, local state is still valid
+      .catch(() => {})
   }, [activeVisit?.id, markFormCompleted])
 
   const visibleForms = useMemo(() => {

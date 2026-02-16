@@ -310,7 +310,12 @@ export const useAppStore = create(
 
         // Build payload (photos are stripped automatically)
         const payload = get().getSupabasePayloadForForm(cfg.code)
-        if (payload) queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
+        if (payload) {
+          // Mark as finalized (distinguishes from autosave)
+          payload.payload.finalized = true
+          payload.payload.meta.finishedAt = new Date().toISOString()
+          queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
+        }
 
         // Try to flush to Supabase — if it fails, data stays in queue for retry
         let flushSuccess = false
@@ -390,12 +395,11 @@ export const useAppStore = create(
       payload: {
         meta: meta ? {
           ...meta,
-          finishedAt: new Date().toISOString(),
         } : {
           startedAt: null,
-          finishedAt: new Date().toISOString(),
         },
         autosave_bucket: formCode,
+        finalized: false,
         data: snapshot,
         submitted_by: state.session ? {
           username: state.session.username,
