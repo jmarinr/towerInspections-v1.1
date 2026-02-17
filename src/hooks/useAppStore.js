@@ -205,8 +205,36 @@ export const useAppStore = create(
       // ============ ACTIVE VISIT (ORDER) ============
       activeVisit: null, // site_visits row from Supabase
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
-      setActiveVisit: (visit) => set({ activeVisit: visit, completedForms: [] }),
-      clearActiveVisit: () => set({ activeVisit: null, completedForms: [] }),
+      setActiveVisit: (visit) => {
+        // When switching orders or starting a new one, reset all form data
+        // to prevent data leaking between orders
+        const prev = get().activeVisit
+        const isNewOrder = !prev || prev.id !== visit?.id
+        if (isNewOrder) {
+          get().resetAllForms()
+        }
+        set({ activeVisit: visit, completedForms: [] })
+      },
+      clearActiveVisit: () => {
+        get().resetAllForms()
+        set({ activeVisit: null, completedForms: [] })
+      },
+      resetAllForms: () => {
+        // Reset all 6 form data stores
+        const allFormKeys = [
+          'inspeccion',
+          'mantenimiento',
+          'inventario',
+          'mantenimiento-ejecutado',
+          'puesta-tierra',
+          'safety-system',
+        ]
+        for (const key of allFormKeys) {
+          try { get().resetFormDraft(key) } catch (_) {}
+        }
+        // Also clear formMeta (start timestamps)
+        set({ formMeta: {} })
+      },
       markFormCompleted: (formId) => set((state) => {
         const list = state.completedForms || []
         if (list.includes(formId)) return state
