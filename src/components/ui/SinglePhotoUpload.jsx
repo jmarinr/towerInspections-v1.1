@@ -58,7 +58,6 @@ export default function SinglePhotoUpload({
         id={id}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleCapture}
         className="hidden"
       />

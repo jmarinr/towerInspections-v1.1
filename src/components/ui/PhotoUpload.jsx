@@ -37,7 +37,7 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove })
 
   return (
     <div className="relative">
-      <input id={id} type="file" accept="image/*" capture="environment" onChange={handleChange} className="hidden" />
+      <input id={id} type="file" accept="image/*" onChange={handleChange} className="hidden" />
 
       {error && (
         <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
