@@ -18,6 +18,7 @@ export default function OrderScreen() {
   const navigate = useNavigate()
   const session = useAppStore((s) => s.session)
   const setActiveVisit = useAppStore((s) => s.setActiveVisit)
+  const setNewActiveVisit = useAppStore((s) => s.setNewActiveVisit)
   const activeVisit = useAppStore((s) => s.activeVisit)
   const showToast = useAppStore((s) => s.showToast)
   const logout = useAppStore((s) => s.logout)
@@ -97,7 +98,7 @@ export default function OrderScreen() {
         lng: geo.lng,
       })
 
-      setActiveVisit(visit)
+      setNewActiveVisit(visit)
       showToast('Orden creada exitosamente', 'success')
       navigate('/', { replace: true })
     } catch (e) {
@@ -120,7 +121,7 @@ export default function OrderScreen() {
           status: 'local',
           _isLocal: true,
         }
-        setActiveVisit(localVisit)
+        setNewActiveVisit(localVisit)
         showToast('Orden creada localmente (sin conexión)', 'warning')
         navigate('/', { replace: true })
       } else {
