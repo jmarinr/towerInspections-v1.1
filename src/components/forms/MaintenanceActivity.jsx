@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { useAppStore } from '../../hooks/useAppStore'
+import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 
 export default function MaintenanceActivity({ activity, index }) {
   const { maintenanceData, updateActivityStatus, updateActivityPhoto } = useAppStore()
@@ -8,13 +8,17 @@ export default function MaintenanceActivity({ activity, index }) {
   
   const state = maintenanceData.activities[activity.id] || {}
   const isComplete = state.status === 'complete'
-  const isNA = state.status === 'na'
-  const hasStatus = isComplete || isNA
-  
-  const beforePhoto = maintenanceData.photos?.[`${activity.id}-before`]
-  const afterPhoto = maintenanceData.photos?.[`${activity.id}-after`]
+
+  const beforeRaw = maintenanceData.photos?.[`${activity.id}-before`]
+  const afterRaw = maintenanceData.photos?.[`${activity.id}-after`]
+  const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw
+    : (beforeRaw ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:before`) : null)
+  const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw
+    : (afterRaw ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:after`) : null)
   const hasPhotos = beforePhoto || afterPhoto
   const hasBothPhotos = beforePhoto && afterPhoto
+  const isNA = state.status === 'na'
+  const hasStatus = isComplete || isNA
   
   // Determinar si está completo (estado + fotos si es completado)
   const isFullyComplete = isComplete && hasBothPhotos
@@ -146,7 +150,7 @@ export default function MaintenanceActivity({ activity, index }) {
                     id={`photo-before-${activity.id}`}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                    
                     onChange={handlePhotoCapture('before')}
                     className="hidden"
                   />
@@ -184,7 +188,7 @@ export default function MaintenanceActivity({ activity, index }) {
                     id={`photo-after-${activity.id}`}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                    
                     onChange={handlePhotoCapture('after')}
                     className="hidden"
                   />

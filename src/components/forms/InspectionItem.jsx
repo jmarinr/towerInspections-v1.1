@@ -28,8 +28,8 @@ export default function InspectionItem({ item, index }) {
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50">
           <div className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-2"><Camera size={14} />Evidencia fotográfica</div>
           <div className="grid grid-cols-2 gap-3">
-            <PhotoUpload type="before" photo={beforePhoto} onCapture={(data) => updateItemPhoto(item.id, 'before', data)} onRemove={() => updateItemPhoto(item.id, 'before', null)} />
-            <PhotoUpload type="after" photo={afterPhoto} onCapture={(data) => updateItemPhoto(item.id, 'after', data)} onRemove={() => updateItemPhoto(item.id, 'after', null)} />
+            <PhotoUpload type="before" photo={beforePhoto} onCapture={(data) => updateItemPhoto(item.id, 'before', data)} onRemove={() => updateItemPhoto(item.id, 'before', null)} formCode="inspection-general" assetType={`inspection:${item.id}:before`} />
+            <PhotoUpload type="after" photo={afterPhoto} onCapture={(data) => updateItemPhoto(item.id, 'after', data)} onRemove={() => updateItemPhoto(item.id, 'after', null)} formCode="inspection-general" assetType={`inspection:${item.id}:after`} />
           </div>
         </div>
       )}

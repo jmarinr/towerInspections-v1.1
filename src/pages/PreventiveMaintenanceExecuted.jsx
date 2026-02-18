@@ -265,12 +265,16 @@ export default function PreventiveMaintenanceExecuted() {
                                   photo={before || null}
                                   onCapture={(data) => updatePMExecutedPhoto(a.id, 'before', data)}
                                   onRemove={() => updatePMExecutedPhoto(a.id, 'before', null)}
+                                  formCode="executed-maintenance"
+                                  assetType={`executed:${a.id}:before`}
                                 />
                                 <PhotoUpload
                                   type="after"
                                   photo={after || null}
                                   onCapture={(data) => updatePMExecutedPhoto(a.id, 'after', data)}
                                   onRemove={() => updatePMExecutedPhoto(a.id, 'after', null)}
+                                  formCode="executed-maintenance"
+                                  assetType={`executed:${a.id}:after`}
                                 />
                               </div>
                             ) : (

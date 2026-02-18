@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.0'
+const APP_VERSION_DISPLAY = '2.0.4'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -45,6 +45,26 @@ export function isDisplayablePhoto(val) {
   if (!val || typeof val !== 'string') return false
   if (val === PHOTO_PLACEHOLDER) return false
   return val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http')
+}
+
+/**
+ * Recover a photo data URL from the pending assets queue in localStorage.
+ * Used after reload when the store only has '__photo__' placeholder.
+ * @param {string} formCode - e.g. 'inspection-general'
+ * @param {string} assetType - e.g. 'inspection:item1:before'
+ * @returns {string|null} data URL or null
+ */
+export function recoverPhotoFromQueue(formCode, assetType) {
+  try {
+    const raw = localStorage.getItem('pti_pending_assets_v1')
+    if (!raw) return null
+    const map = JSON.parse(raw)
+    const list = Array.isArray(map?.[formCode]) ? map[formCode] : []
+    const asset = list.find(a => a.assetType === assetType && a.action === 'upload' && a.dataUrl)
+    return asset?.dataUrl || null
+  } catch (_) {
+    return null
+  }
 }
 
 /**

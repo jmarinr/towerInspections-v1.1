@@ -473,6 +473,8 @@ export default function DistributionBuilder({
             photo={fotoTorreDataUrl}
             onCapture={(data) => onSaveFoto?.(data)}
             onRemove={() => onSaveFoto?.('')}
+            formCode="equipment"
+            assetType="equipment:fotoTorre"
           />
           <p className="text-xs text-gray-500 mt-2">
             Esta foto se guarda como evidencia junto al croquis.

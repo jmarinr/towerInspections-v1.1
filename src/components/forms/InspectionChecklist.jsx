@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { isDisplayablePhoto } from '../../hooks/useAppStore'
+import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 
 export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {} }) {
   const [expandedItems, setExpandedItems] = useState({})
@@ -44,8 +44,11 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
     const hasBeforeValue = !!beforeRaw
     const hasAfterValue = !!afterRaw
     // But only displayable photos can be rendered as <img>
-    const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw : null
-    const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw : null
+    // Try recovering from pending assets queue if placeholder
+    const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw
+      : (beforeRaw ? recoverPhotoFromQueue('inspection-general', `inspection:${itemId}:before`) : null)
+    const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw
+      : (afterRaw ? recoverPhotoFromQueue('inspection-general', `inspection:${itemId}:after`) : null)
     
     const hasStatus = !!data.status
     const isNA = data.status === 'na'
@@ -206,7 +209,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                           id={`photo-before-${item.id}`}
                           type="file"
                           accept="image/*"
-                          capture="environment"
+                          
                           onChange={handlePhotoCapture(item.id, 'before')}
                           className="hidden"
                         />
@@ -252,7 +255,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                           id={`photo-after-${item.id}`}
                           type="file"
                           accept="image/*"
-                          capture="environment"
+                          
                           onChange={handlePhotoCapture(item.id, 'after')}
                           className="hidden"
                         />

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Camera, X, Loader2, AlertCircle } from 'lucide-react'
-import { isDisplayablePhoto } from '../../hooks/useAppStore'
+import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
 
 export default function SinglePhotoUpload({
@@ -10,9 +10,21 @@ export default function SinglePhotoUpload({
   onChange,
   required = false,
   helpText = '',
+  formCode,
+  assetType,
 }) {
   const rawValue = value || null
-  const displayablePhoto = isDisplayablePhoto(rawValue) ? rawValue : null
+
+  // Try to recover photo from pending queue if we only have placeholder
+  const recoveredPhoto = useMemo(() => {
+    if (isDisplayablePhoto(rawValue)) return rawValue
+    if (rawValue && formCode && assetType) {
+      return recoverPhotoFromQueue(formCode, assetType)
+    }
+    return null
+  }, [rawValue, formCode, assetType])
+
+  const displayablePhoto = recoveredPhoto || (isDisplayablePhoto(rawValue) ? rawValue : null)
   const hasUploadedPhoto = !!rawValue && !displayablePhoto
 
   const [loading, setLoading] = useState(false)

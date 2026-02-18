@@ -1,7 +1,7 @@
 import { MapPin, Camera, X } from 'lucide-react'
 import { useState } from 'react'
 import { queueAssetUpload } from '../../lib/supabaseSync'
-import { isDisplayablePhoto } from '../../hooks/useAppStore'
+import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
@@ -275,7 +275,11 @@ export default function DynamicForm(props) {
         )
 
       case 'photo':
-        const photoDisplayable = isDisplayablePhoto(value)
+        const recoveredDynPhoto = !isDisplayablePhoto(value) && value && formCode
+          ? recoverPhotoFromQueue(formCode, field.id)
+          : null
+        const photoSrc = recoveredDynPhoto || value
+        const photoDisplayable = isDisplayablePhoto(photoSrc)
         const photoPlaceholder = !!value && !photoDisplayable
         return (
           <div>
@@ -283,13 +287,13 @@ export default function DynamicForm(props) {
               id={`photo-${field.id}`}
               type="file"
               accept="image/*"
-              capture="environment"
+              
               onChange={handlePhotoCapture(field.id)}
               className="hidden"
             />
             {photoDisplayable ? (
               <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-500">
-                <img src={value} alt="Captura" className="w-full h-full object-cover" />
+                <img src={photoSrc} alt="Captura" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => onFieldChange(field.id, '')}
