@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.1.5'
+const APP_VERSION_DISPLAY = '2.1.6'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -227,14 +227,9 @@ export const useAppStore = create(
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
       formDataOwnerId: null, // ID of the order that owns the current form data in localStorage
 
-      // Continue existing order
+      // Continue existing order - never reset here, Home handles data sync
       setActiveVisit: (visit) => {
-        const ownerId = get().formDataOwnerId
-        // If local data belongs to a different order, clear it
-        if (ownerId && visit && ownerId !== visit.id) {
-          get().resetAllForms()
-        }
-        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
+        set({ activeVisit: visit, completedForms: [] })
       },
       // Create new order - always reset all form data
       setNewActiveVisit: (visit) => {

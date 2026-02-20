@@ -88,16 +88,19 @@ export default function Home() {
   useEffect(() => {
     if (!activeVisit?.id) return
     if (String(activeVisit.id).startsWith('local-')) return
+
+    const isOwnOrder = formDataOwnerId === activeVisit.id
+
     if (!navigator.onLine) {
-      // Offline: if data belongs to different order, clear it
-      if (formDataOwnerId && formDataOwnerId !== activeVisit.id) {
+      // Offline: clear stale data from other orders
+      if (!isOwnOrder) {
         resetAllForms()
+        useAppStore.setState({ formDataOwnerId: activeVisit.id })
       }
-      useAppStore.setState({ formDataOwnerId: activeVisit.id })
       return
     }
 
-    // Online: always fetch from Supabase to get latest data
+    // Online: fetch from Supabase
     const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
@@ -109,21 +112,30 @@ export default function Home() {
 
     fetchVisitSubmissions(activeVisit.id)
       .then((submissions) => {
+        console.log(`[Home] Fetched ${submissions.length} submissions for visit ${activeVisit.id}, isOwnOrder=${isOwnOrder}`)
+
+        // Only reset if switching to a different order AND we got Supabase data
+        if (!isOwnOrder) {
+          resetAllForms()
+        }
+
         submissions.forEach((s) => {
           const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
+          console.log(`[Home] Hydrating ${s.form_code}, finalized=${s.payload?.finalized}, hasData=${!!s.payload?.data}`)
 
           if (s.payload?.finalized === true) {
             markFormCompleted(formId)
           }
 
-          // Hydrate from Supabase — always overwrite local with server data
           if (s.payload?.data) {
             hydrateFormFromSupabase(s.form_code, s.payload)
           }
         })
         useAppStore.setState({ formDataOwnerId: activeVisit.id })
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.warn('[Home] fetchVisitSubmissions failed', err?.message || err)
+      })
   }, [activeVisit?.id])
 
   const visibleForms = useMemo(() => {
@@ -190,7 +202,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.5</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.6</p>
 
           {/* User info pill */}
           {session && (
