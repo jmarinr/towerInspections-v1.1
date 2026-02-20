@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.0.8'
+const APP_VERSION_DISPLAY = '2.1.1'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -225,21 +225,29 @@ export const useAppStore = create(
       // ============ ACTIVE VISIT (ORDER) ============
       activeVisit: null, // site_visits row from Supabase
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
-      // Continue existing order — never reset form data
+      formDataOwnerId: null, // ID of the order that owns the current form data in localStorage
+
+      // Continue existing order
       setActiveVisit: (visit) => {
-        set({ activeVisit: visit, completedForms: [] })
+        const ownerId = get().formDataOwnerId
+        // If local data belongs to a different order, clear it
+        if (ownerId && visit && ownerId !== visit.id) {
+          get().resetAllForms()
+        }
+        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
       },
-      // Create new order — reset all form data to start clean
+      // Create new order - always reset all form data
       setNewActiveVisit: (visit) => {
         get().resetAllForms()
-        set({ activeVisit: visit, completedForms: [] })
+        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
       },
       clearActiveVisit: () => {
         get().resetAllForms()
-        set({ activeVisit: null, completedForms: [] })
+        set({ activeVisit: null, completedForms: [], formDataOwnerId: null })
       },
       // Navigate to order screen without resetting form data
       navigateToOrderScreen: () => {
+        // Keep formDataOwnerId so we know who owns the cached data
         set({ activeVisit: null, completedForms: [] })
       },
       resetAllForms: () => {
@@ -255,8 +263,8 @@ export const useAppStore = create(
         for (const key of allFormKeys) {
           try { get().resetFormDraft(key) } catch (_) {}
         }
-        // Also clear formMeta (start timestamps)
-        set({ formMeta: {} })
+        // Also clear formMeta (start timestamps) and owner tracking
+        set({ formMeta: {}, formDataOwnerId: null })
       },
       markFormCompleted: (formId) => set((state) => {
         const list = state.completedForms || []
@@ -325,6 +333,51 @@ export const useAppStore = create(
 
 
       // ============ RESET / FINALIZE ============
+
+      /**
+       * Hydrate a form's local data from a Supabase submission payload.
+       * Called when continuing an existing order to load saved data.
+       * @param {string} formCode - canonical form code (e.g. 'inspeccion')
+       * @param {object} payload - the payload column from submissions table
+       */
+      hydrateFormFromSupabase: (formCode, payload) => {
+        if (!payload?.data) return
+        const data = payload.data
+        const meta = payload.meta || {}
+
+        const stateMap = {
+          'inspeccion': 'inspectionData',
+          'mantenimiento': 'maintenanceData',
+          'mantenimiento-ejecutado': 'pmExecutedData',
+          'inventario': 'equipmentInventoryData',
+          'puesta-tierra': 'groundingSystemData',
+          'sistema-ascenso': 'safetyClimbingData',
+        }
+
+        const metaKeyMap = {
+          'inspeccion': 'inspeccion',
+          'mantenimiento': 'mantenimiento',
+          'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+          'inventario': 'equipment',
+          'puesta-tierra': 'grounding-system-test',
+          'sistema-ascenso': 'sistema-ascenso',
+        }
+
+        const stateKey = stateMap[formCode]
+        const metaKey = metaKeyMap[formCode]
+        if (!stateKey) return
+
+        // Write form data into the store
+        set({ [stateKey]: data })
+
+        // Write formMeta if available
+        if (meta.startedAt && metaKey) {
+          set((state) => ({
+            formMeta: { ...(state.formMeta || {}), [metaKey]: meta }
+          }))
+        }
+      },
+
       resetFormDraft: (formKey) => {
         const map = {
           'inspeccion': { code: 'inspection-general', reset: 'resetInspectionData', metaKey: 'inspeccion' },
@@ -963,7 +1016,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 6, // v2.0: add activeVisit, completedForms, connectivity
+      version: 7, // v2.1: add formDataOwnerId, Supabase as source of truth
       // Safe localStorage wrapper: silently ignores QuotaExceededError so set() never throws
       storage: createJSONStorage(() => ({
         getItem: (name) => {
@@ -1096,6 +1149,9 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
         // v6: add activeVisit and completedForms
         state = { ...state, activeVisit: state.activeVisit || null }
         state = { ...state, completedForms: state.completedForms || [] }
+
+        // v7: add formDataOwnerId — set from activeVisit if available
+        state = { ...state, formDataOwnerId: state.formDataOwnerId || state.activeVisit?.id || null }
 
         return state
       }

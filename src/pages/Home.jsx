@@ -73,6 +73,9 @@ export default function Home() {
   const completedForms = useAppStore((s) => s.completedForms)
   const markFormCompleted = useAppStore((s) => s.markFormCompleted)
   const formMeta = useAppStore((s) => s.formMeta)
+  const hydrateFormFromSupabase = useAppStore((s) => s.hydrateFormFromSupabase)
+  const resetAllForms = useAppStore((s) => s.resetAllForms)
+  const formDataOwnerId = useAppStore((s) => s.formDataOwnerId)
 
   // Redirect to order screen if no active visit
   useEffect(() => {
@@ -81,10 +84,22 @@ export default function Home() {
     }
   }, [activeVisit, navigate])
 
-  // Sync completed forms from Supabase (Option B - works when online)
+  // Sync form data from Supabase when loading an order (source of truth when online)
   useEffect(() => {
-    if (!activeVisit?.id || !navigator.onLine) return
-    // Map DB form_code → formId used in completedForms
+    if (!activeVisit?.id) return
+    // Skip local-only orders — use localStorage only
+    if (String(activeVisit.id).startsWith('local-')) return
+
+    // If offline, check that local data belongs to this order
+    if (!navigator.onLine) {
+      if (formDataOwnerId && formDataOwnerId !== activeVisit.id) {
+        // Local data belongs to a different order — clear it
+        resetAllForms()
+      }
+      return
+    }
+
+    // Online: Supabase is the source of truth
     const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
@@ -93,18 +108,30 @@ export default function Home() {
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
     }
+
+    // Reset all local form data first to avoid mixing
+    resetAllForms()
+
     fetchVisitSubmissions(activeVisit.id)
       .then((submissions) => {
         submissions.forEach((s) => {
-          // Only mark as completed if finalized flag is true in payload
+          const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
+
+          // Mark finalized forms as completed
           if (s.payload?.finalized === true) {
-            const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
             markFormCompleted(formId)
           }
+
+          // Hydrate form data from Supabase (only non-finalized — finalized are locked)
+          if (s.payload?.data && s.payload?.finalized !== true) {
+            hydrateFormFromSupabase(s.form_code, s.payload)
+          }
         })
+        // Mark local data as owned by this order
+        useAppStore.setState({ formDataOwnerId: activeVisit.id })
       })
       .catch(() => {})
-  }, [activeVisit?.id, markFormCompleted])
+  }, [activeVisit?.id])
 
   const visibleForms = useMemo(() => {
     if (!session) return []
@@ -170,7 +197,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.0.8</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.1</p>
 
           {/* User info pill */}
           {session && (

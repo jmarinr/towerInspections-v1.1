@@ -102,3 +102,21 @@ export async function fetchVisitSubmissions(visitId) {
   if (error) throw error
   return data || []
 }
+
+/**
+ * Fetch a specific form submission for a visit.
+ * Returns the payload data or null if not found.
+ */
+export async function fetchSubmissionForForm(visitId, formCode) {
+  const { data, error } = await supabase
+    .from('submissions')
+    .select('form_code, payload, updated_at')
+    .eq('site_visit_id', visitId)
+    .eq('form_code', formCode)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data || null
+}
