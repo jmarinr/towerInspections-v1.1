@@ -87,45 +87,17 @@ export default function Home() {
   // Sync form data from Supabase when loading an order
   useEffect(() => {
     if (!activeVisit?.id) return
-    // Skip local-only orders
     if (String(activeVisit.id).startsWith('local-')) return
-
-    const isOwnOrder = formDataOwnerId === activeVisit.id
-
-    // If local data already belongs to this order, just sync completed status
-    // Don't reset or overwrite — local data may be more recent than Supabase
-    if (isOwnOrder && navigator.onLine) {
-      fetchVisitSubmissions(activeVisit.id)
-        .then((submissions) => {
-          const CODE_TO_FORM_ID = {
-            'inspeccion': 'inspeccion',
-            'mantenimiento': 'mantenimiento',
-            'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
-            'inventario': 'equipment',
-            'puesta-tierra': 'grounding-system-test',
-            'sistema-ascenso': 'sistema-ascenso',
-          }
-          submissions.forEach((s) => {
-            if (s.payload?.finalized === true) {
-              const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
-              markFormCompleted(formId)
-            }
-          })
-        })
-        .catch(() => {})
-      return
-    }
-
-    // If offline and data belongs to a different order, clear it
     if (!navigator.onLine) {
-      if (formDataOwnerId && !isOwnOrder) {
+      // Offline: if data belongs to different order, clear it
+      if (formDataOwnerId && formDataOwnerId !== activeVisit.id) {
         resetAllForms()
       }
       useAppStore.setState({ formDataOwnerId: activeVisit.id })
       return
     }
 
-    // Online + different order (or no owner): download from Supabase
+    // Online: always fetch from Supabase to get latest data
     const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
@@ -134,8 +106,6 @@ export default function Home() {
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
     }
-
-    resetAllForms()
 
     fetchVisitSubmissions(activeVisit.id)
       .then((submissions) => {
@@ -146,7 +116,8 @@ export default function Home() {
             markFormCompleted(formId)
           }
 
-          if (s.payload?.data && s.payload?.finalized !== true) {
+          // Hydrate from Supabase — always overwrite local with server data
+          if (s.payload?.data) {
             hydrateFormFromSupabase(s.form_code, s.payload)
           }
         })
@@ -219,7 +190,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.2</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.3</p>
 
           {/* User info pill */}
           {session && (
