@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.0.6'
+const APP_VERSION_DISPLAY = '2.0.7'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -836,7 +836,7 @@ setSafetyField: (sectionId, fieldId, value) => {
   }))
   get().triggerAutosave('safety-system')
 },
-resetSafetyClimbingData: () => set({ safetyClimbingData: getDefaultSafetyClimbingData(), safetyClimbingStep: 1 }),
+resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep: 1 }),
 
 
       // Actualizar campo de formulario
