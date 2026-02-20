@@ -41,7 +41,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.1.3';
+  return import.meta.env.VITE_APP_VERSION || '2.1.4';
 }
 
 function loadMap(key) {
@@ -229,32 +229,73 @@ export async function flushSupabaseQueues({ formCode } = {}) {
 
       try {
         const canonicalFormCode = item.payload?.form_code || code;
-        await ensureSubmissionId(canonicalFormCode, item.formVersion);
-
         const deviceId = getDeviceId();
-        const row = {
-          org_code: ORG_CODE,
-          device_id: deviceId,
-          form_code: canonicalFormCode,
-          form_version: item.formVersion,
-          app_version: getAppVersion(),
-          site_visit_id: (item.payload?.site_visit_id && !String(item.payload.site_visit_id).startsWith('local-'))
-            ? item.payload.site_visit_id
-            : null,
-          payload: {
-            ...item.payload,
-            _meta: {
-              ...(item.payload?._meta || {}),
-              last_saved_at: new Date().toISOString(),
-            },
+        const siteVisitId = (item.payload?.site_visit_id && !String(item.payload.site_visit_id).startsWith('local-'))
+          ? item.payload.site_visit_id
+          : null;
+
+        const payloadData = {
+          ...item.payload,
+          _meta: {
+            ...(item.payload?._meta || {}),
+            last_saved_at: new Date().toISOString(),
           },
         };
 
-        const { error } = await supabase
-          .from('submissions')
-          .upsert(row, { onConflict: 'org_code,device_id,form_code' });
+        if (siteVisitId) {
+          // Per-order submission: find existing row by visit+form, or insert new
+          const { data: existing } = await supabase
+            .from('submissions')
+            .select('id')
+            .eq('site_visit_id', siteVisitId)
+            .eq('form_code', canonicalFormCode)
+            .eq('device_id', deviceId)
+            .limit(1)
+            .maybeSingle();
 
-        if (error) throw error;
+          if (existing) {
+            // Update existing row
+            const { error } = await supabase
+              .from('submissions')
+              .update({
+                payload: payloadData,
+                app_version: getAppVersion(),
+                form_version: item.formVersion,
+              })
+              .eq('id', existing.id);
+            if (error) throw error;
+          } else {
+            // Insert new row for this order+form
+            const { error } = await supabase
+              .from('submissions')
+              .insert({
+                org_code: ORG_CODE,
+                device_id: deviceId,
+                form_code: canonicalFormCode,
+                form_version: item.formVersion,
+                app_version: getAppVersion(),
+                site_visit_id: siteVisitId,
+                payload: payloadData,
+              });
+            if (error) throw error;
+          }
+        } else {
+          // No order context — legacy upsert by device+form
+          await ensureSubmissionId(canonicalFormCode, item.formVersion);
+          const row = {
+            org_code: ORG_CODE,
+            device_id: deviceId,
+            form_code: canonicalFormCode,
+            form_version: item.formVersion,
+            app_version: getAppVersion(),
+            site_visit_id: null,
+            payload: payloadData,
+          };
+          const { error } = await supabase
+            .from('submissions')
+            .upsert(row, { onConflict: 'org_code,device_id,form_code' });
+          if (error) throw error;
+        }
 
         // remove from queue only if success
         const fresh = loadMap(PENDING_SYNC_KEY);
