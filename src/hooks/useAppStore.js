@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.0.5'
+const APP_VERSION_DISPLAY = '2.0.6'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -225,13 +225,8 @@ export const useAppStore = create(
       // ============ ACTIVE VISIT (ORDER) ============
       activeVisit: null, // site_visits row from Supabase
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
-      // Continue existing order — only reset if switching to a different order
+      // Continue existing order — never reset form data
       setActiveVisit: (visit) => {
-        const prev = get().activeVisit
-        if (prev && prev.id !== visit?.id) {
-          // Switching to a different order — clear stale data
-          get().resetAllForms()
-        }
         set({ activeVisit: visit, completedForms: [] })
       },
       // Create new order — reset all form data to start clean
