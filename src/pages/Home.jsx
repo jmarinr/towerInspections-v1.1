@@ -84,22 +84,48 @@ export default function Home() {
     }
   }, [activeVisit, navigate])
 
-  // Sync form data from Supabase when loading an order (source of truth when online)
+  // Sync form data from Supabase when loading an order
   useEffect(() => {
     if (!activeVisit?.id) return
-    // Skip local-only orders — use localStorage only
+    // Skip local-only orders
     if (String(activeVisit.id).startsWith('local-')) return
 
-    // If offline, check that local data belongs to this order
-    if (!navigator.onLine) {
-      if (formDataOwnerId && formDataOwnerId !== activeVisit.id) {
-        // Local data belongs to a different order — clear it
-        resetAllForms()
-      }
+    const isOwnOrder = formDataOwnerId === activeVisit.id
+
+    // If local data already belongs to this order, just sync completed status
+    // Don't reset or overwrite — local data may be more recent than Supabase
+    if (isOwnOrder && navigator.onLine) {
+      fetchVisitSubmissions(activeVisit.id)
+        .then((submissions) => {
+          const CODE_TO_FORM_ID = {
+            'inspeccion': 'inspeccion',
+            'mantenimiento': 'mantenimiento',
+            'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+            'inventario': 'equipment',
+            'puesta-tierra': 'grounding-system-test',
+            'sistema-ascenso': 'sistema-ascenso',
+          }
+          submissions.forEach((s) => {
+            if (s.payload?.finalized === true) {
+              const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
+              markFormCompleted(formId)
+            }
+          })
+        })
+        .catch(() => {})
       return
     }
 
-    // Online: Supabase is the source of truth
+    // If offline and data belongs to a different order, clear it
+    if (!navigator.onLine) {
+      if (formDataOwnerId && !isOwnOrder) {
+        resetAllForms()
+      }
+      useAppStore.setState({ formDataOwnerId: activeVisit.id })
+      return
+    }
+
+    // Online + different order (or no owner): download from Supabase
     const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
@@ -109,7 +135,6 @@ export default function Home() {
       'sistema-ascenso': 'sistema-ascenso',
     }
 
-    // Reset all local form data first to avoid mixing
     resetAllForms()
 
     fetchVisitSubmissions(activeVisit.id)
@@ -117,17 +142,14 @@ export default function Home() {
         submissions.forEach((s) => {
           const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
 
-          // Mark finalized forms as completed
           if (s.payload?.finalized === true) {
             markFormCompleted(formId)
           }
 
-          // Hydrate form data from Supabase (only non-finalized — finalized are locked)
           if (s.payload?.data && s.payload?.finalized !== true) {
             hydrateFormFromSupabase(s.form_code, s.payload)
           }
         })
-        // Mark local data as owned by this order
         useAppStore.setState({ formDataOwnerId: activeVisit.id })
       })
       .catch(() => {})
@@ -197,7 +219,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.1</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.2</p>
 
           {/* User info pill */}
           {session && (
