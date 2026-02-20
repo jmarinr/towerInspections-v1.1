@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.0.7'
+const APP_VERSION_DISPLAY = '2.0.8'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -236,6 +236,10 @@ export const useAppStore = create(
       },
       clearActiveVisit: () => {
         get().resetAllForms()
+        set({ activeVisit: null, completedForms: [] })
+      },
+      // Navigate to order screen without resetting form data
+      navigateToOrderScreen: () => {
         set({ activeVisit: null, completedForms: [] })
       },
       resetAllForms: () => {
@@ -1017,12 +1021,42 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           } : state.equipmentInventoryData.planoPlanta,
         } : state.equipmentInventoryData
 
+        // Strip data URL photos from safetyClimbingData (nested sections)
+        const safetyClimbingData = state.safetyClimbingData
+          ? Object.fromEntries(
+              Object.entries(state.safetyClimbingData).map(([section, fields]) => [
+                section,
+                fields && typeof fields === 'object'
+                  ? Object.fromEntries(
+                      Object.entries(fields).map(([k, v]) => [k, stripSingle(v)])
+                    )
+                  : fields,
+              ])
+            )
+          : state.safetyClimbingData
+
+        // Strip data URL photos from groundingSystemData (nested sections)
+        const groundingSystemData = state.groundingSystemData
+          ? Object.fromEntries(
+              Object.entries(state.groundingSystemData).map(([section, fields]) => [
+                section,
+                fields && typeof fields === 'object'
+                  ? Object.fromEntries(
+                      Object.entries(fields).map(([k, v]) => [k, stripSingle(v)])
+                    )
+                  : fields,
+              ])
+            )
+          : state.groundingSystemData
+
         return {
           ...state,
           inspectionData,
           maintenanceData,
           pmExecutedData,
           equipmentInventoryData,
+          safetyClimbingData,
+          groundingSystemData,
           // Never persist transient UI state
           toast: undefined,
           _toastTimer: undefined,

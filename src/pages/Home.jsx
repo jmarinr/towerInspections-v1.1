@@ -68,6 +68,7 @@ export default function Home() {
   const logout = useAppStore((s) => s.logout)
   const activeVisit = useAppStore((s) => s.activeVisit)
   const clearActiveVisit = useAppStore((s) => s.clearActiveVisit)
+  const navigateToOrderScreen = useAppStore((s) => s.navigateToOrderScreen)
   const showToast = useAppStore((s) => s.showToast)
   const completedForms = useAppStore((s) => s.completedForms)
   const markFormCompleted = useAppStore((s) => s.markFormCompleted)
@@ -143,7 +144,7 @@ export default function Home() {
   }
 
   const handleChangeOrder = () => {
-    clearActiveVisit()
+    navigateToOrderScreen()
     navigate('/order', { replace: true })
   }
 
@@ -169,7 +170,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.0.7</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.0.8</p>
 
           {/* User info pill */}
           {session && (
