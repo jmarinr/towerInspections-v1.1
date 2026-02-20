@@ -41,7 +41,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.1.6';
+  return import.meta.env.VITE_APP_VERSION || '2.1.7';
 }
 
 function loadMap(key) {
@@ -230,9 +230,10 @@ export async function flushSupabaseQueues({ formCode } = {}) {
       try {
         const canonicalFormCode = item.payload?.form_code || code;
         const deviceId = getDeviceId();
+        const NIL_UUID = '00000000-0000-0000-0000-000000000000';
         const siteVisitId = (item.payload?.site_visit_id && !String(item.payload.site_visit_id).startsWith('local-'))
           ? item.payload.site_visit_id
-          : null;
+          : NIL_UUID;
 
         const row = {
           org_code: ORG_CODE,
@@ -250,8 +251,8 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           },
         };
 
-        // Unique index: (org_code, device_id, form_code, COALESCE(site_visit_id, nil-uuid))
-        // This allows one row per order+form+device
+        // Constraint: (org_code, device_id, form_code, site_visit_id)
+        // Each order+form+device gets its own row
         const { error } = await supabase
           .from('submissions')
           .upsert(row, { onConflict: 'org_code,device_id,form_code,site_visit_id' });
