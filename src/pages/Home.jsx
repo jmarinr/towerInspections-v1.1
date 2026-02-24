@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
 import { useAppStore } from '../hooks/useAppStore'
@@ -76,6 +76,7 @@ export default function Home() {
   const hydrateFormFromSupabase = useAppStore((s) => s.hydrateFormFromSupabase)
   const resetAllForms = useAppStore((s) => s.resetAllForms)
   const formDataOwnerId = useAppStore((s) => s.formDataOwnerId)
+  const [hydrating, setHydrating] = useState(false)
 
   // Redirect to order screen if no active visit
   useEffect(() => {
@@ -92,7 +93,6 @@ export default function Home() {
     const isOwnOrder = formDataOwnerId === activeVisit.id
 
     if (!navigator.onLine) {
-      // Offline: clear stale data from other orders
       if (!isOwnOrder) {
         resetAllForms()
         useAppStore.setState({ formDataOwnerId: activeVisit.id })
@@ -100,7 +100,6 @@ export default function Home() {
       return
     }
 
-    // Online: fetch from Supabase
     const CODE_TO_FORM_ID = {
       'inspeccion': 'inspeccion',
       'mantenimiento': 'mantenimiento',
@@ -110,14 +109,15 @@ export default function Home() {
       'sistema-ascenso': 'sistema-ascenso',
     }
 
+    // Block form access while loading data for a different order
+    if (!isOwnOrder) {
+      setHydrating(true)
+      resetAllForms()
+    }
+
     fetchVisitSubmissions(activeVisit.id)
       .then((submissions) => {
         console.log(`[Home] Fetched ${submissions.length} submissions for visit ${activeVisit.id}, isOwnOrder=${isOwnOrder}`)
-
-        // Only reset if switching to a different order AND we got Supabase data
-        if (!isOwnOrder) {
-          resetAllForms()
-        }
 
         submissions.forEach((s) => {
           const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
@@ -135,6 +135,9 @@ export default function Home() {
       })
       .catch((err) => {
         console.warn('[Home] fetchVisitSubmissions failed', err?.message || err)
+      })
+      .finally(() => {
+        setHydrating(false)
       })
   }, [activeVisit?.id])
 
@@ -202,7 +205,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.7</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.8</p>
 
           {/* User info pill */}
           {session && (
@@ -272,6 +275,12 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-3">
+              {hydrating && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                  <span className="text-sm font-medium text-blue-700">Cargando datos de la orden...</span>
+                </div>
+              )}
               {visibleForms.map((form) => {
                 const IconComponent = form.icon
                 const isCompleted = (completedForms || []).includes(form.id)
@@ -287,7 +296,7 @@ export default function Home() {
                 return (
                   <button
                     key={form.id}
-                    onClick={() => !isCompleted && navigate(form.route)}
+                    onClick={() => !isCompleted && !hydrating && navigate(form.route)}
                     disabled={isCompleted}
                     className={`w-full rounded-2xl p-4 flex items-center gap-4 shadow-sm border text-left transition-all ${
                       isCompleted
