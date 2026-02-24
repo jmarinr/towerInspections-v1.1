@@ -1,22 +1,30 @@
 import { useState } from 'react'
-import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Camera, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
 import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
+import { processImageFile } from '../../lib/photoUtils'
 
 export default function MaintenanceActivity({ activity, index }) {
   const { maintenanceData, updateActivityStatus, updateActivityPhoto } = useAppStore()
   const [showPhotos, setShowPhotos] = useState(false)
+  const [loadingBefore, setLoadingBefore] = useState(false)
+  const [loadingAfter, setLoadingAfter] = useState(false)
   
   const state = maintenanceData.activities[activity.id] || {}
   const isComplete = state.status === 'complete'
 
   const beforeRaw = maintenanceData.photos?.[`${activity.id}-before`]
   const afterRaw = maintenanceData.photos?.[`${activity.id}-after`]
-  const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw
-    : (beforeRaw ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:before`) : null)
-  const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw
-    : (afterRaw ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:after`) : null)
-  const hasPhotos = beforePhoto || afterPhoto
-  const hasBothPhotos = beforePhoto && afterPhoto
+  const beforeRecovered = (!isDisplayablePhoto(beforeRaw) && beforeRaw)
+    ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:before`) : null
+  const afterRecovered = (!isDisplayablePhoto(afterRaw) && afterRaw)
+    ? recoverPhotoFromQueue('preventive-maintenance', `maintenance:${activity.id}:after`) : null
+  const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw : beforeRecovered
+  const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw : afterRecovered
+  // Has a photo been uploaded but we can't display it (placeholder)?
+  const beforeHasPlaceholder = !!beforeRaw && !beforePhoto
+  const afterHasPlaceholder = !!afterRaw && !afterPhoto
+  const hasPhotos = beforePhoto || afterPhoto || beforeHasPlaceholder || afterHasPlaceholder
+  const hasBothPhotos = (beforePhoto || beforeHasPlaceholder) && (afterPhoto || afterHasPlaceholder)
   const isNA = state.status === 'na'
   const hasStatus = isComplete || isNA
   
@@ -24,12 +32,20 @@ export default function MaintenanceActivity({ activity, index }) {
   const isFullyComplete = isComplete && hasBothPhotos
   const needsPhotos = isComplete && !hasBothPhotos
 
-  const handlePhotoCapture = (type) => (e) => {
+  const handlePhotoCapture = (type) => async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => updateActivityPhoto(activity.id, type, ev.target.result)
-    reader.readAsDataURL(file)
+    const setLoading = type === 'before' ? setLoadingBefore : setLoadingAfter
+    setLoading(true)
+    const result = await processImageFile(file)
+    if (result.error) {
+      alert(result.error)
+      setLoading(false)
+      return
+    }
+    updateActivityPhoto(activity.id, type, result.dataUrl)
+    setLoading(false)
+    e.target.value = ''
   }
 
   const handleRemovePhoto = (type) => () => {
@@ -154,7 +170,12 @@ export default function MaintenanceActivity({ activity, index }) {
                     onChange={handlePhotoCapture('before')}
                     className="hidden"
                   />
-                  {beforePhoto ? (
+                  {loadingBefore ? (
+                    <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2">
+                      <Loader2 size={20} className="animate-spin text-blue-500" />
+                      <span className="text-[10px] font-semibold text-blue-600">Procesando...</span>
+                    </div>
+                  ) : beforePhoto ? (
                     <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-blue-500">
                       <img src={beforePhoto} alt="Antes" className="w-full h-full object-cover" />
                       <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-blue-500">
@@ -168,6 +189,17 @@ export default function MaintenanceActivity({ activity, index }) {
                         <X size={12} />
                       </button>
                     </div>
+                  ) : beforeHasPlaceholder ? (
+                    <label
+                      htmlFor={`photo-before-${activity.id}`}
+                      className="aspect-[4/3] rounded-xl border-2 border-blue-500 bg-blue-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-blue-500">
+                        Antes
+                      </span>
+                      <span className="text-[10px] font-semibold text-gray-600">📷 Subida</span>
+                      <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
+                    </label>
                   ) : (
                     <label
                       htmlFor={`photo-before-${activity.id}`}
@@ -192,7 +224,12 @@ export default function MaintenanceActivity({ activity, index }) {
                     onChange={handlePhotoCapture('after')}
                     className="hidden"
                   />
-                  {afterPhoto ? (
+                  {loadingAfter ? (
+                    <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-2">
+                      <Loader2 size={20} className="animate-spin text-green-500" />
+                      <span className="text-[10px] font-semibold text-green-600">Procesando...</span>
+                    </div>
+                  ) : afterPhoto ? (
                     <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-green-500">
                       <img src={afterPhoto} alt="Después" className="w-full h-full object-cover" />
                       <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-green-500">
@@ -206,6 +243,17 @@ export default function MaintenanceActivity({ activity, index }) {
                         <X size={12} />
                       </button>
                     </div>
+                  ) : afterHasPlaceholder ? (
+                    <label
+                      htmlFor={`photo-after-${activity.id}`}
+                      className="aspect-[4/3] rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-green-500">
+                        Después
+                      </span>
+                      <span className="text-[10px] font-semibold text-gray-600">📷 Subida</span>
+                      <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
+                    </label>
                   ) : (
                     <label
                       htmlFor={`photo-after-${activity.id}`}

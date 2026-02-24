@@ -1,7 +1,8 @@
-import { MapPin, Camera, X } from 'lucide-react'
+import { MapPin, Camera, X, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { queueAssetUpload } from '../../lib/supabaseSync'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
+import { processImageFile } from '../../lib/photoUtils'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
@@ -25,6 +26,7 @@ export default function DynamicForm(props) {
   const { fields } = step
 
   const [touched, setTouched] = useState({})
+  const [loadingPhotos, setLoadingPhotos] = useState({})
 
   const markTouched = (id) => setTouched((prev) => (prev[id] ? prev : { ...prev, [id]: true }))
 
@@ -81,29 +83,30 @@ export default function DynamicForm(props) {
     )
   }
 
-  const handlePhotoCapture = (fieldId) => (e) => {
+  const handlePhotoCapture = (fieldId) => async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen debe ser menor a 5MB')
+    setLoadingPhotos(prev => ({ ...prev, [fieldId]: true }))
+    const result = await processImageFile(file)
+    if (result.error) {
+      alert(result.error)
+      setLoadingPhotos(prev => ({ ...prev, [fieldId]: false }))
       return
     }
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result
-      onFieldChange(fieldId, dataUrl)
-      // Background upload to Supabase Storage (if configured). This should NOT
-      // block navigation or local autosave.
-      if (formCode) {
-        try {
-          queueAssetUpload(formCode, fieldId, dataUrl)
-        } catch (err) {
-          // Silent: offline / storage not configured yet.
-          console.warn('[Supabase] queueAssetUpload failed', err)
-        }
+    const dataUrl = result.dataUrl
+    onFieldChange(fieldId, dataUrl)
+    // Background upload to Supabase Storage (if configured). This should NOT
+    // block navigation or local autosave.
+    if (formCode) {
+      try {
+        queueAssetUpload(formCode, fieldId, dataUrl)
+      } catch (err) {
+        // Silent: offline / storage not configured yet.
+        console.warn('[Supabase] queueAssetUpload failed', err)
       }
     }
-    reader.readAsDataURL(file)
+    setLoadingPhotos(prev => ({ ...prev, [fieldId]: false }))
+    e.target.value = ''
   }
 
   const renderField = (field) => {
@@ -281,6 +284,7 @@ export default function DynamicForm(props) {
         const photoSrc = recoveredDynPhoto || value
         const photoDisplayable = isDisplayablePhoto(photoSrc)
         const photoPlaceholder = !!value && !photoDisplayable
+        const photoLoading = !!loadingPhotos[field.id]
         return (
           <div>
             <input
@@ -291,7 +295,12 @@ export default function DynamicForm(props) {
               onChange={handlePhotoCapture(field.id)}
               className="hidden"
             />
-            {photoDisplayable ? (
+            {photoLoading ? (
+              <div className="w-full aspect-video rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={28} className="animate-spin text-blue-500" />
+                <span className="text-xs font-semibold text-blue-600">Procesando foto...</span>
+              </div>
+            ) : photoDisplayable ? (
               <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-500">
                 <img src={photoSrc} alt="Captura" className="w-full h-full object-cover" />
                 <button

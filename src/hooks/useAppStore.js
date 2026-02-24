@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.2.1'
+const APP_VERSION_DISPLAY = '2.2.3'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -50,21 +50,34 @@ export function isDisplayablePhoto(val) {
 /**
  * Recover a photo data URL from the pending assets queue in localStorage.
  * Used after reload when the store only has '__photo__' placeholder.
+ * Falls back to checking uploaded asset URLs (saved after successful Supabase upload).
  * @param {string} formCode - e.g. 'inspection-general'
  * @param {string} assetType - e.g. 'inspection:item1:before'
- * @returns {string|null} data URL or null
+ * @returns {string|null} data URL, public URL, or null
  */
 export function recoverPhotoFromQueue(formCode, assetType) {
   try {
+    // First check pending queue (has full data URL)
     const raw = localStorage.getItem('pti_pending_assets_v1')
-    if (!raw) return null
-    const map = JSON.parse(raw)
-    const list = Array.isArray(map?.[formCode]) ? map[formCode] : []
-    const asset = list.find(a => a.assetType === assetType && a.action === 'upload' && a.dataUrl)
-    return asset?.dataUrl || null
-  } catch (_) {
-    return null
-  }
+    if (raw) {
+      const map = JSON.parse(raw)
+      const list = Array.isArray(map?.[formCode]) ? map[formCode] : []
+      const asset = list.find(a => a.assetType === assetType && a.action === 'upload' && a.dataUrl)
+      if (asset?.dataUrl) return asset.dataUrl
+    }
+  } catch (_) {}
+
+  try {
+    // Fallback: check uploaded URLs map (has public URL from Supabase Storage)
+    const urlsRaw = localStorage.getItem('pti_uploaded_urls_v1')
+    if (urlsRaw) {
+      const urlsMap = JSON.parse(urlsRaw)
+      const key = `${formCode}::${assetType}`
+      if (urlsMap[key]) return urlsMap[key]
+    }
+  } catch (_) {}
+
+  return null
 }
 
 /**
@@ -346,10 +359,34 @@ export const useAppStore = create(
 
         // Replace __photo_uploaded__ placeholders with public URLs from submission_assets
         if (assets && assets.length > 0) {
+          // Build URL map: asset_type → public_url
           const urlMap = {}
           for (const a of assets) {
             if (a.asset_type && a.public_url) {
               urlMap[a.asset_type] = a.public_url
+            }
+          }
+
+          // Build reverse lookups for different naming patterns:
+          // inspection:itemId:photoType → itemId-photoType
+          // executed:activityId:photoType → activityId-photoType
+          // maintenance:itemId:photoType → itemId-photoType
+          // equipment:fotoTorre → fotoTorreDataUrl, equipment:croquisEsquematico → pngDataUrl (nested)
+          const keyToUrl = {}
+          for (const [assetType, url] of Object.entries(urlMap)) {
+            // Direct match (DynamicForm fields like fotoEscalera, fotoPataTorre)
+            keyToUrl[assetType] = url
+
+            const parts = assetType.split(':')
+            if (parts.length === 3) {
+              // inspection:itemId:before → itemId-before
+              keyToUrl[`${parts[1]}-${parts[2]}`] = url
+            }
+            if (parts.length === 2 && parts[0] === 'equipment') {
+              // equipment:fotoTorre → fotoTorreDataUrl
+              keyToUrl[`${parts[1]}DataUrl`] = url
+              // Also match pngDataUrl for nested objects
+              keyToUrl[`${parts[1]}`] = url
             }
           }
 
@@ -359,10 +396,11 @@ export const useAppStore = create(
             if (Array.isArray(obj)) return obj.map(injectUrls)
             const out = {}
             for (const [k, v] of Object.entries(obj)) {
-              if (v === '__photo_uploaded__' || v === '__photo__') {
-                // Try to find matching asset by field key
-                // Assets use types like "fieldId" or "formPrefix:activityId:photoType"
-                out[k] = urlMap[k] || v
+              if ((v === '__photo_uploaded__' || v === '__photo__') && keyToUrl[k]) {
+                out[k] = keyToUrl[k]
+              } else if (typeof v === 'string' && (v === '__photo_uploaded__' || v === '__photo__')) {
+                // Try pngDataUrl match for equipment nested objects
+                out[k] = keyToUrl[k] || v
               } else if (typeof v === 'object') {
                 out[k] = injectUrls(v)
               } else {
@@ -828,13 +866,13 @@ export const useAppStore = create(
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
           return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), scene, pngDataUrl } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       setDistribucionFotoTorre: (fotoTorreDataUrl) => {
         set((state) => {
           const current = state.equipmentInventoryData || getDefaultEquipmentInventoryData()
-          return { equipmentInventoryData: { ...current, fotoTorreDataUrl } }
+          return { equipmentInventoryData: { ...current, distribucionTorre: { ...(current.distribucionTorre || {}), fotoTorreDataUrl } } }
         })
 
         // Upload photo in background (best effort)
@@ -869,7 +907,7 @@ export const useAppStore = create(
           const niveles = current.croquisEsquematico?.niveles || { nivel1: '', nivel2: '', nivel3: '', banqueta: '' }
           return { equipmentInventoryData: { ...current, croquisEsquematico: { ...(current.croquisEsquematico || {}), niveles: { ...niveles, [field]: value } } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       setPlanoPlanta: (pngDataUrl) => {

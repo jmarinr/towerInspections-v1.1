@@ -41,7 +41,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.2.1';
+  return import.meta.env.VITE_APP_VERSION || '2.2.3';
 }
 
 function loadMap(key) {
@@ -83,6 +83,20 @@ export function clearSupabaseLocalForForm(formCode) {
         }
       }
       saveMap(SUBMISSION_IDS_KEY, idsMap);
+    }
+  } catch (e) {}
+
+  // Clear uploaded photo URLs for this form
+  try {
+    const urlsRaw = localStorage.getItem('pti_uploaded_urls_v1')
+    if (urlsRaw) {
+      const urlsMap = JSON.parse(urlsRaw)
+      for (const key of Object.keys(urlsMap)) {
+        if (key.startsWith(formCode + '::')) {
+          delete urlsMap[key]
+        }
+      }
+      localStorage.setItem('pti_uploaded_urls_v1', JSON.stringify(urlsMap))
     }
   } catch (e) {}
 }
@@ -391,6 +405,14 @@ export async function flushSupabaseQueues({ formCode } = {}) {
 
           // Use the safe upsert (DELETE + INSERT) to avoid 409 Conflict
           await upsertSubmissionAsset(row)
+
+          // Save public URL for photo recovery (so preview works after reload)
+          try {
+            const urlsRaw = localStorage.getItem('pti_uploaded_urls_v1')
+            const urlsMap = urlsRaw ? JSON.parse(urlsRaw) : {}
+            urlsMap[`${fc}::${asset.assetType}`] = publicUrl
+            localStorage.setItem('pti_uploaded_urls_v1', JSON.stringify(urlsMap))
+          } catch (_) {}
 
           // remove from queue on success
           assetsMap[fc] = (assetsMap[fc] || []).filter(a => a.assetType !== asset.assetType)
