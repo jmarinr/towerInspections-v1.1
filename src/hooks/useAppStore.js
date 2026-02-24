@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.2.0'
+const APP_VERSION_DISPLAY = '2.2.1'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -43,7 +43,7 @@ function stripDataUrlFields(obj) {
 /** Returns true if the value is a renderable image source (data URL, blob URL, or http URL) */
 export function isDisplayablePhoto(val) {
   if (!val || typeof val !== 'string') return false
-  if (val === PHOTO_PLACEHOLDER) return false
+  if (val === PHOTO_PLACEHOLDER || val === '__photo_uploaded__') return false
   return val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http')
 }
 
@@ -335,14 +335,44 @@ export const useAppStore = create(
        * @param {string} formCode - canonical form code (e.g. 'inspeccion')
        * @param {object} payload - the payload column from submissions table
        */
-      hydrateFormFromSupabase: (formCode, payload) => {
+      hydrateFormFromSupabase: (formCode, payload, assets) => {
         // The submissions table payload column has structure:
         // { payload: { data: {...}, meta: {...} }, _meta: {...} }
         // OR directly: { data: {...}, meta: {...} }
         const inner = payload?.payload || payload
         if (!inner?.data) return
-        const data = inner.data
+        let data = JSON.parse(JSON.stringify(inner.data)) // deep clone
         const meta = inner.meta || {}
+
+        // Replace __photo_uploaded__ placeholders with public URLs from submission_assets
+        if (assets && assets.length > 0) {
+          const urlMap = {}
+          for (const a of assets) {
+            if (a.asset_type && a.public_url) {
+              urlMap[a.asset_type] = a.public_url
+            }
+          }
+
+          // Recursively walk data and replace placeholders
+          const injectUrls = (obj) => {
+            if (!obj || typeof obj !== 'object') return obj
+            if (Array.isArray(obj)) return obj.map(injectUrls)
+            const out = {}
+            for (const [k, v] of Object.entries(obj)) {
+              if (v === '__photo_uploaded__' || v === '__photo__') {
+                // Try to find matching asset by field key
+                // Assets use types like "fieldId" or "formPrefix:activityId:photoType"
+                out[k] = urlMap[k] || v
+              } else if (typeof v === 'object') {
+                out[k] = injectUrls(v)
+              } else {
+                out[k] = v
+              }
+            }
+            return out
+          }
+          data = injectUrls(data)
+        }
 
         const stateMap = {
           'inspeccion': 'inspectionData',

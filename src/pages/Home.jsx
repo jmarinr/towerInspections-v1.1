@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
 import { useAppStore } from '../hooks/useAppStore'
 import { filterFormsByRole } from '../lib/auth'
-import { closeSiteVisit, fetchVisitSubmissions } from '../lib/siteVisitService'
+import { closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
 
 const ALL_FORMS = [
   {
@@ -116,21 +116,33 @@ export default function Home() {
     }
 
     fetchVisitSubmissions(activeVisit.id)
-      .then((submissions) => {
+      .then(async (submissions) => {
         console.log(`[Home] Fetched ${submissions.length} submissions for visit ${activeVisit.id}, isOwnOrder=${isOwnOrder}`)
+
+        // Fetch photo assets for all submissions in parallel
+        const submissionIds = submissions.map(s => s.id).filter(Boolean)
+        let assetsMap = {}
+        if (submissionIds.length > 0) {
+          try {
+            assetsMap = await fetchSubmissionAssets(submissionIds)
+            console.log(`[Home] Fetched assets for ${Object.keys(assetsMap).length} submissions`)
+          } catch (err) {
+            console.warn('[Home] fetchSubmissionAssets failed', err?.message || err)
+          }
+        }
 
         submissions.forEach((s) => {
           const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
-          // payload column structure: { payload: { data: {...}, meta: {...}, finalized }, _meta }
           const inner = s.payload?.payload || s.payload
-          console.log(`[Home] Hydrating ${s.form_code}, finalized=${inner?.finalized}, hasData=${!!inner?.data}`)
+          const assets = assetsMap[s.id] || []
+          console.log(`[Home] Hydrating ${s.form_code}, finalized=${inner?.finalized}, hasData=${!!inner?.data}, assets=${assets.length}`)
 
           if (inner?.finalized === true) {
             markFormCompleted(formId)
           }
 
           if (inner?.data) {
-            hydrateFormFromSupabase(s.form_code, s.payload)
+            hydrateFormFromSupabase(s.form_code, s.payload, assets)
           }
         })
         useAppStore.setState({ formDataOwnerId: activeVisit.id })
@@ -207,7 +219,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.2.0</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.2.1</p>
 
           {/* User info pill */}
           {session && (

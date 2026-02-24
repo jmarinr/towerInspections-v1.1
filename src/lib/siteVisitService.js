@@ -96,11 +96,37 @@ export async function closeSiteVisit(visitId, { lat, lng } = {}) {
 export async function fetchVisitSubmissions(visitId) {
   const { data, error } = await supabase
     .from('submissions')
-    .select('form_code, payload, updated_at')
+    .select('id, form_code, payload, updated_at')
     .eq('site_visit_id', visitId)
 
   if (error) throw error
   return data || []
+}
+
+/**
+ * Fetch all submission_assets for a list of submission IDs.
+ * Returns a map: { submissionId: [ { asset_type, public_url, ... } ] }
+ */
+export async function fetchSubmissionAssets(submissionIds) {
+  if (!submissionIds || !submissionIds.length) return {}
+
+  const { data, error } = await supabase
+    .from('submission_assets')
+    .select('submission_id, asset_type, public_url')
+    .in('submission_id', submissionIds)
+
+  if (error) {
+    console.warn('[siteVisitService] fetchSubmissionAssets failed', error?.message)
+    return {}
+  }
+
+  // Group by submission_id
+  const map = {}
+  for (const row of (data || [])) {
+    if (!map[row.submission_id]) map[row.submission_id] = []
+    map[row.submission_id].push(row)
+  }
+  return map
 }
 
 /**
