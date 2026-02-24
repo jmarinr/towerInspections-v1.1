@@ -1,8 +1,9 @@
-import { MapPin, Camera, X, Loader2 } from 'lucide-react'
-import { useState } from 'react'
-import { queueAssetUpload } from '../../lib/supabaseSync'
+import { MapPin, Camera, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { queueAssetUpload, flushSupabaseQueues } from '../../lib/supabaseSync'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
+import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
@@ -27,6 +28,32 @@ export default function DynamicForm(props) {
 
   const [touched, setTouched] = useState({})
   const [loadingPhotos, setLoadingPhotos] = useState({})
+  // Track upload status per field: { fieldId: 'uploading' | 'done' | 'error' }
+  const [uploadStatuses, setUploadStatuses] = useState({})
+  const statusTimersRef = useRef({})
+
+  // Subscribe to photo upload events
+  useEffect(() => {
+    if (!formCode) return
+    const unsub = onPhotoStatus((evt) => {
+      if (evt.formCode !== formCode) return
+      // evt.assetType is the field.id for DynamicForm photos
+      const fieldId = evt.assetType
+      setUploadStatuses(prev => ({ ...prev, [fieldId]: evt.status }))
+      // Auto-clear done/error
+      if (evt.status === PhotoUploadStatus.DONE || evt.status === PhotoUploadStatus.ERROR) {
+        clearTimeout(statusTimersRef.current[fieldId])
+        const delay = evt.status === PhotoUploadStatus.DONE ? 3000 : 5000
+        statusTimersRef.current[fieldId] = setTimeout(() => {
+          setUploadStatuses(prev => ({ ...prev, [fieldId]: null }))
+        }, delay)
+      }
+    })
+    return () => {
+      unsub()
+      Object.values(statusTimersRef.current).forEach(clearTimeout)
+    }
+  }, [formCode])
 
   const markTouched = (id) => setTouched((prev) => (prev[id] ? prev : { ...prev, [id]: true }))
 
@@ -285,6 +312,44 @@ export default function DynamicForm(props) {
         const photoDisplayable = isDisplayablePhoto(photoSrc)
         const photoPlaceholder = !!value && !photoDisplayable
         const photoLoading = !!loadingPhotos[field.id]
+        const photoUpStatus = uploadStatuses[field.id] || null
+
+        const renderDynUploadBadge = () => {
+          if (!photoUpStatus || photoLoading) return null
+          if (photoUpStatus === PhotoUploadStatus.UPLOADING) {
+            return (
+              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-blue-600/90 backdrop-blur-sm">
+                <Loader2 size={12} className="animate-spin text-white" />
+                <span className="text-[10px] font-bold text-white">Subiendo a la nube...</span>
+              </div>
+            )
+          }
+          if (photoUpStatus === PhotoUploadStatus.DONE) {
+            return (
+              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-green-600/90 backdrop-blur-sm">
+                <Check size={12} className="text-white" />
+                <span className="text-[10px] font-bold text-white">¡Foto guardada!</span>
+              </div>
+            )
+          }
+          if (photoUpStatus === PhotoUploadStatus.ERROR) {
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadStatuses(prev => ({ ...prev, [field.id]: null }))
+                  try { flushSupabaseQueues({ formCode }) } catch (_) {}
+                }}
+                className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-red-600/90 backdrop-blur-sm active:scale-95"
+              >
+                <RefreshCw size={12} className="text-white" />
+                <span className="text-[10px] font-bold text-white">Error al subir · Reintentar</span>
+              </button>
+            )
+          }
+          return null
+        }
+
         return (
           <div>
             <input
@@ -310,14 +375,15 @@ export default function DynamicForm(props) {
                 >
                   <X size={16} />
                 </button>
+                {renderDynUploadBadge()}
               </div>
             ) : photoPlaceholder ? (
               <label
                 htmlFor={`photo-${field.id}`}
                 className="w-full aspect-video rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-2 cursor-pointer"
               >
-                <Camera size={32} className="text-green-500" />
-                <span className="text-sm font-semibold text-green-700">📷 Foto subida</span>
+                <UploadCloud size={28} className="text-green-500" />
+                <span className="text-sm font-semibold text-green-700">Foto guardada en nube</span>
                 <span className="text-xs text-green-500">Toque para reemplazar</span>
               </label>
             ) : (

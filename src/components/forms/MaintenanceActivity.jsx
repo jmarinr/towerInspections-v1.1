@@ -1,13 +1,40 @@
-import { useState } from 'react'
-import { Camera, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Camera, ChevronDown, ChevronUp, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
 import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
+import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
+import { flushSupabaseQueues } from '../../lib/supabaseSync'
 
 export default function MaintenanceActivity({ activity, index }) {
   const { maintenanceData, updateActivityStatus, updateActivityPhoto } = useAppStore()
   const [showPhotos, setShowPhotos] = useState(false)
   const [loadingBefore, setLoadingBefore] = useState(false)
   const [loadingAfter, setLoadingAfter] = useState(false)
+  const [uploadStatuses, setUploadStatuses] = useState({})
+  const statusTimersRef = useRef({})
+
+  // Subscribe to upload events
+  useEffect(() => {
+    const beforeKey = `maintenance:${activity.id}:before`
+    const afterKey = `maintenance:${activity.id}:after`
+    const unsub = onPhotoStatus((evt) => {
+      if (evt.formCode !== 'preventive-maintenance') return
+      if (evt.assetType !== beforeKey && evt.assetType !== afterKey) return
+      const which = evt.assetType === beforeKey ? 'before' : 'after'
+      setUploadStatuses(prev => ({ ...prev, [which]: evt.status }))
+      if (evt.status === PhotoUploadStatus.DONE || evt.status === PhotoUploadStatus.ERROR) {
+        clearTimeout(statusTimersRef.current[which])
+        const delay = evt.status === PhotoUploadStatus.DONE ? 3000 : 5000
+        statusTimersRef.current[which] = setTimeout(() => {
+          setUploadStatuses(prev => ({ ...prev, [which]: null }))
+        }, delay)
+      }
+    })
+    return () => {
+      unsub()
+      Object.values(statusTimersRef.current).forEach(clearTimeout)
+    }
+  }, [activity.id])
   
   const state = maintenanceData.activities[activity.id] || {}
   const isComplete = state.status === 'complete'
@@ -50,6 +77,46 @@ export default function MaintenanceActivity({ activity, index }) {
 
   const handleRemovePhoto = (type) => () => {
     updateActivityPhoto(activity.id, type, null)
+  }
+
+  const handleRetry = (type) => {
+    setUploadStatuses(prev => ({ ...prev, [type]: null }))
+    try { flushSupabaseQueues({ formCode: 'preventive-maintenance' }) } catch (_) {}
+  }
+
+  const renderUploadBadge = (type) => {
+    const status = uploadStatuses[type]
+    const isLoading = type === 'before' ? loadingBefore : loadingAfter
+    if (!status || isLoading) return null
+    if (status === PhotoUploadStatus.UPLOADING) {
+      return (
+        <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-blue-600/90 backdrop-blur-sm">
+          <Loader2 size={10} className="animate-spin text-white" />
+          <span className="text-[9px] font-bold text-white">Subiendo...</span>
+        </div>
+      )
+    }
+    if (status === PhotoUploadStatus.DONE) {
+      return (
+        <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-green-600/90 backdrop-blur-sm">
+          <Check size={10} className="text-white" />
+          <span className="text-[9px] font-bold text-white">¡Guardada!</span>
+        </div>
+      )
+    }
+    if (status === PhotoUploadStatus.ERROR) {
+      return (
+        <button
+          type="button"
+          onClick={() => handleRetry(type)}
+          className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-red-600/90 backdrop-blur-sm active:scale-95"
+        >
+          <RefreshCw size={10} className="text-white" />
+          <span className="text-[9px] font-bold text-white">Reintentar</span>
+        </button>
+      )
+    }
+    return null
   }
 
   // Determinar color del borde
@@ -188,6 +255,7 @@ export default function MaintenanceActivity({ activity, index }) {
                       >
                         <X size={12} />
                       </button>
+                      {renderUploadBadge('before')}
                     </div>
                   ) : beforeHasPlaceholder ? (
                     <label
@@ -197,7 +265,8 @@ export default function MaintenanceActivity({ activity, index }) {
                       <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-blue-500">
                         Antes
                       </span>
-                      <span className="text-[10px] font-semibold text-gray-600">📷 Subida</span>
+                      <UploadCloud size={16} className="text-blue-400" />
+                      <span className="text-[10px] font-semibold text-gray-600">Guardada en nube</span>
                       <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
                     </label>
                   ) : (
@@ -242,6 +311,7 @@ export default function MaintenanceActivity({ activity, index }) {
                       >
                         <X size={12} />
                       </button>
+                      {renderUploadBadge('after')}
                     </div>
                   ) : afterHasPlaceholder ? (
                     <label
@@ -251,7 +321,8 @@ export default function MaintenanceActivity({ activity, index }) {
                       <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-green-500">
                         Después
                       </span>
-                      <span className="text-[10px] font-semibold text-gray-600">📷 Subida</span>
+                      <UploadCloud size={16} className="text-green-400" />
+                      <span className="text-[10px] font-semibold text-gray-600">Guardada en nube</span>
                       <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
                     </label>
                   ) : (

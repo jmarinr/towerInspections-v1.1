@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getDeviceId } from './deviceId';
 import { dataUrlToBlob } from './dataUrl';
+import { emitPhotoStatus, PhotoUploadStatus } from './photoEvents';
 
 
 // Converts multiple image representations into a Blob:
@@ -41,7 +42,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.2.3';
+  return import.meta.env.VITE_APP_VERSION || '2.3.0';
 }
 
 function loadMap(key) {
@@ -374,6 +375,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
 
         // UPLOAD
         try {
+          emitPhotoStatus(fc, asset.assetType, PhotoUploadStatus.UPLOADING)
           const blob = await toBlobAny(asset.dataUrl)
 
           const mimeExt = (blob.type || '').split('/')[1] || 'jpg'
@@ -414,11 +416,14 @@ export async function flushSupabaseQueues({ formCode } = {}) {
             localStorage.setItem('pti_uploaded_urls_v1', JSON.stringify(urlsMap))
           } catch (_) {}
 
+          emitPhotoStatus(fc, asset.assetType, PhotoUploadStatus.DONE, publicUrl)
+
           // remove from queue on success
           assetsMap[fc] = (assetsMap[fc] || []).filter(a => a.assetType !== asset.assetType)
           saveMap(PENDING_ASSETS_KEY, assetsMap)
         } catch (e) {
           console.warn('[Supabase] asset upload failed', fc, asset?.assetType, e?.message || e)
+          emitPhotoStatus(fc, asset.assetType, PhotoUploadStatus.ERROR)
           // Continue with next asset instead of breaking the whole loop
           continue
         }
