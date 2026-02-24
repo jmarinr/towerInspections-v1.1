@@ -121,13 +121,15 @@ export default function Home() {
 
         submissions.forEach((s) => {
           const formId = CODE_TO_FORM_ID[s.form_code] || s.form_code
-          console.log(`[Home] Hydrating ${s.form_code}, finalized=${s.payload?.finalized}, hasData=${!!s.payload?.data}`)
+          // payload column structure: { payload: { data: {...}, meta: {...}, finalized }, _meta }
+          const inner = s.payload?.payload || s.payload
+          console.log(`[Home] Hydrating ${s.form_code}, finalized=${inner?.finalized}, hasData=${!!inner?.data}`)
 
-          if (s.payload?.finalized === true) {
+          if (inner?.finalized === true) {
             markFormCompleted(formId)
           }
 
-          if (s.payload?.data) {
+          if (inner?.data) {
             hydrateFormFromSupabase(s.form_code, s.payload)
           }
         })
@@ -205,7 +207,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.8</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.1.9</p>
 
           {/* User info pill */}
           {session && (

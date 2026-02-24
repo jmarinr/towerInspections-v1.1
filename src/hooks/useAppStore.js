@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.1.8'
+const APP_VERSION_DISPLAY = '2.1.9'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -336,9 +336,13 @@ export const useAppStore = create(
        * @param {object} payload - the payload column from submissions table
        */
       hydrateFormFromSupabase: (formCode, payload) => {
-        if (!payload?.data) return
-        const data = payload.data
-        const meta = payload.meta || {}
+        // The submissions table payload column has structure:
+        // { payload: { data: {...}, meta: {...} }, _meta: {...} }
+        // OR directly: { data: {...}, meta: {...} }
+        const inner = payload?.payload || payload
+        if (!inner?.data) return
+        const data = inner.data
+        const meta = inner.meta || {}
 
         const stateMap = {
           'inspeccion': 'inspectionData',
