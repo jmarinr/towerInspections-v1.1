@@ -75,7 +75,13 @@ export function clearSupabaseLocalForForm(formCode) {
   try {
     const idsMap = loadMap(SUBMISSION_IDS_KEY);
     if (idsMap && typeof idsMap === 'object') {
+      // Clear both old-style keys and new-style keys (formCode::visitId)
       delete idsMap[formCode];
+      for (const key of Object.keys(idsMap)) {
+        if (key.startsWith(formCode + '::')) {
+          delete idsMap[key];
+        }
+      }
       saveMap(SUBMISSION_IDS_KEY, idsMap);
     }
   } catch (e) {}
