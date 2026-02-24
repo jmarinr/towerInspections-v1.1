@@ -41,7 +41,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.1.9';
+  return import.meta.env.VITE_APP_VERSION || '2.2.0';
 }
 
 function loadMap(key) {
@@ -84,26 +84,73 @@ export function clearSupabaseLocalForForm(formCode) {
 export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
   const deviceId = getDeviceId();
   const map = loadMap(SUBMISSION_IDS_KEY);
-  if (map[formCode]) return map[formCode];
+  const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-  // Create minimal row (payload can be null initially)
+  // Map autosave bucket names to canonical form codes (same as getSupabasePayloadForForm)
+  const toCanonical = (code) => {
+    if (!code) return 'unknown';
+    if (code.startsWith('inspection')) return 'inspeccion';
+    if (code === 'preventive-maintenance') return 'mantenimiento';
+    if (code === 'executed-maintenance' || code === 'pm-executed') return 'mantenimiento-ejecutado';
+    if (code === 'equipment-inventory' || code === 'equipment') return 'inventario';
+    if (code === 'grounding-system-test') return 'puesta-tierra';
+    if (code === 'safety-system') return 'sistema-ascenso';
+    return code;
+  };
+  const canonicalCode = toCanonical(formCode);
+
+  // Get site_visit_id from the most recent pending sync for this form
+  let siteVisitId = NIL_UUID;
+  try {
+    const syncMap = loadMap(PENDING_SYNC_KEY);
+    for (const [, item] of Object.entries(syncMap)) {
+      const vid = item?.payload?.site_visit_id;
+      if (vid && vid !== NIL_UUID && !String(vid).startsWith('local-')) {
+        siteVisitId = vid;
+        break;
+      }
+    }
+  } catch (_) {}
+
+  // Cache key includes visit ID to separate per-order submissions
+  const cacheKey = `${canonicalCode}::${siteVisitId}`;
+  if (map[cacheKey]) return map[cacheKey];
+
+  // First try to find the existing submission row (created by autosave)
+  const { data: existing } = await supabase
+    .from('submissions')
+    .select('id')
+    .eq('device_id', deviceId)
+    .eq('form_code', canonicalCode)
+    .eq('site_visit_id', siteVisitId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    map[cacheKey] = existing.id;
+    saveMap(SUBMISSION_IDS_KEY, map);
+    return existing.id;
+  }
+
+  // If not found, create a minimal row
   const row = {
     org_code: ORG_CODE,
     device_id: deviceId,
-    form_code: formCode,
+    form_code: canonicalCode,
     form_version: formVersion,
     app_version: getAppVersion(),
+    site_visit_id: siteVisitId,
     payload: {},
   };
 
   const { data, error } = await supabase
     .from('submissions')
-    .upsert(row, { onConflict: 'org_code,device_id,form_code' })
+    .upsert(row, { onConflict: 'org_code,device_id,form_code,site_visit_id' })
     .select('id')
     .single();
 
   if (error) throw error;
-  map[formCode] = data.id;
+  map[cacheKey] = data.id;
   saveMap(SUBMISSION_IDS_KEY, map);
   return data.id;
 }
