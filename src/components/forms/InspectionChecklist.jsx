@@ -1,11 +1,44 @@
-import { useState } from 'react'
-import { Camera, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Camera, ChevronDown, ChevronUp, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
+import { processImageFile } from '../../lib/photoUtils'
+import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
+import { flushSupabaseQueues } from '../../lib/supabaseSync'
 
 export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {} }) {
   const [expandedItems, setExpandedItems] = useState({})
+  const [loadingPhotos, setLoadingPhotos] = useState({})
+  // Upload status per photo: { 'itemId-before': 'uploading' | 'done' | 'error' }
+  const [uploadStatuses, setUploadStatuses] = useState({})
+  const statusTimersRef = useRef({})
 
-  // Guard against undefined step or items
+  // The correct formCode for photos in MantenimientoPreventivo checklist
+  const FORM_CODE = 'preventive-maintenance'
+
+  // Subscribe to upload events for this form
+  useEffect(() => {
+    const unsub = onPhotoStatus((evt) => {
+      if (evt.formCode !== FORM_CODE) return
+      // assetType is 'maintenance:itemId:before|after'
+      const parts = evt.assetType.split(':')
+      if (parts.length === 3 && parts[0] === 'maintenance') {
+        const key = `${parts[1]}-${parts[2]}` // e.g. '1.1-before'
+        setUploadStatuses(prev => ({ ...prev, [key]: evt.status }))
+        if (evt.status === PhotoUploadStatus.DONE || evt.status === PhotoUploadStatus.ERROR) {
+          clearTimeout(statusTimersRef.current[key])
+          const delay = evt.status === PhotoUploadStatus.DONE ? 3000 : 5000
+          statusTimersRef.current[key] = setTimeout(() => {
+            setUploadStatuses(prev => ({ ...prev, [key]: null }))
+          }, delay)
+        }
+      }
+    })
+    return () => {
+      unsub()
+      Object.values(statusTimersRef.current).forEach(clearTimeout)
+    }
+  }, [])
+
   if (!step || !step.items) {
     return <div className="text-gray-500 text-center py-4">No hay ítems para mostrar</div>
   }
@@ -24,31 +57,37 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
     setExpandedItems(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
-  const handlePhotoCapture = (itemId, type) => (e) => {
+  const handlePhotoCapture = (itemId, type) => async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen debe ser menor a 5MB')
+    const key = `${itemId}-${type}`
+    setLoadingPhotos(prev => ({ ...prev, [key]: true }))
+    const result = await processImageFile(file)
+    if (result.error) {
+      alert(result.error)
+      setLoadingPhotos(prev => ({ ...prev, [key]: false }))
       return
     }
-    const reader = new FileReader()
-    reader.onload = (ev) => onPhotoChange(itemId, type, ev.target.result)
-    reader.readAsDataURL(file)
+    onPhotoChange(itemId, type, result.dataUrl)
+    setLoadingPhotos(prev => ({ ...prev, [key]: false }))
+    e.target.value = ''
+  }
+
+  const handleRetry = () => {
+    try { flushSupabaseQueues({ formCode: FORM_CODE }) } catch (_) {}
   }
 
   const getItemStatus = (itemId) => {
     const data = checklistData[itemId] || {}
     const beforeRaw = photos[`${itemId}-before`]
     const afterRaw = photos[`${itemId}-after`]
-    // A photo "exists" (for progress) if it has any truthy value (including placeholder)
     const hasBeforeValue = !!beforeRaw
     const hasAfterValue = !!afterRaw
-    // But only displayable photos can be rendered as <img>
-    // Try recovering from pending assets queue if placeholder
+    // Use correct formCode and assetType pattern for recovery
     const beforePhoto = isDisplayablePhoto(beforeRaw) ? beforeRaw
-      : (beforeRaw ? recoverPhotoFromQueue('inspection-general', `inspection:${itemId}:before`) : null)
+      : (beforeRaw ? recoverPhotoFromQueue(FORM_CODE, `maintenance:${itemId}:before`) : null)
     const afterPhoto = isDisplayablePhoto(afterRaw) ? afterRaw
-      : (afterRaw ? recoverPhotoFromQueue('inspection-general', `inspection:${itemId}:after`) : null)
+      : (afterRaw ? recoverPhotoFromQueue(FORM_CODE, `maintenance:${itemId}:after`) : null)
     
     const hasStatus = !!data.status
     const isNA = data.status === 'na'
@@ -60,6 +99,41 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
   }
 
   const completedCount = visibleItems.filter(item => getItemStatus(item.id).isComplete).length
+
+  const renderUploadBadge = (itemId, type) => {
+    const key = `${itemId}-${type}`
+    const status = uploadStatuses[key]
+    if (!status || loadingPhotos[key]) return null
+    if (status === PhotoUploadStatus.UPLOADING) {
+      return (
+        <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-blue-600/90 backdrop-blur-sm">
+          <Loader2 size={10} className="animate-spin text-white" />
+          <span className="text-[9px] font-bold text-white">Subiendo...</span>
+        </div>
+      )
+    }
+    if (status === PhotoUploadStatus.DONE) {
+      return (
+        <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-green-600/90 backdrop-blur-sm">
+          <Check size={10} className="text-white" />
+          <span className="text-[9px] font-bold text-white">¡Guardada!</span>
+        </div>
+      )
+    }
+    if (status === PhotoUploadStatus.ERROR) {
+      return (
+        <button
+          type="button"
+          onClick={handleRetry}
+          className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg bg-red-600/90 backdrop-blur-sm active:scale-95"
+        >
+          <RefreshCw size={10} className="text-white" />
+          <span className="text-[9px] font-bold text-white">Reintentar</span>
+        </button>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="space-y-3">
@@ -82,7 +156,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
         const data = checklistData[item.id] || {}
         const isExpanded = expandedItems[item.id]
 
-        // Determinar estilo del borde
         const borderColor = status.isComplete 
           ? 'border-green-500' 
           : status.needsPhotos 
@@ -91,7 +164,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
               ? 'border-gray-300' 
               : 'border-gray-200'
 
-        // Determinar estilo del badge
         const badgeStyle = status.isComplete
           ? 'bg-green-500 text-white'
           : status.needsPhotos
@@ -105,9 +177,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
             key={item.id} 
             className={`bg-white rounded-2xl border-2 transition-all overflow-hidden ${borderColor}`}
           >
-            {/* Contenido principal */}
             <div className="p-4">
-              {/* Header del item */}
               <div className="flex gap-3 mb-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${badgeStyle}`}>
                   {status.isComplete ? '✓' : status.isNA ? '—' : item.id}
@@ -125,7 +195,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                 )}
               </div>
 
-              {/* Botones de estado */}
               <div className="flex gap-1.5 mb-3">
                 {['bueno', 'regular', 'malo', 'na'].map((st) => {
                   const isSelected = data.status === st
@@ -148,7 +217,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                 })}
               </div>
 
-              {/* Campo de valor adicional si existe */}
               {item.hasValueInput && (
                 <div className="mb-3">
                   <input
@@ -161,7 +229,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                 </div>
               )}
 
-              {/* Observación */}
               <input
                 type="text"
                 value={data.observation || ''}
@@ -171,7 +238,6 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
               />
             </div>
 
-            {/* Sección de fotos - Solo si no es N/A */}
             {!status.isNA && (
               <div className="border-t border-gray-100">
                 <button
@@ -185,15 +251,15 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                     <span className={`text-xs font-medium ${status.hasBothPhotos ? 'text-gray-700' : 'text-gray-500'}`}>
                       {status.hasBothPhotos 
                         ? 'Evidencia completa' 
-                        : status.beforePhoto || status.afterPhoto
-                          ? `Evidencia (${[status.beforePhoto, status.afterPhoto].filter(Boolean).length}/2)`
+                        : (status.beforePhoto || status.hasBeforeValue || status.afterPhoto || status.hasAfterValue)
+                          ? `Evidencia (${[status.hasBeforeValue, status.hasAfterValue].filter(Boolean).length}/2)`
                           : 'Agregar evidencia'
                       }
                     </span>
-                    {status.beforePhoto && (
+                    {(status.beforePhoto || status.hasBeforeValue) && (
                       <span className="w-4 h-4 rounded bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center">A</span>
                     )}
-                    {status.afterPhoto && (
+                    {(status.afterPhoto || status.hasAfterValue) && (
                       <span className="w-4 h-4 rounded bg-green-500 text-white text-[8px] font-bold flex items-center justify-center">D</span>
                     )}
                   </div>
@@ -213,7 +279,12 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                           onChange={handlePhotoCapture(item.id, 'before')}
                           className="hidden"
                         />
-                        {status.beforePhoto ? (
+                        {loadingPhotos[`${item.id}-before`] ? (
+                          <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1">
+                            <Loader2 size={18} className="animate-spin text-blue-500" />
+                            <span className="text-[9px] font-semibold text-blue-600">Procesando...</span>
+                          </div>
+                        ) : status.beforePhoto ? (
                           <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-blue-500">
                             <img src={status.beforePhoto} alt="Antes" className="w-full h-full object-cover" />
                             <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-blue-500">
@@ -226,6 +297,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             >
                               <X size={10} />
                             </button>
+                            {renderUploadBadge(item.id, 'before')}
                           </div>
                         ) : status.hasBeforeValue ? (
                           <label
@@ -233,8 +305,9 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             className="aspect-[4/3] rounded-xl border-2 border-blue-500 bg-blue-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
                           >
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-blue-500">Antes</span>
-                            <span className="text-[10px] text-blue-600 font-semibold">📷 Subida</span>
-                            <span className="text-[9px] text-blue-400">Toque para reemplazar</span>
+                            <UploadCloud size={16} className="text-blue-400" />
+                            <span className="text-[9px] text-blue-600 font-semibold">En la nube</span>
+                            <span className="text-[8px] text-blue-400">Toque para reemplazar</span>
                           </label>
                         ) : (
                           <label
@@ -259,7 +332,12 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                           onChange={handlePhotoCapture(item.id, 'after')}
                           className="hidden"
                         />
-                        {status.afterPhoto ? (
+                        {loadingPhotos[`${item.id}-after`] ? (
+                          <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-1">
+                            <Loader2 size={18} className="animate-spin text-green-500" />
+                            <span className="text-[9px] font-semibold text-green-600">Procesando...</span>
+                          </div>
+                        ) : status.afterPhoto ? (
                           <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-green-500">
                             <img src={status.afterPhoto} alt="Después" className="w-full h-full object-cover" />
                             <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-green-500">
@@ -272,6 +350,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             >
                               <X size={10} />
                             </button>
+                            {renderUploadBadge(item.id, 'after')}
                           </div>
                         ) : status.hasAfterValue ? (
                           <label
@@ -279,8 +358,9 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             className="aspect-[4/3] rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
                           >
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-green-500">Después</span>
-                            <span className="text-[10px] text-green-600 font-semibold">📷 Subida</span>
-                            <span className="text-[9px] text-green-400">Toque para reemplazar</span>
+                            <UploadCloud size={16} className="text-green-400" />
+                            <span className="text-[9px] text-green-600 font-semibold">En la nube</span>
+                            <span className="text-[8px] text-green-400">Toque para reemplazar</span>
                           </label>
                         ) : (
                           <label
