@@ -46,7 +46,7 @@ export default function MantenimientoPreventivo() {
         return /^\d{4}-\d{2}-\d{2}$/.test(String(v))
       case 'time':
         return /^\d{2}:\d{2}$/.test(String(v))
-      case 'photo':
+      case 'photo': {
         // Puede venir como string (dataUrl/blob/url/placeholder) o como objeto (metadatos de subida a Supabase)
         if (!v) return false
         if (typeof v === 'string') {
@@ -57,6 +57,7 @@ export default function MantenimientoPreventivo() {
           return Boolean(v.dataUrl || v.publicUrl || v.url || v.path || v.key || v.storageKey)
         }
         return false
+      }
       case 'select':
         return String(v).trim().length > 0
       default:

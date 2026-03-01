@@ -238,7 +238,7 @@ export default function DynamicForm(props) {
           </div>
         )
 
-      case 'status':
+      case 'status': {
         // Botones estilo inspección: Bueno/Regular/Malo/N/A
         const statusOptions = [
           { value: 'bueno', label: 'Bueno', color: 'bg-green-500' },
@@ -267,6 +267,7 @@ export default function DynamicForm(props) {
             ))}
           </div>
         )
+      }
 
       case 'textarea':
         return (
