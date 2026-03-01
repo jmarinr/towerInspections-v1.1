@@ -42,7 +42,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.3.1';
+  return import.meta.env.VITE_APP_VERSION || '2.3.2';
 }
 
 function loadMap(key) {
@@ -431,6 +431,19 @@ export async function flushSupabaseQueues({ formCode } = {}) {
     }
   } finally {
     _flushing = false;
+  }
+
+  // Re-check: if new items were queued while we were flushing, flush again.
+  // This handles the case where photo 2 is captured while photo 1 is still uploading.
+  const remainingAssets = loadMap(PENDING_ASSETS_KEY);
+  const remainingSync = loadMap(PENDING_SYNC_KEY);
+  const hasRemaining = (formCode
+    ? !!(remainingAssets[formCode]?.length || remainingSync[formCode])
+    : (Object.values(remainingAssets).some(a => a?.length) || Object.keys(remainingSync).length > 0)
+  );
+  if (hasRemaining) {
+    // Use setTimeout to avoid deep recursion and give the UI a chance to breathe
+    setTimeout(() => flushSupabaseQueues({ formCode }), 200);
   }
 }
 
