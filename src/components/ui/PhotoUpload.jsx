@@ -9,6 +9,12 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove, f
   const isBefore = type === 'before'
   const rawPhoto = photo || value || null
 
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  // Upload status: null | 'uploading' | 'done' | 'error'
+  const [uploadStatus, setUploadStatus] = useState(null)
+  const statusTimerRef = useRef(null)
+
   // Try to recover photo from pending queue or uploaded URLs
   // Re-evaluate when uploadStatus changes (e.g. after upload completes, URL becomes available)
   const recoveredPhoto = useMemo(() => {
@@ -22,12 +28,6 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove, f
 
   const displayablePhoto = recoveredPhoto || (isDisplayablePhoto(rawPhoto) ? rawPhoto : null)
   const hasUploadedPhoto = !!rawPhoto && !displayablePhoto
-
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  // Upload status: null | 'uploading' | 'done' | 'error'
-  const [uploadStatus, setUploadStatus] = useState(null)
-  const statusTimerRef = useRef(null)
 
   // Subscribe to upload events for this specific photo
   useEffect(() => {
