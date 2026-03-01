@@ -127,6 +127,7 @@ export default function DynamicForm(props) {
     if (formCode) {
       try {
         queueAssetUpload(formCode, fieldId, dataUrl)
+        flushSupabaseQueues({ formCode })
       } catch (err) {
         // Silent: offline / storage not configured yet.
         console.warn('[Supabase] queueAssetUpload failed', err)
