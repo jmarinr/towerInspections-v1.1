@@ -304,7 +304,7 @@ export default function DynamicForm(props) {
           </div>
         )
 
-      case 'photo':
+      case 'photo': {
         const recoveredDynPhoto = !isDisplayablePhoto(value) && value && formCode
           ? recoverPhotoFromQueue(formCode, field.id)
           : null
@@ -397,6 +397,7 @@ export default function DynamicForm(props) {
             )}
           </div>
         )
+      }
 
       case 'calculated':
         // Campo calculado - solo lectura

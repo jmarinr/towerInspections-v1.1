@@ -35,6 +35,9 @@ const PENDING_ASSETS_KEY = 'pti_pending_assets_v1';
 
 // Concurrency guard – prevents overlapping flushSupabaseQueues calls
 let _flushing = false;
+// Track consecutive re-flush attempts to prevent infinite loops on persistent errors
+let _reflushCount = 0;
+const MAX_REFLUSH = 10;
 
 function safeJsonParse(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
@@ -42,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.3.3';
+  return import.meta.env.VITE_APP_VERSION || '2.3.4';
 }
 
 function loadMap(key) {
@@ -123,6 +126,7 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
   // Get site_visit_id from the most recent pending sync for this form
   let siteVisitId = NIL_UUID;
   try {
+    // First check pending sync queue
     const syncMap = loadMap(PENDING_SYNC_KEY);
     for (const [, item] of Object.entries(syncMap)) {
       const vid = item?.payload?.site_visit_id;
@@ -131,7 +135,23 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
         break;
       }
     }
+    // If not found in sync queue, check the active visit in the zustand persisted store
+    if (siteVisitId === NIL_UUID) {
+      const storeRaw = localStorage.getItem('pti-inspect-storage');
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        const vid = store?.state?.activeVisit?.id;
+        if (vid && vid !== NIL_UUID && !String(vid).startsWith('local-')) {
+          siteVisitId = vid;
+        }
+      }
+    }
   } catch (_) {}
+
+  // If we still have NIL_UUID, we can't create a submission (FK constraint will fail)
+  if (siteVisitId === NIL_UUID) {
+    throw new Error('No valid site_visit_id available - cannot create submission for assets');
+  }
 
   // Cache key includes visit ID to separate per-order submissions
   const cacheKey = `${canonicalCode}::${siteVisitId}`;
@@ -441,9 +461,13 @@ export async function flushSupabaseQueues({ formCode } = {}) {
     ? !!(remainingAssets[formCode]?.length || remainingSync[formCode])
     : (Object.values(remainingAssets).some(a => a?.length) || Object.keys(remainingSync).length > 0)
   );
-  if (hasRemaining) {
+  if (hasRemaining && _reflushCount < MAX_REFLUSH) {
+    _reflushCount++;
     // Use setTimeout to avoid deep recursion and give the UI a chance to breathe
-    setTimeout(() => flushSupabaseQueues({ formCode }), 200);
+    setTimeout(() => flushSupabaseQueues({ formCode }), 500);
+  } else {
+    // Reset counter when queue is drained or we gave up
+    _reflushCount = 0;
   }
 }
 
