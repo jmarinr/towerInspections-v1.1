@@ -10,13 +10,15 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove, f
   const rawPhoto = photo || value || null
 
   // Try to recover photo from pending queue or uploaded URLs
+  // Re-evaluate when uploadStatus changes (e.g. after upload completes, URL becomes available)
   const recoveredPhoto = useMemo(() => {
     if (isDisplayablePhoto(rawPhoto)) return rawPhoto
     if (rawPhoto && formCode && assetType) {
       return recoverPhotoFromQueue(formCode, assetType)
     }
     return null
-  }, [rawPhoto, formCode, assetType])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawPhoto, formCode, assetType, uploadStatus])
 
   const displayablePhoto = recoveredPhoto || (isDisplayablePhoto(rawPhoto) ? rawPhoto : null)
   const hasUploadedPhoto = !!rawPhoto && !displayablePhoto
