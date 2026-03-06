@@ -33,7 +33,6 @@ export const maintenanceFormConfig = {
           { value: 'rawland', label: 'Rawland' },
           { value: 'rooftop', label: 'Rooftop' },
         ]},
-        { id: 'horaSalida', label: 'Hora de Salida', type: 'time', required: true },
       ]
     },
     {
@@ -89,7 +88,7 @@ export const maintenanceFormConfig = {
         { id: 'ciudad', label: 'Ciudad', type: 'text', required: true, placeholder: 'Ciudad' },
         { id: 'estado', label: 'Estado/Provincia', type: 'text', required: true, placeholder: 'Estado' },
         { id: 'codigoPostal', label: 'Código Postal', type: 'text', placeholder: 'Ej: 10101' },
-        { id: 'pais', label: 'País', type: 'text', required: true, placeholder: 'Ej: Costa Rica' },
+        { id: 'pais', label: 'País', type: 'text', required: true, placeholder: 'Ej: Costa Rica', defaultValue: 'Panamá' },
       ]
     },
     {

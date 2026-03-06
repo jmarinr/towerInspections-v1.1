@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
@@ -8,6 +8,7 @@ import CategoryTabs from '../components/layout/CategoryTabs'
 import StepIndicator from '../components/layout/StepIndicator'
 import DynamicForm from '../components/forms/DynamicForm'
 import InspectionChecklist from '../components/forms/InspectionChecklist'
+import DepartureTimeModal from '../components/ui/DepartureTimeModal'
 import { useAppStore } from '../hooks/useAppStore'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
@@ -21,6 +22,8 @@ export default function MantenimientoPreventivo() {
     completeMaintenanceStep,
     showToast,
     formMeta, resetFormDraft, finalizeForm } = useAppStore()
+
+  const [showDepartureModal, setShowDepartureModal] = useState(false)
 
   // Asegurar que tenemos datos válidos con valores por defecto
   // Importante: normalizar a número (evita que "1" rompa getStepById)
@@ -206,6 +209,15 @@ export default function MantenimientoPreventivo() {
       return
     }
 
+    // Show departure time modal before finalizing
+    setShowDepartureModal(true)
+  }
+
+  const handleDepartureConfirm = async (time) => {
+    setShowDepartureModal(false)
+    // Save departure time to form data
+    updateMaintenanceField('horaSalida', time)
+
     try {
       await finalizeForm('mantenimiento')
       showToast('¡Mantenimiento enviado!', 'success')
@@ -317,6 +329,12 @@ export default function MantenimientoPreventivo() {
         onNext={handleNext} 
         showPrev={currentStep > 1} 
         nextLabel={currentStep === totalSteps ? 'Finalizar' : 'Siguiente'} 
+      />
+
+      <DepartureTimeModal
+        open={showDepartureModal}
+        onConfirm={handleDepartureConfirm}
+        onCancel={() => setShowDepartureModal(false)}
       />
     </div>
   )
