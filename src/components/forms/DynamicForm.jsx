@@ -55,6 +55,18 @@ export default function DynamicForm(props) {
     }
   }, [formCode])
 
+  // Apply defaultValues from field config for empty fields
+  useEffect(() => {
+    if (!fields) return
+    fields.forEach(field => {
+      if (field.defaultValue && (formData[field.id] == null || formData[field.id] === '')) {
+        onFieldChange(field.id, field.defaultValue)
+      }
+    })
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const markTouched = (id) => setTouched((prev) => (prev[id] ? prev : { ...prev, [id]: true }))
 
   const validateByType = (field, value) => {
@@ -140,7 +152,8 @@ export default function DynamicForm(props) {
   const renderField = (field) => {
     if (!shouldShowField(field)) return null
 
-    const value = formData[field.id] || ''
+    const rawValue = formData[field.id]
+    const value = (rawValue != null && rawValue !== '') ? rawValue : (field.defaultValue || '')
     const validity = validateByType(field, value)
     const isTouched = !!touched[field.id] || (field.type === 'gps' && String(value).trim().length > 0)
     const showError = isTouched && validity === false
