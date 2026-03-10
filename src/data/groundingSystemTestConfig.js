@@ -93,6 +93,7 @@ export const groundingSystemTestConfig = {
         { id: 'sumResistencias', label: 'Sumatoria (automática)', type: 'calculated' },
         { id: 'rg', label: 'Rg promedio (automático)', type: 'calculated' },
         { id: 'observaciones', label: 'Observaciones', type: 'textarea', placeholder: 'Notas relevantes de la medición.' },
+        { id: 'fotoObservaciones', label: 'Foto - Observaciones', type: 'photo' },
       ],
     },
     {

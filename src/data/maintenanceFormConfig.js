@@ -33,6 +33,7 @@ export const maintenanceFormConfig = {
           { value: 'rawland', label: 'Rawland' },
           { value: 'rooftop', label: 'Rooftop' },
         ]},
+        { id: 'fotoGPS', label: 'Foto GPS', type: 'photo' },
       ]
     },
     {
