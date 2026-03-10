@@ -376,38 +376,38 @@ export default function DynamicForm(props) {
               className="hidden"
             />
             {photoLoading ? (
-              <div className="w-full aspect-video rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2">
-                <Loader2 size={28} className="animate-spin text-blue-500" />
-                <span className="text-xs font-semibold text-blue-600">Procesando foto...</span>
+              <div className="w-36 aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1">
+                <Loader2 size={20} className="animate-spin text-blue-500" />
+                <span className="text-[10px] font-semibold text-blue-600">Procesando...</span>
               </div>
             ) : photoDisplayable ? (
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-green-500">
+              <div className="relative w-36 aspect-[4/3] rounded-xl overflow-hidden border-2 border-green-500">
                 <img src={photoSrc} alt="Captura" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => onFieldChange(field.id, '')}
-                  className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95"
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95"
                 >
-                  <X size={16} />
+                  <X size={12} />
                 </button>
                 {renderDynUploadBadge()}
               </div>
             ) : photoPlaceholder ? (
               <label
                 htmlFor={`photo-${field.id}`}
-                className="w-full aspect-video rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-2 cursor-pointer"
+                className="w-36 aspect-[4/3] rounded-xl border-2 border-green-500 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer"
               >
-                <UploadCloud size={28} className="text-green-500" />
-                <span className="text-sm font-semibold text-green-700">Foto guardada en nube</span>
-                <span className="text-xs text-green-500">Toque para reemplazar</span>
+                <UploadCloud size={18} className="text-green-500" />
+                <span className="text-[10px] font-semibold text-green-700">En la nube</span>
+                <span className="text-[9px] text-green-500">Toque para reemplazar</span>
               </label>
             ) : (
               <label
                 htmlFor={`photo-${field.id}`}
-                className="w-full aspect-video rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+                className="w-36 aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               >
-                <Camera size={32} className="text-gray-400" />
-                <span className="text-sm font-semibold text-gray-500">Tomar foto</span>
+                <Camera size={22} className="text-gray-400" />
+                <span className="text-[10px] font-semibold text-gray-500">Tomar foto</span>
               </label>
             )}
           </div>
