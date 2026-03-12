@@ -1,6 +1,8 @@
 // Configuración Formulario: Inventario de Equipos v2
-// Tabla de torre con dimensiones separadas (Alto, Ancho, Profundidad)
-// 3 fotos de evidencia + sección Piso reutilizada
+// Basado en documento Inventario_de_equipos_APP.docx
+// Cambios vs v1: Torre con dimensiones desglosadas + comentario, fórmula área,
+// 3 fotos torre, foto plano en piso, sin Distribución ni Croquis/Plano,
+// nueva sección Carriers repetible con tabla + 3 fotos cada uno.
 
 export const equipmentInventoryV2Steps = [
   {
@@ -13,7 +15,7 @@ export const equipmentInventoryV2Steps = [
   {
     id: 'inventario-torre',
     title: 'Torre',
-    description: 'Inventario de equipos en torre (tabla con dimensiones desglosadas).',
+    description: 'Inventario de equipos en torre con dimensiones desglosadas.',
     icon: '🗼',
     type: 'table-torre-v2',
   },
@@ -25,11 +27,11 @@ export const equipmentInventoryV2Steps = [
     type: 'piso',
   },
   {
-    id: 'fotos-evidencia',
-    title: 'Fotos',
-    description: 'Evidencia fotográfica del sitio.',
-    icon: '📷',
-    type: 'fotos',
+    id: 'carriers',
+    title: 'Carriers',
+    description: 'Datos y fotos por cada carrier del sitio.',
+    icon: '📡',
+    type: 'carriers',
   },
 ]
 

@@ -12,7 +12,7 @@ import { useAppStore } from '../hooks/useAppStore'
 import EquipmentInventorySiteInfoForm from '../components/forms/EquipmentInventorySiteInfoForm'
 import TowerInventoryTableV2 from '../components/forms/TowerInventoryTableV2'
 import FloorInventoryClientsV2 from '../components/forms/FloorInventoryClientsV2'
-import EquipmentPhotosV2 from '../components/forms/EquipmentPhotosV2'
+import CarrierSection from '../components/forms/CarrierSection'
 
 export default function InventarioEquiposV2() {
   const navigate = useNavigate()
@@ -56,18 +56,13 @@ export default function InventarioEquiposV2() {
   const renderStepContent = () => {
     switch (currentStep.type) {
       case 'form':
-        return (
-          <EquipmentInventorySiteInfoForm
-            siteInfo={siteInfo}
-            onChange={updateEquipmentV2SiteField}
-          />
-        )
+        return <EquipmentInventorySiteInfoForm siteInfo={siteInfo} onChange={updateEquipmentV2SiteField} />
       case 'table-torre-v2':
         return <TowerInventoryTableV2 />
       case 'piso':
         return <FloorInventoryClientsV2 />
-      case 'fotos':
-        return <EquipmentPhotosV2 />
+      case 'carriers':
+        return <CarrierSection />
       default:
         return <div className="text-gray-500 text-center py-8">Sección no implementada</div>
     }
@@ -75,29 +70,13 @@ export default function InventarioEquiposV2() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <AppHeader
-        title="Inventario de Equipos v2"
-        subtitle="Formulario 7 · PTI Inspect"
-        onBack={() => navigate('/')}
-      />
+      <AppHeader title="Inventario de Equipos v2" subtitle="PTI Inspect" onBack={() => navigate('/')} />
 
-      <StepPills
-        steps={equipmentInventoryV2Steps}
-        currentStepId={currentStepId}
-        completedSteps={[]}
-        onStepClick={(s) => navigateToStep(s.id)}
-      />
+      <StepPills steps={equipmentInventoryV2Steps} currentStepId={currentStepId} completedSteps={[]} onStepClick={(s) => navigateToStep(s.id)} />
 
       {showAutosaveIndicator && <AutosaveIndicator />}
 
-      <FormMetaBar
-        meta={meta}
-        onReset={() => {
-          if (window.confirm('¿Reiniciar formulario? Se perderán los datos ingresados.')) {
-            resetFormDraft('inventario-v2')
-          }
-        }}
-      />
+      <FormMetaBar meta={meta} onReset={() => { if (window.confirm('¿Reiniciar formulario?')) resetFormDraft('inventario-v2') }} />
 
       <main className="flex-1 px-4 pb-32">
         <div className="mb-4">
@@ -105,16 +84,10 @@ export default function InventarioEquiposV2() {
           <h2 className="text-lg font-extrabold text-gray-900">{currentStep.title}</h2>
           <p className="text-sm text-gray-500">{currentStep.description}</p>
         </div>
-
         {renderStepContent()}
       </main>
 
-      <BottomNav
-        onPrev={handlePrev}
-        onNext={handleNext}
-        showPrev={stepIndex > 0}
-        nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'}
-      />
+      <BottomNav onPrev={handlePrev} onNext={handleNext} showPrev={stepIndex > 0} nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'} />
     </div>
   )
 }

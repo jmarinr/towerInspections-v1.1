@@ -881,6 +881,28 @@ export const useAppStore = create(
         get().triggerAutosave('equipment-v2')
       },
 
+      updateEquipmentV2Carriers: (carriers) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          return { equipmentInventoryV2Data: { ...current, carriers } }
+        })
+        // Queue photo uploads for any carrier photos that are data URLs
+        if (Array.isArray(carriers)) {
+          carriers.forEach((c, idx) => {
+            ['foto1', 'foto2', 'foto3'].forEach((fKey) => {
+              const val = c[fKey]
+              if (val && typeof val === 'string' && val.startsWith('data:image')) {
+                try {
+                  queueAssetUpload('equipment-v2', `carrier:${idx}:${fKey}`, val)
+                  flushSupabaseQueues({ formCode: 'equipment-v2' })
+                } catch (_) {}
+              }
+            })
+          })
+        }
+        get().triggerAutosave('equipment-v2')
+      },
+
       updateEquipmentSiteField: (field, value) => {
         set((state) => ({
           equipmentInventoryData: {
