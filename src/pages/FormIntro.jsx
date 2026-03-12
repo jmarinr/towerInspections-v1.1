@@ -27,6 +27,13 @@ const FORM_MAP = {
     route: '/inventario-equipos',
     icon: Package,
   },
+  'equipment-v2': {
+    title: 'Inventario de Equipos v2',
+    description: 'Inventario con dimensiones desglosadas y evidencia fotográfica.',
+    summary: ['Datos generales', 'Torre (dimensiones)', 'Piso (clientes)', 'Fotos de evidencia'],
+    route: '/inventario-equipos-v2',
+    icon: Package,
+  },
   'sistema-ascenso': {
     title: 'Sistema de ascenso',
     description: 'Inspección de dispositivos y condiciones de seguridad.',
@@ -114,6 +121,7 @@ export default function FormIntro() {
     'inspeccion': 'inspeccion',
     'mantenimiento': 'mantenimiento',
     'equipment': 'inventario',
+    'equipment-v2': 'inventario-v2',
     'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
     'sistema-ascenso': 'safety-system',
     'grounding-system-test': 'puesta-tierra',

@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import InspeccionSitio from './pages/InspeccionSitio'
 import MantenimientoPreventivo from './pages/MantenimientoPreventivo'
 import InventarioEquipos from './pages/InventarioEquipos'
+import InventarioEquiposV2 from './pages/InventarioEquiposV2'
 import SafetyClimbingDevice from './pages/SafetyClimbingDevice'
 import GroundingSystemTest from './pages/GroundingSystemTest'
 import PreventiveMaintenanceExecuted from './pages/PreventiveMaintenanceExecuted'
@@ -75,6 +76,9 @@ function App() {
 
           <Route path="/inventario-equipos" element={<InventarioEquipos />} />
           <Route path="/inventario-equipos/:step" element={<InventarioEquipos />} />
+
+          <Route path="/inventario-equipos-v2" element={<InventarioEquiposV2 />} />
+          <Route path="/inventario-equipos-v2/:step" element={<InventarioEquiposV2 />} />
 
           <Route path="/safety-climbing-device" element={<SafetyClimbingDevice />} />
           <Route path="/sistema-ascenso" element={<SafetyClimbingDevice />} />

@@ -43,6 +43,15 @@ const ALL_FORMS = [
     route: '/intro/equipment',
   },
   {
+    id: 'equipment-v2',
+    title: 'Inventario de Equipos v2',
+    description: 'Inventario con dimensiones desglosadas (Alto/Ancho/Profundidad) y fotos de evidencia',
+    icon: Package,
+    iconBg: 'bg-lime-600',
+    stats: '4 pasos / 3 fotos',
+    route: '/intro/equipment-v2',
+  },
+  {
     id: 'sistema-ascenso',
     title: 'Sistema de ascenso',
     description: 'Revisión de dispositivo de ascenso y componentes asociados',
@@ -105,6 +114,7 @@ export default function Home() {
       'mantenimiento': 'mantenimiento',
       'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
       'inventario': 'equipment',
+      'inventario-v2': 'equipment-v2',
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
     }
@@ -219,7 +229,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.4.5</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.4.6</p>
 
           {/* User info pill */}
           {session && (

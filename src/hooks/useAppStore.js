@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.4.5'
+const APP_VERSION_DISPLAY = '2.4.6'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -417,6 +417,7 @@ export const useAppStore = create(
           'mantenimiento': 'maintenanceData',
           'mantenimiento-ejecutado': 'pmExecutedData',
           'inventario': 'equipmentInventoryData',
+          'inventario-v2': 'equipmentInventoryV2Data',
           'puesta-tierra': 'groundingSystemData',
           'sistema-ascenso': 'safetyClimbingData',
         }
@@ -426,6 +427,7 @@ export const useAppStore = create(
           'mantenimiento': 'mantenimiento',
           'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
           'inventario': 'equipment',
+          'inventario-v2': 'equipment-v2',
           'puesta-tierra': 'grounding-system-test',
           'sistema-ascenso': 'sistema-ascenso',
         }
@@ -450,6 +452,7 @@ export const useAppStore = create(
           'inspeccion': { code: 'inspection-general', reset: 'resetInspectionData', metaKey: 'inspeccion' },
           'mantenimiento': { code: 'preventive-maintenance', reset: 'resetMaintenanceData', metaKey: 'mantenimiento' },
           'inventario': { code: 'equipment', reset: 'resetEquipmentInventoryData', metaKey: 'equipment' },
+          'inventario-v2': { code: 'equipment-v2', reset: 'resetEquipmentInventoryV2Data', metaKey: 'equipment-v2' },
           'mantenimiento-ejecutado': { code: 'executed-maintenance', reset: 'resetPMExecutedData', metaKey: 'mantenimiento-ejecutado' },
           'puesta-tierra': { code: 'grounding-system-test', reset: 'resetGroundingSystemData', metaKey: 'grounding-system-test' },
           'safety-system': { code: 'safety-system', reset: 'resetSafetyClimbingData', metaKey: 'sistema-ascenso' },
@@ -472,6 +475,7 @@ export const useAppStore = create(
           'inspeccion': { code: 'inspection-general', formId: 'inspeccion' },
           'mantenimiento': { code: 'preventive-maintenance', formId: 'mantenimiento' },
           'inventario': { code: 'equipment', formId: 'equipment' },
+          'inventario-v2': { code: 'equipment-v2', formId: 'equipment-v2' },
           'mantenimiento-ejecutado': { code: 'executed-maintenance', formId: 'mantenimiento-ejecutado' },
           'puesta-tierra': { code: 'grounding-system-test', formId: 'grounding-system-test' },
           'safety-system': { code: 'safety-system', formId: 'sistema-ascenso' },
@@ -518,6 +522,7 @@ export const useAppStore = create(
       if (code === 'preventive-maintenance') return 'mantenimiento'
       if (code === 'executed-maintenance' || code === 'pm-executed') return 'mantenimiento-ejecutado'
       if (code === 'equipment-inventory' || code === 'equipment') return 'inventario'
+      if (code === 'equipment-v2') return 'inventario-v2'
       if (code === 'grounding-system-test') return 'puesta-tierra'
       if (code === 'safety-system') return 'sistema-ascenso'
       return code
@@ -531,6 +536,7 @@ export const useAppStore = create(
       'mantenimiento': 'mantenimiento',
       'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
       'inventario': 'equipment',
+      'inventario-v2': 'equipment-v2',
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
     }
@@ -543,6 +549,7 @@ export const useAppStore = create(
       : canonicalFormCode === 'mantenimiento' ? state.maintenanceData
       : canonicalFormCode === 'mantenimiento-ejecutado' ? state.pmExecutedData
       : canonicalFormCode === 'inventario' ? state.equipmentInventoryData
+      : canonicalFormCode === 'inventario-v2' ? state.equipmentInventoryV2Data
       : canonicalFormCode === 'puesta-tierra' ? state.groundingSystemData
       : canonicalFormCode === 'sistema-ascenso' ? state.safetyClimbingData
       : null
@@ -729,6 +736,150 @@ export const useAppStore = create(
 
       // ============ SAFETY CLIMBING DEVICE (Nuevo formulario) ============
       safetyClimbingData: {},
+
+      // ============ EQUIPMENT INVENTORY V2 ============
+      equipmentInventoryV2Data: {
+        siteInfo: {},
+        torre: { items: [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }] },
+        piso: { clientes: [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] },
+        fotos: {},
+      },
+
+      updateEquipmentV2SiteField: (field, value) => {
+        set((state) => ({
+          equipmentInventoryV2Data: {
+            ...(state.equipmentInventoryV2Data || {}),
+            siteInfo: { ...((state.equipmentInventoryV2Data || {}).siteInfo || {}), [field]: value },
+          },
+        }))
+        get().triggerAutosave('equipment-v2')
+      },
+
+      updateEquipmentV2Field: (section, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          return {
+            equipmentInventoryV2Data: {
+              ...current,
+              [section]: { ...(current[section] || {}), [field]: value },
+            },
+          }
+        })
+        if (value && typeof value === 'string' && value.startsWith('data:image')) {
+          try {
+            queueAssetUpload('equipment-v2', `equipmentV2:${field}`, value)
+            flushSupabaseQueues({ formCode: 'equipment-v2' })
+          } catch (_) {}
+        }
+        get().triggerAutosave('equipment-v2')
+      },
+
+      addTowerItemV2: () => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const items = current.torre?.items || []
+          return {
+            equipmentInventoryV2Data: {
+              ...current,
+              torre: { ...(current.torre || {}), items: [...items, { alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }] },
+            },
+          }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      removeTowerItemV2: (index) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const items = (current.torre?.items || []).slice()
+          items.splice(index, 1)
+          const fallback = [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }]
+          return { equipmentInventoryV2Data: { ...current, torre: { ...(current.torre || {}), items: items.length ? items : fallback } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      updateTowerItemFieldV2: (index, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const items = (current.torre?.items || []).map((it, i) => (i === index ? { ...it, [field]: value } : it))
+          return { equipmentInventoryV2Data: { ...current, torre: { ...(current.torre || {}), items } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      // V2 Piso reuses same structure — actions reference V2 data
+      addFloorClientV2: (tipoCliente = 'colo') => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = current.piso?.clientes || []
+          return {
+            equipmentInventoryV2Data: {
+              ...current,
+              piso: { ...(current.piso || {}), clientes: [...clientes, { tipoCliente, nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] },
+            },
+          }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      removeFloorClientV2: (index) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = (current.piso?.clientes || []).slice()
+          clientes.splice(index, 1)
+          const fallback = [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }]
+          return { equipmentInventoryV2Data: { ...current, piso: { ...(current.piso || {}), clientes: clientes.length ? clientes : fallback } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      updateFloorClientFieldV2: (index, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = (current.piso?.clientes || []).map((c, i) => (i === index ? { ...c, [field]: value } : c))
+          return { equipmentInventoryV2Data: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      addCabinetV2: (clientIndex) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            return { ...c, gabinetes: [...(c.gabinetes || []), { gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }
+          })
+          return { equipmentInventoryV2Data: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      removeCabinetV2: (clientIndex, cabIndex) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            const gabs = (c.gabinetes || []).filter((_, gi) => gi !== cabIndex)
+            return { ...c, gabinetes: gabs.length ? gabs : [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }
+          })
+          return { equipmentInventoryV2Data: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
+
+      updateCabinetFieldV2: (clientIndex, cabIndex, field, value) => {
+        set((state) => {
+          const current = state.equipmentInventoryV2Data || {}
+          const clientes = (current.piso?.clientes || []).map((c, i) => {
+            if (i !== clientIndex) return c
+            const gabinetes = (c.gabinetes || []).map((g, gi) => (gi === cabIndex ? { ...g, [field]: value } : g))
+            return { ...c, gabinetes }
+          })
+          return { equipmentInventoryV2Data: { ...current, piso: { ...(current.piso || {}), clientes } } }
+        })
+        get().triggerAutosave('equipment-v2')
+      },
 
       updateEquipmentSiteField: (field, value) => {
         set((state) => ({
@@ -928,6 +1079,15 @@ export const useAppStore = create(
       },
 
       resetEquipmentInventoryData: () => set({ equipmentInventoryData: getDefaultEquipmentInventoryData() }),
+
+      resetEquipmentInventoryV2Data: () => set({
+        equipmentInventoryV2Data: {
+          siteInfo: {},
+          torre: { items: [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }] },
+          piso: { clientes: [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] },
+          fotos: {},
+        },
+      }),
 
       // Prueba de puesta a tierra
       setGroundingField: (sectionId, fieldId, value) => {
