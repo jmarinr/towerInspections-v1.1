@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import StepPills from '../components/layout/StepPills'
@@ -20,6 +20,8 @@ export default function InventarioEquiposV2() {
 
   const { showAutosaveIndicator, showToast, formMeta, equipmentInventoryV2Data, updateEquipmentV2SiteField, resetFormDraft, finalizeForm } = useAppStore()
 
+  const [completedSteps, setCompletedSteps] = useState([])
+
   const currentStepId = useMemo(() => {
     if (step && equipmentInventoryV2Steps.some(s => s.id === step)) return step
     return equipmentInventoryV2Steps[0].id
@@ -28,6 +30,14 @@ export default function InventarioEquiposV2() {
   const stepIndex = getEquipmentV2StepIndex(currentStepId)
   const currentStep = equipmentInventoryV2Steps[stepIndex] || equipmentInventoryV2Steps[0]
   const totalSteps = equipmentInventoryV2Steps.length
+
+  // Marca como completados todos los pasos anteriores al actual (igual que v1)
+  useEffect(() => {
+    setCompletedSteps((prev) => {
+      const ids = equipmentInventoryV2Steps.slice(0, stepIndex).map(s => s.id)
+      return Array.from(new Set([...prev, ...ids]))
+    })
+  }, [stepIndex])
 
   const navigateToStep = (id) => navigate(`/inventario-equipos-v2/${id}`, { replace: true })
 
@@ -72,7 +82,7 @@ export default function InventarioEquiposV2() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <AppHeader title="Inventario de Equipos v2" subtitle="PTI Inspect" onBack={() => navigate('/')} />
 
-      <StepPills steps={equipmentInventoryV2Steps} currentStepId={currentStepId} completedSteps={[]} onStepClick={(s) => navigateToStep(s.id)} />
+      <StepPills steps={equipmentInventoryV2Steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={(s) => navigateToStep(s.id)} />
 
       {showAutosaveIndicator && <AutosaveIndicator />}
 
