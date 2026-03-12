@@ -82,7 +82,7 @@ export default function InventarioEquiposV2() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <AppHeader title="Inventario de Equipos v2" subtitle="PTI Inspect" onBack={() => navigate('/')} />
 
-      <StepPills steps={equipmentInventoryV2Steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={(s) => navigateToStep(s.id)} />
+      <StepPills steps={equipmentInventoryV2Steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={navigateToStep} />
 
       {showAutosaveIndicator && <AutosaveIndicator />}
 
