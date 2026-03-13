@@ -97,6 +97,7 @@ export default function FormIntro() {
     updateSiteInfo,
     updateMaintenanceField,
     updateEquipmentSiteField,
+    updateEquipmentV2SiteField,
     updatePMExecutedField,
     setSafetyField,
     setGroundingField,
@@ -186,6 +187,9 @@ export default function FormIntro() {
       if (normalizedId === 'equipment') {
         updateEquipmentSiteField('fechaInicio', base.date)
       }
+      if (normalizedId === 'equipment-v2') {
+        updateEquipmentV2SiteField('fechaInicio', base.date)
+      }
       if (normalizedId === 'mantenimiento-ejecutado') {
         updatePMExecutedField('fecha', base.date)
         updatePMExecutedField('hora', base.time)
@@ -216,6 +220,10 @@ export default function FormIntro() {
         if (normalizedId === 'equipment') {
           updateEquipmentSiteField('idSitio', sId)
           updateEquipmentSiteField('nombreSitio', sName)
+        }
+        if (normalizedId === 'equipment-v2') {
+          updateEquipmentV2SiteField('idSitio', sId)
+          updateEquipmentV2SiteField('nombreSitio', sName)
         }
         if (normalizedId === 'mantenimiento-ejecutado') {
           updatePMExecutedField('idSitio', sId)
@@ -249,6 +257,10 @@ export default function FormIntro() {
           if (normalizedId === 'equipment') {
             updateEquipmentSiteField('latitud', String(lat))
             updateEquipmentSiteField('longitud', String(lng))
+          }
+          if (normalizedId === 'equipment-v2') {
+            updateEquipmentV2SiteField('latitud', String(lat))
+            updateEquipmentV2SiteField('longitud', String(lng))
           }
           if (normalizedId === 'sistema-ascenso') {
             setSafetyField('datos', 'latitud', String(lat))
