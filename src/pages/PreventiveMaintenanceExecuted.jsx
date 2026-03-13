@@ -111,11 +111,20 @@ export default function PreventiveMaintenanceExecuted() {
             />
 
             <Input
+              label="Número de Orden"
+              placeholder="Ej: OT-2026-0451"
+              value={siteInfo.numeroOrden || ''}
+              onChange={(e) => updatePMExecutedField('numeroOrden', e.target.value)}
+              readOnly={!!siteInfo.numeroOrden}
+            />
+
+            <Input
               label="ID Sitio"
               required
               placeholder="Ej: PTI-CR-0001"
               value={siteInfo.idSitio || ''}
               onChange={(e) => updatePMExecutedField('idSitio', e.target.value)}
+              readOnly={!!siteInfo.idSitio}
             />
 
             <Input
@@ -132,6 +141,7 @@ export default function PreventiveMaintenanceExecuted() {
               placeholder="Ej: Torre Heredia Centro"
               value={siteInfo.nombreSitio || ''}
               onChange={(e) => updatePMExecutedField('nombreSitio', e.target.value)}
+              readOnly={!!siteInfo.nombreSitio}
             />
 
             <Select

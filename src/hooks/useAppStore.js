@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.7'
+const APP_VERSION_DISPLAY = '2.5.9'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -240,14 +240,54 @@ export const useAppStore = create(
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
       formDataOwnerId: null, // ID of the order that owns the current form data in localStorage
 
+      // Inject order/site data into ALL forms' siteInfo at once
+      injectVisitSiteData: (visit) => {
+        if (!visit) return
+        const sId = visit.site_id || ''
+        const sName = visit.site_name || ''
+        const sOrder = visit.order_number || ''
+        set((state) => ({
+          inspectionData: {
+            ...state.inspectionData,
+            siteInfo: { ...(state.inspectionData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          maintenanceData: {
+            ...state.maintenanceData,
+            formData: { ...(state.maintenanceData?.formData || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          pmExecutedData: {
+            ...state.pmExecutedData,
+            siteInfo: { ...(state.pmExecutedData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          equipmentInventoryV2Data: {
+            ...state.equipmentInventoryV2Data,
+            siteInfo: { ...(state.equipmentInventoryV2Data?.siteInfo || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          equipmentInventoryData: {
+            ...state.equipmentInventoryData,
+            siteInfo: { ...(state.equipmentInventoryData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          safetyClimbingData: {
+            ...state.safetyClimbingData,
+            datos: { ...(state.safetyClimbingData?.datos || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+          groundingSystemData: {
+            ...state.groundingSystemData,
+            datos: { ...(state.groundingSystemData?.datos || {}), idSitio: sId, nombreSitio: sName, numeroOrden: sOrder },
+          },
+        }))
+      },
+
       // Continue existing order - never reset here, Home handles data sync
       setActiveVisit: (visit) => {
         set({ activeVisit: visit, completedForms: [] })
+        get().injectVisitSiteData(visit)
       },
-      // Create new order - always reset all form data
+      // Create new order - always reset all form data, then inject site data
       setNewActiveVisit: (visit) => {
         get().resetAllForms()
         set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
+        get().injectVisitSiteData(visit)
       },
       clearActiveVisit: () => {
         get().resetAllForms()

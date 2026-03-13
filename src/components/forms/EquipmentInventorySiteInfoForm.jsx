@@ -28,9 +28,10 @@ export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp,
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input label="ID Sitio" required placeholder="Ej: PTI-XXX" value={data.idSitio || ''} onChange={(e) => update('idSitio', e.target.value)} />
-        <Input label="Nombre Sitio" required placeholder="Ej: Torre San José" value={data.nombreSitio || ''} onChange={(e) => update('nombreSitio', e.target.value)} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Input label="Número de Orden" placeholder="Ej: OT-2026-0451" value={data.numeroOrden || ''} onChange={(e) => update('numeroOrden', e.target.value)} readOnly={!!data.numeroOrden} />
+        <Input label="ID Sitio" required placeholder="Ej: PTI-XXX" value={data.idSitio || ''} onChange={(e) => update('idSitio', e.target.value)} readOnly={!!data.idSitio} />
+        <Input label="Nombre Sitio" required placeholder="Ej: Torre San José" value={data.nombreSitio || ''} onChange={(e) => update('nombreSitio', e.target.value)} readOnly={!!data.nombreSitio} />
       </div>
 
       <Input label="Dirección" required placeholder="Dirección completa del sitio" value={data.direccion || ''} onChange={(e) => update('direccion', e.target.value)} />

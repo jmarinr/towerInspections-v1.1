@@ -19,12 +19,22 @@ export default function SiteInfoForm({ type = 'inspection' }) {
       />
 
       <Input
+        label="Número de Orden"
+        description="Auto-completado desde la orden de trabajo"
+        placeholder="Ej: OT-2026-0451"
+        value={data.numeroOrden || ''}
+        onChange={(e) => updateFn('numeroOrden', e.target.value)}
+        readOnly={!!data.numeroOrden}
+      />
+
+      <Input
         label="ID del Sitio"
         description="Código asignado por PTI"
         required
         placeholder="Ej: PTI-CR-SJ-001"
         value={data.idSitio || ''}
         onChange={(e) => updateFn('idSitio', e.target.value)}
+        readOnly={!!data.idSitio}
       />
 
       <Input
@@ -33,6 +43,7 @@ export default function SiteInfoForm({ type = 'inspection' }) {
         placeholder="Ej: San José Centro"
         value={data.nombreSitio || ''}
         onChange={(e) => updateFn('nombreSitio', e.target.value)}
+        readOnly={!!data.nombreSitio}
       />
 
       <Select

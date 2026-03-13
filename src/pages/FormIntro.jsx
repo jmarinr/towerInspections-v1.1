@@ -208,34 +208,42 @@ export default function FormIntro() {
     if (activeVisit) {
       const sId = activeVisit.site_id || ''
       const sName = activeVisit.site_name || ''
+      const sOrder = activeVisit.order_number || ''
       try {
         if (normalizedId === 'inspeccion') {
           updateSiteInfo('idSitio', sId)
           updateSiteInfo('nombreSitio', sName)
+          updateSiteInfo('numeroOrden', sOrder)
         }
         if (normalizedId === 'mantenimiento') {
           updateMaintenanceField('idSitio', sId)
           updateMaintenanceField('nombreSitio', sName)
+          updateMaintenanceField('numeroOrden', sOrder)
         }
         if (normalizedId === 'equipment') {
           updateEquipmentSiteField('idSitio', sId)
           updateEquipmentSiteField('nombreSitio', sName)
+          updateEquipmentSiteField('numeroOrden', sOrder)
         }
         if (normalizedId === 'equipment-v2') {
           updateEquipmentV2SiteField('idSitio', sId)
           updateEquipmentV2SiteField('nombreSitio', sName)
+          updateEquipmentV2SiteField('numeroOrden', sOrder)
         }
         if (normalizedId === 'mantenimiento-ejecutado') {
           updatePMExecutedField('idSitio', sId)
           updatePMExecutedField('nombreSitio', sName)
+          updatePMExecutedField('numeroOrden', sOrder)
         }
         if (normalizedId === 'sistema-ascenso') {
           setSafetyField('datos', 'idSitio', sId)
           setSafetyField('datos', 'nombreSitio', sName)
+          setSafetyField('datos', 'numeroOrden', sOrder)
         }
         if (normalizedId === 'grounding-system-test') {
           setGroundingField('datos', 'idSitio', sId)
           setGroundingField('datos', 'nombreSitio', sName)
+          setGroundingField('datos', 'numeroOrden', sOrder)
         }
       } catch (e) {
         // no bloquear

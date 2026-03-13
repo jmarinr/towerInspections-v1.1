@@ -80,7 +80,7 @@ export default function InventarioEquiposV2() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <AppHeader title="Inventario de Equipos v2" subtitle="PTI Inspect" onBack={() => navigate('/')} />
+      <AppHeader title="Inventario de Equipos v2" subtitle={siteInfo.idSitio || siteInfo.nombreSitio || 'Nuevo'} badge="En progreso" onBack={() => navigate('/')} />
 
       <StepPills steps={equipmentInventoryV2Steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={navigateToStep} />
 

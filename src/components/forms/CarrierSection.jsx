@@ -4,6 +4,10 @@ import PhotoUpload from '../ui/PhotoUpload'
 import Input from '../ui/Input'
 
 const cellClass = "w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+const selectClass = cellClass
+
+const ORIENTACION_OPTS = ['', 'Cara 1', 'Cara 2', 'Cara 3', 'Pierna A', 'Pierna B', 'Pierna C', 'Mástil']
+const TIPO_EQUIPO_OPTS = ['', 'RF', 'RRU', 'MW', 'Omni', 'Herraje Vacío', 'Soporte Vacío', 'Otro']
 
 function calcArea(alto, ancho) {
   const a = parseFloat(alto)
@@ -97,7 +101,7 @@ export default function CarrierSection() {
             </button>
           </div>
 
-          {/* Table (mobile cards) */}
+          {/* Mobile cards */}
           <div className="block md:hidden p-4 space-y-3">
             {(carrier.items || []).map((row, rIdx) => (
               <div key={rIdx} className="rounded-xl border border-gray-200 p-3 space-y-2">
@@ -107,9 +111,19 @@ export default function CarrierSection() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Input label="Altura (m)" value={row.alturaMts || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alturaMts', e.target.value)} placeholder="m" className="mb-0" />
-                  <Input label="Orientación" value={row.orientacion || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'orientacion', e.target.value)} placeholder="N" className="mb-0" />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Orientación</label>
+                    <select className={selectClass} value={row.orientacion || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'orientacion', e.target.value)}>
+                      {ORIENTACION_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <Input label="Tipo Antena/Equipo" value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)} placeholder="RF" className="mb-0" />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo Antena/Equipo</label>
+                  <select className={selectClass} value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)}>
+                    {TIPO_EQUIPO_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                  </select>
+                </div>
                 <Input label="Número" value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" className="mb-0" />
                 <div className="text-[10px] font-bold text-gray-400 uppercase">Dimensiones</div>
                 <div className="grid grid-cols-3 gap-2">
@@ -143,8 +157,16 @@ export default function CarrierSection() {
                 {(carrier.items || []).map((row, rIdx) => (
                   <tr key={rIdx} className="border-t border-gray-100">
                     <td className="p-1"><input className={cellClass} value={row.alturaMts || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alturaMts', e.target.value)} placeholder="m" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.orientacion || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'orientacion', e.target.value)} placeholder="N" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)} placeholder="RF" /></td>
+                    <td className="p-1">
+                      <select className={selectClass} value={row.orientacion || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'orientacion', e.target.value)}>
+                        {ORIENTACION_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                      </select>
+                    </td>
+                    <td className="p-1">
+                      <select className={selectClass} value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)}>
+                        {TIPO_EQUIPO_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                      </select>
+                    </td>
                     <td className="p-1"><input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" /></td>
                     <td className="p-1"><input className={cellClass} value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder="m" /></td>
                     <td className="p-1"><input className={cellClass} value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" /></td>
