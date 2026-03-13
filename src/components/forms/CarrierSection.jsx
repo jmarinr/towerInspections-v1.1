@@ -144,8 +144,8 @@ export default function CarrierSection() {
                 </div>
 
                 <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {[['Alto', 'alto'], ['Ancho', 'ancho'], ['Prof.', 'profundidad']].map(([lbl, f]) => (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {[['Alto', 'alto'], ['Ancho', 'ancho']].map(([lbl, f]) => (
                     <div key={f}>
                       <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
                       <input className={cellClass} value={row[f] || ''} onChange={(e) => updateItemField(cIdx, rIdx, f, e.target.value)} placeholder="m" />
@@ -177,7 +177,7 @@ export default function CarrierSection() {
               <thead className="bg-gray-50">
                 <tr className="text-left text-[11px] font-extrabold text-gray-600">
                   <th className="p-2">Altura</th><th className="p-2">Orient.</th><th className="p-2">Tipo</th><th className="p-2">Núm.</th>
-                  <th className="p-2">Alto</th><th className="p-2">Ancho</th><th className="p-2">Prof.</th><th className="p-2">Área M2</th>
+                  <th className="p-2">Alto</th><th className="p-2">Ancho</th><th className="p-2">Área M2</th>
                   <th className="p-2">Carrier</th><th className="p-2">Comentario</th><th className="p-2 w-[40px]"></th>
                 </tr>
               </thead>
@@ -198,7 +198,6 @@ export default function CarrierSection() {
                     <td className="p-1"><input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" /></td>
                     <td className="p-1"><input className={cellClass} value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder="m" /></td>
                     <td className="p-1"><input className={cellClass} value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.profundidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'profundidad', e.target.value)} placeholder="m" /></td>
                     <td className="p-1"><div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-center">{calcArea(row.alto, row.ancho)}</div></td>
                     <td className="p-1"><input className={cellClass} value={row.carrier || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'carrier', e.target.value)} placeholder="TIGO" /></td>
                     <td className="p-1"><input className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." /></td>
