@@ -22,65 +22,92 @@ export default function TowerInventoryTableV2() {
   const fotos = equipmentInventoryV2Data?.fotos || {}
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
+      {/* Table card */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 p-4 border-b border-gray-100">
-          <div>
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+          <div className="flex-1">
             <div className="font-extrabold text-gray-900">Inventario de equipos en torre</div>
-            <div className="text-xs text-gray-500 mt-1">Área M2 se calcula automáticamente (Alto × Ancho).</div>
+            <div className="text-xs text-gray-500 mt-0.5">Área M2 = Alto × Ancho (auto-calculado).</div>
           </div>
-          <div className="flex-1" />
-          <button type="button" onClick={addTowerItemV2} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-2">
-            <Plus size={18} /> Agregar fila
+          <button
+            type="button"
+            onClick={addTowerItemV2}
+            className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+          >
+            <Plus size={16} /> Fila
           </button>
         </div>
 
         {/* Mobile cards */}
-        <div className="block md:hidden p-4 space-y-4">
+        <div className="block md:hidden p-3 space-y-3">
           {items.length === 0 && (
-            <div className="text-sm text-gray-500">Aún no hay filas. Toca "Agregar fila".</div>
+            <div className="text-sm text-gray-400 text-center py-4">Sin filas. Toca "+ Fila".</div>
           )}
           {items.map((row, idx) => (
-            <div key={idx} className="rounded-2xl border-2 border-gray-200 p-4 bg-white">
+            <div key={idx} className="rounded-xl border border-gray-200 p-3 bg-gray-50">
               <div className="flex items-center gap-2 mb-3">
-                <div className="text-sm font-extrabold text-gray-900">Fila {idx + 1}</div>
+                <div className="text-xs font-extrabold text-gray-700">Equipo #{idx + 1}</div>
                 <div className="flex-1" />
-                <button type="button" onClick={() => removeTowerItemV2(idx)} className="w-10 h-10 rounded-xl border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center justify-center">
-                  <Trash2 size={18} />
+                <button type="button" onClick={() => removeTowerItemV2(idx)} className="w-8 h-8 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 active:scale-95 flex items-center justify-center bg-white">
+                  <Trash2 size={14} />
                 </button>
               </div>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <Input label="Altura (m)" value={row.alturaMts || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alturaMts', e.target.value)} placeholder="Ej: 32.0" className="mb-0" />
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Orientación</label>
-                    <select className={selectClass} value={row.orientacion || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'orientacion', e.target.value)}>
-                      {ORIENTACION_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
-                    </select>
-                  </div>
+
+              {/* Row 1: Altura + Orientacion */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Altura (m)</div>
+                  <input className={cellClass} value={row.alturaMts || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alturaMts', e.target.value)} placeholder="m" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo de Antena y/o Equipo</label>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Orientación</div>
+                  <select className={selectClass} value={row.orientacion || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'orientacion', e.target.value)}>
+                    {ORIENTACION_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Tipo + Número */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Tipo Antena/Equipo</div>
                   <select className={selectClass} value={row.tipoEquipo || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'tipoEquipo', e.target.value)}>
                     {TIPO_EQUIPO_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
                   </select>
                 </div>
-                <Input label="Número de Antenas y/o Equipo" value={row.cantidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'cantidad', e.target.value)} placeholder="Ej: 2" className="mb-0" />
-                <div className="text-xs font-bold text-gray-500 uppercase mt-1">Dimensiones en metros</div>
-                <div className="grid grid-cols-3 gap-3">
-                  <Input label="Alto" value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder="m" className="mb-0" />
-                  <Input label="Ancho" value={row.ancho || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'ancho', e.target.value)} placeholder="m" className="mb-0" />
-                  <Input label="Profundidad" value={row.profundidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'profundidad', e.target.value)} placeholder="m" className="mb-0" />
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Número</div>
+                  <input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'cantidad', e.target.value)} placeholder="1" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Área M2</label>
-                    <div className="px-3 py-2 text-sm bg-gray-100 rounded-xl text-gray-700 font-mono">{calcArea(row.alto, row.ancho)}</div>
+              </div>
+
+              {/* Row 3: Dimensiones */}
+              <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {[['Alto', 'alto'], ['Ancho', 'ancho'], ['Prof.', 'profundidad']].map(([lbl, f]) => (
+                  <div key={f}>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
+                    <input className={cellClass} value={row[f] || ''} onChange={(e) => updateTowerItemFieldV2(idx, f, e.target.value)} placeholder="m" />
                   </div>
-                  <Input label="Carrier" value={row.carrier || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'carrier', e.target.value)} placeholder="Ej: Claro" className="mb-0" />
+                ))}
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
+                  <div className="px-3 py-2 text-sm bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho)}</div>
                 </div>
-                <Input label="Comentario" value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="Observaciones..." className="mb-0" />
+              </div>
+
+              {/* Row 4: Carrier + Comentario */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Carrier</div>
+                  <input className={cellClass} value={row.carrier || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'carrier', e.target.value)} placeholder="Claro" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-gray-500 mb-1">Comentario</div>
+                  <input className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." />
+                </div>
               </div>
             </div>
           ))}
@@ -142,18 +169,23 @@ export default function TowerInventoryTableV2() {
         <div className="font-extrabold text-gray-900 mb-1">Fotos de torre</div>
         <div className="text-xs text-gray-500 mb-4">Evidencia fotográfica de la torre.</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Distribución de equipos en torre</label>
-            <PhotoUpload type="after" photo={fotos.fotoDistribucionTorre || null} onCapture={(data) => updateEquipmentV2Field('fotos', 'fotoDistribucionTorre', data)} onRemove={() => updateEquipmentV2Field('fotos', 'fotoDistribucionTorre', null)} formCode="equipment-v2" assetType="equipmentV2:fotoDistribucionTorre" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Foto de torre completa</label>
-            <PhotoUpload type="after" photo={fotos.fotoTorreCompleta || null} onCapture={(data) => updateEquipmentV2Field('fotos', 'fotoTorreCompleta', data)} onRemove={() => updateEquipmentV2Field('fotos', 'fotoTorreCompleta', null)} formCode="equipment-v2" assetType="equipmentV2:fotoTorreCompleta" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Croquis esquemático del edificio</label>
-            <PhotoUpload type="after" photo={fotos.fotoCroquisEdificio || null} onCapture={(data) => updateEquipmentV2Field('fotos', 'fotoCroquisEdificio', data)} onRemove={() => updateEquipmentV2Field('fotos', 'fotoCroquisEdificio', null)} formCode="equipment-v2" assetType="equipmentV2:fotoCroquisEdificio" />
-          </div>
+          {[
+            ['Distribución de equipos en torre', 'fotoDistribucionTorre'],
+            ['Foto de torre completa', 'fotoTorreCompleta'],
+            ['Croquis esquemático del edificio', 'fotoCroquisEdificio'],
+          ].map(([label, key]) => (
+            <div key={key}>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">{label}</label>
+              <PhotoUpload
+                type="after"
+                photo={fotos[key] || null}
+                onCapture={(data) => updateEquipmentV2Field('fotos', key, data)}
+                onRemove={() => updateEquipmentV2Field('fotos', key, null)}
+                formCode="equipment-v2"
+                assetType={`equipmentV2:${key}`}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

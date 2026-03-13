@@ -25,35 +25,53 @@ export default function FloorInventoryClientsV2() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-wrap items-center gap-2">
-        <div>
+
+      {/* Header + add buttons */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="mb-3">
           <div className="font-extrabold text-gray-900">Inventario de equipos en piso</div>
-          <div className="text-xs text-gray-500 mt-1">Secciones por cliente (Ancla / Colo) y gabinetes con dimensiones + foto #.</div>
+          <div className="text-xs text-gray-500 mt-1">Secciones por cliente (Ancla / Colo) y gabinetes.</div>
         </div>
-        <div className="flex-1" />
-        <button type="button" onClick={() => addFloorClientV2('ancla')} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-2">
-          <Plus size={18} /> Agregar Ancla
-        </button>
-        <button type="button" onClick={() => addFloorClientV2('colo')} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center gap-2">
-          <Plus size={18} /> Agregar Colo
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => addFloorClientV2('ancla')}
+            className="py-2.5 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <Plus size={16} /> Ancla
+          </button>
+          <button
+            type="button"
+            onClick={() => addFloorClientV2('colo')}
+            className="py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <Plus size={16} /> Colo
+          </button>
+        </div>
       </div>
 
       {clientes.map((c, idx) => (
         <div key={idx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center gap-2 p-4 border-b border-gray-100">
+
+          {/* Client header */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
             <div>
-              <div className="font-extrabold text-gray-900">{labelByTipo(c.tipoCliente)}</div>
+              <div className="font-extrabold text-gray-900 text-sm">{labelByTipo(c.tipoCliente)}</div>
               <div className="text-xs text-gray-500">Cliente #{idx + 1}</div>
             </div>
             <div className="flex-1" />
-            <button type="button" onClick={() => removeFloorClientV2(idx)} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 bg-white hover:border-red-300 hover:text-red-600 active:scale-95 flex items-center gap-2">
-              <Trash2 size={18} /> Quitar
+            <button
+              type="button"
+              onClick={() => removeFloorClientV2(idx)}
+              className="w-9 h-9 rounded-xl border-2 border-gray-200 text-gray-500 bg-white hover:border-red-300 hover:text-red-500 active:scale-95 flex items-center justify-center"
+            >
+              <Trash2 size={16} />
             </button>
           </div>
 
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Client fields */}
+          <div className="p-4 space-y-0">
+            <div className="grid grid-cols-2 gap-3">
               <Select
                 label="Tipo"
                 value={c.tipoCliente || 'colo'}
@@ -63,72 +81,87 @@ export default function FloorInventoryClientsV2() {
                   { value: 'colo', label: 'Colo' },
                 ]}
               />
-              <Input label="Nombre cliente" placeholder="Ej: Operador X" value={c.nombreCliente || ''} onChange={(e) => updateFloorClientFieldV2(idx, 'nombreCliente', e.target.value)} />
-              <Input label="Área arrendada" placeholder="m²" value={c.areaArrendada || ''} onChange={(e) => updateFloorClientFieldV2(idx, 'areaArrendada', e.target.value)} />
-              <Input label="Área en uso" placeholder="m²" value={c.areaEnUso || ''} onChange={(e) => updateFloorClientFieldV2(idx, 'areaEnUso', e.target.value)} />
+              <Input
+                label="Nombre cliente"
+                placeholder="Ej: Operador X"
+                value={c.nombreCliente || ''}
+                onChange={(e) => updateFloorClientFieldV2(idx, 'nombreCliente', e.target.value)}
+              />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Área arrendada"
+                placeholder="m²"
+                value={c.areaArrendada || ''}
+                onChange={(e) => updateFloorClientFieldV2(idx, 'areaArrendada', e.target.value)}
+              />
+              <Input
+                label="Área en uso"
+                placeholder="m²"
+                value={c.areaEnUso || ''}
+                onChange={(e) => updateFloorClientFieldV2(idx, 'areaEnUso', e.target.value)}
+              />
+            </div>
+            <Input
+              label="Placa de equipos"
+              placeholder="Ej: placa / identificadores"
+              value={c.placaEquipos || ''}
+              onChange={(e) => updateFloorClientFieldV2(idx, 'placaEquipos', e.target.value)}
+            />
 
-            <Input label="Placa de equipos" description="Texto libre." placeholder="Ej: placa/identificadores" value={c.placaEquipos || ''} onChange={(e) => updateFloorClientFieldV2(idx, 'placaEquipos', e.target.value)} />
-
-            <div className="mt-4 bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="flex items-center gap-2 p-3 border-b border-gray-200">
+            {/* Gabinetes */}
+            <div className="mt-2 bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
                 <div className="font-extrabold text-gray-900 text-sm">Gabinetes</div>
                 <div className="flex-1" />
-                <button type="button" onClick={() => addCabinetV2(idx)} className="px-3 py-2 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-white active:scale-95 flex items-center gap-2">
-                  <Plus size={18} /> Agregar gabinete
+                <button
+                  type="button"
+                  onClick={() => addCabinetV2(idx)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 border-primary text-primary bg-white active:scale-95 flex items-center gap-1"
+                >
+                  <Plus size={13} /> Agregar
                 </button>
               </div>
 
-              {/* Móvil: tarjetas verticales */}
+              {/* Mobile: cards */}
               <div className="block md:hidden p-3 space-y-3">
                 {(c.gabinetes || []).length === 0 && (
-                  <div className="text-sm text-gray-500 bg-white border border-dashed border-gray-200 rounded-2xl p-4">
-                    Aún no hay gabinetes. Usa "Agregar gabinete".
+                  <div className="text-sm text-gray-400 text-center py-3">
+                    Sin gabinetes. Toca "Agregar".
                   </div>
                 )}
                 {(c.gabinetes || []).map((g, j) => (
-                  <div key={j} className="bg-white rounded-2xl border border-gray-200 p-3">
+                  <div key={j} className="bg-white rounded-xl border border-gray-200 p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="text-xs font-extrabold text-gray-900">Gabinete #{j + 1}</div>
+                      <div className="text-xs font-extrabold text-gray-700">Gabinete #{j + 1}</div>
                       <div className="flex-1" />
                       <button
                         type="button"
                         onClick={() => removeCabinetV2(idx, j)}
-                        className="w-9 h-9 rounded-xl border-2 border-gray-200 text-gray-600 bg-white active:scale-95 flex items-center justify-center"
-                        aria-label="Quitar gabinete"
+                        className="w-8 h-8 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 active:scale-95 flex items-center justify-center"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="col-span-2">
-                        <div className="text-[11px] font-bold text-gray-600 mb-1">Nombre / ID</div>
-                        <input className={cellClass} value={g.gabinete || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'gabinete', e.target.value)} placeholder="Ej: Gab-01" />
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-bold text-gray-600 mb-1">Largo</div>
-                        <input className={cellClass} value={g.largo || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'largo', e.target.value)} placeholder="m" />
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-bold text-gray-600 mb-1">Ancho</div>
-                        <input className={cellClass} value={g.ancho || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'ancho', e.target.value)} placeholder="m" />
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-bold text-gray-600 mb-1">Alto</div>
-                        <input className={cellClass} value={g.alto || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'alto', e.target.value)} placeholder="m" />
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-bold text-gray-600 mb-1">Foto #</div>
-                        <input className={cellClass} value={g.fotoRef || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'fotoRef', e.target.value)} placeholder="Ej: 3" />
-                      </div>
+                    <div className="mb-2">
+                      <div className="text-[11px] font-bold text-gray-500 mb-1">Nombre / ID</div>
+                      <input className={cellClass} value={g.gabinete || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'gabinete', e.target.value)} placeholder="Ej: Gab-01" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[['Largo', 'largo'], ['Ancho', 'ancho'], ['Alto', 'alto'], ['Foto #', 'fotoRef']].map(([lbl, field]) => (
+                        <div key={field}>
+                          <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
+                          <input className={cellClass} value={g[field] || ''} onChange={(e) => updateCabinetFieldV2(idx, j, field, e.target.value)} placeholder={field === 'fotoRef' ? '#' : 'm'} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Desktop/tablet: tabla */}
+              {/* Desktop: table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="min-w-[860px] w-full">
+                <table className="min-w-[700px] w-full">
                   <thead className="bg-white">
                     <tr className="text-left text-xs font-extrabold text-gray-700">
                       <th className="p-3">Gabinete</th>
@@ -136,20 +169,20 @@ export default function FloorInventoryClientsV2() {
                       <th className="p-3">Ancho</th>
                       <th className="p-3">Alto</th>
                       <th className="p-3">Foto #</th>
-                      <th className="p-3 w-[70px]"></th>
+                      <th className="p-3 w-[60px]"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {(c.gabinetes || []).map((g, j) => (
                       <tr key={j} className="border-t border-gray-200">
-                        <td className="p-3"><input className={cellClass} value={g.gabinete || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'gabinete', e.target.value)} placeholder="Ej: Gab-01" /></td>
-                        <td className="p-3"><input className={cellClass} value={g.largo || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'largo', e.target.value)} placeholder="m" /></td>
-                        <td className="p-3"><input className={cellClass} value={g.ancho || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'ancho', e.target.value)} placeholder="m" /></td>
-                        <td className="p-3"><input className={cellClass} value={g.alto || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'alto', e.target.value)} placeholder="m" /></td>
-                        <td className="p-3"><input className={cellClass} value={g.fotoRef || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'fotoRef', e.target.value)} placeholder="Ej: 3" /></td>
-                        <td className="p-3">
-                          <button type="button" onClick={() => removeCabinetV2(idx, j)} className="w-9 h-9 rounded-xl border-2 border-gray-200 text-gray-600 bg-white hover:border-red-300 hover:text-red-600 active:scale-95 flex items-center justify-center">
-                            <Trash2 size={16} />
+                        <td className="p-2"><input className={cellClass} value={g.gabinete || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'gabinete', e.target.value)} placeholder="Ej: Gab-01" /></td>
+                        <td className="p-2"><input className={cellClass} value={g.largo || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'largo', e.target.value)} placeholder="m" /></td>
+                        <td className="p-2"><input className={cellClass} value={g.ancho || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'ancho', e.target.value)} placeholder="m" /></td>
+                        <td className="p-2"><input className={cellClass} value={g.alto || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'alto', e.target.value)} placeholder="m" /></td>
+                        <td className="p-2"><input className={cellClass} value={g.fotoRef || ''} onChange={(e) => updateCabinetFieldV2(idx, j, 'fotoRef', e.target.value)} placeholder="Ej: 3" /></td>
+                        <td className="p-2">
+                          <button type="button" onClick={() => removeCabinetV2(idx, j)} className="w-8 h-8 rounded-xl border border-gray-200 text-gray-500 hover:text-red-500 active:scale-95 flex items-center justify-center">
+                            <Trash2 size={15} />
                           </button>
                         </td>
                       </tr>
@@ -158,18 +191,18 @@ export default function FloorInventoryClientsV2() {
                 </table>
               </div>
 
-              <div className="p-3 text-xs text-gray-500">
-                Tip: si el cliente tiene varios racks, agrega múltiples filas.
+              <div className="px-3 py-2 text-[11px] text-gray-400">
+                Tip: agrega múltiples filas si el cliente tiene varios racks.
               </div>
             </div>
           </div>
         </div>
       ))}
 
-      {/* Plano de planta y equipos */}
+      {/* Plano de planta */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4">
         <div className="font-extrabold text-gray-900 mb-1">Plano de planta y equipos</div>
-        <div className="text-xs text-gray-500 mb-4">Carga una fotografía o imagen del plano de planta y distribución de equipos del sitio.</div>
+        <div className="text-xs text-gray-500 mb-4">Fotografía o imagen del plano de planta y distribución de equipos del sitio.</div>
         <PhotoUpload
           type="after"
           photo={fotos.fotoPlanoPlanta || null}

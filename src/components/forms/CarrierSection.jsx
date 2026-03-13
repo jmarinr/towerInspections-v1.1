@@ -20,125 +20,153 @@ export default function CarrierSection() {
   const { equipmentInventoryV2Data, updateEquipmentV2Carriers } = useAppStore()
   const carriers = equipmentInventoryV2Data?.carriers || []
 
+  const emptyItem = () => ({ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', carrier: '', comentario: '' })
+
   const addCarrier = () => {
-    updateEquipmentV2Carriers([
-      ...carriers,
-      {
-        nombre: '',
-        items: [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', carrier: '', comentario: '' }],
-        foto1: null,
-        foto2: null,
-        foto3: null,
-      },
-    ])
+    updateEquipmentV2Carriers([...carriers, { nombre: '', items: [emptyItem()], foto1: null, foto2: null, foto3: null }])
   }
 
-  const removeCarrier = (idx) => {
-    const updated = carriers.filter((_, i) => i !== idx)
-    updateEquipmentV2Carriers(updated)
-  }
+  const removeCarrier = (idx) => updateEquipmentV2Carriers(carriers.filter((_, i) => i !== idx))
 
-  const updateCarrierField = (cIdx, field, value) => {
-    const updated = carriers.map((c, i) => i === cIdx ? { ...c, [field]: value } : c)
-    updateEquipmentV2Carriers(updated)
-  }
+  const updateCarrierField = (cIdx, field, value) =>
+    updateEquipmentV2Carriers(carriers.map((c, i) => i === cIdx ? { ...c, [field]: value } : c))
 
-  const addItem = (cIdx) => {
-    const updated = carriers.map((c, i) => {
-      if (i !== cIdx) return c
-      return { ...c, items: [...(c.items || []), { alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', carrier: '', comentario: '' }] }
-    })
-    updateEquipmentV2Carriers(updated)
-  }
+  const addItem = (cIdx) =>
+    updateEquipmentV2Carriers(carriers.map((c, i) =>
+      i !== cIdx ? c : { ...c, items: [...(c.items || []), emptyItem()] }
+    ))
 
-  const removeItem = (cIdx, rIdx) => {
-    const updated = carriers.map((c, i) => {
+  const removeItem = (cIdx, rIdx) =>
+    updateEquipmentV2Carriers(carriers.map((c, i) => {
       if (i !== cIdx) return c
       const items = (c.items || []).filter((_, ri) => ri !== rIdx)
-      return { ...c, items: items.length ? items : [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', carrier: '', comentario: '' }] }
-    })
-    updateEquipmentV2Carriers(updated)
-  }
+      return { ...c, items: items.length ? items : [emptyItem()] }
+    }))
 
-  const updateItemField = (cIdx, rIdx, field, value) => {
-    const updated = carriers.map((c, i) => {
+  const updateItemField = (cIdx, rIdx, field, value) =>
+    updateEquipmentV2Carriers(carriers.map((c, i) => {
       if (i !== cIdx) return c
-      const items = (c.items || []).map((it, ri) => ri === rIdx ? { ...it, [field]: value } : it)
-      return { ...c, items }
-    })
-    updateEquipmentV2Carriers(updated)
-  }
+      return { ...c, items: (c.items || []).map((it, ri) => ri === rIdx ? { ...it, [field]: value } : it) }
+    }))
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-4">
+
+      {/* Add carrier button */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="mb-3">
           <div className="font-extrabold text-gray-900">Carriers</div>
-          <div className="text-xs text-gray-500">Agregue un bloque por cada carrier del sitio con su tabla de equipos y fotos.</div>
+          <div className="text-xs text-gray-500 mt-1">Un bloque por cada carrier del sitio.</div>
         </div>
-        <button type="button" onClick={addCarrier} className="px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center gap-2">
-          <Plus size={18} /> Agregar Carrier
+        <button
+          type="button"
+          onClick={addCarrier}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 border-primary text-primary bg-primary/5 active:scale-95 flex items-center justify-center gap-2"
+        >
+          <Plus size={16} /> Agregar Carrier
         </button>
       </div>
 
       {carriers.length === 0 && (
-        <div className="text-sm text-gray-500 text-center py-8 bg-white rounded-2xl border border-gray-200">No hay carriers. Toca "Agregar Carrier" para iniciar.</div>
+        <div className="text-sm text-gray-400 text-center py-6 bg-white rounded-2xl border border-dashed border-gray-200">
+          Sin carriers. Toca "Agregar Carrier".
+        </div>
       )}
 
       {carriers.map((carrier, cIdx) => (
         <div key={cIdx} className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+
           {/* Carrier header */}
-          <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-extrabold text-sm flex items-center justify-center">{cIdx + 1}</div>
-            <div className="flex-1">
-              <Input label="" value={carrier.nombre || ''} onChange={(e) => updateCarrierField(cIdx, 'nombre', e.target.value)} placeholder="Nombre del carrier (ej: TIGO, Claro)" className="mb-0" />
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary font-extrabold text-xs flex items-center justify-center flex-shrink-0">
+              {cIdx + 1}
             </div>
-            <button type="button" onClick={() => addItem(cIdx)} className="px-2 py-1 text-xs rounded-lg border border-primary text-primary active:scale-95 flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              <input
+                className="w-full text-sm font-semibold text-gray-900 bg-transparent border-0 outline-none placeholder-gray-400 truncate"
+                value={carrier.nombre || ''}
+                onChange={(e) => updateCarrierField(cIdx, 'nombre', e.target.value)}
+                placeholder="Nombre del carrier (ej: TIGO, Claro)"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => addItem(cIdx)}
+              className="px-2.5 py-1.5 text-xs rounded-lg border border-primary text-primary active:scale-95 flex items-center gap-1 flex-shrink-0"
+            >
               <Plus size={12} /> Fila
             </button>
-            <button type="button" onClick={() => { if (window.confirm('¿Eliminar este carrier y todos sus datos?')) removeCarrier(cIdx) }} className="px-2 py-1 text-xs rounded-lg border border-red-300 text-red-600 active:scale-95 flex items-center gap-1">
-              <Trash2 size={12} /> Quitar
+            <button
+              type="button"
+              onClick={() => { if (window.confirm('¿Eliminar este carrier?')) removeCarrier(cIdx) }}
+              className="w-8 h-8 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 active:scale-95 flex items-center justify-center flex-shrink-0"
+            >
+              <Trash2 size={14} />
             </button>
           </div>
 
-          {/* Mobile cards */}
-          <div className="block md:hidden p-4 space-y-3">
+          {/* Mobile: item cards */}
+          <div className="block md:hidden p-3 space-y-3">
             {(carrier.items || []).map((row, rIdx) => (
-              <div key={rIdx} className="rounded-xl border border-gray-200 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500">Equipo {rIdx + 1}</span>
-                  <button type="button" onClick={() => removeItem(cIdx, rIdx)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+              <div key={rIdx} className="rounded-xl border border-gray-200 p-3 bg-gray-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-xs font-extrabold text-gray-700">Equipo #{rIdx + 1}</div>
+                  <div className="flex-1" />
+                  <button type="button" onClick={() => removeItem(cIdx, rIdx)} className="w-7 h-7 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 flex items-center justify-center bg-white">
+                    <Trash2 size={13} />
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input label="Altura (m)" value={row.alturaMts || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alturaMts', e.target.value)} placeholder="m" className="mb-0" />
+
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Orientación</label>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Altura (m)</div>
+                    <input className={cellClass} value={row.alturaMts || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alturaMts', e.target.value)} placeholder="m" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Orientación</div>
                     <select className={selectClass} value={row.orientacion || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'orientacion', e.target.value)}>
                       {ORIENTACION_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo Antena/Equipo</label>
-                  <select className={selectClass} value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)}>
-                    {TIPO_EQUIPO_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
-                  </select>
+
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Tipo Antena/Equipo</div>
+                    <select className={selectClass} value={row.tipoEquipo || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'tipoEquipo', e.target.value)}>
+                      {TIPO_EQUIPO_OPTS.map(o => <option key={o} value={o}>{o || 'Seleccione...'}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Número</div>
+                    <input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" />
+                  </div>
                 </div>
-                <Input label="Número" value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" className="mb-0" />
-                <div className="text-[10px] font-bold text-gray-400 uppercase">Dimensiones</div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Input label="Alto" value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder="m" className="mb-0" />
-                  <Input label="Ancho" value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" className="mb-0" />
-                  <Input label="Prof." value={row.profundidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'profundidad', e.target.value)} placeholder="m" className="mb-0" />
+
+                <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[['Alto', 'alto'], ['Ancho', 'ancho'], ['Prof.', 'profundidad']].map(([lbl, f]) => (
+                    <div key={f}>
+                      <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
+                      <input className={cellClass} value={row[f] || ''} onChange={(e) => updateItemField(cIdx, rIdx, f, e.target.value)} placeholder="m" />
+                    </div>
+                  ))}
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
+                    <div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho)}</div>
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Área M2</label>
-                    <div className="px-3 py-2 text-sm bg-gray-100 rounded-xl font-mono">{calcArea(row.alto, row.ancho)}</div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Carrier</div>
+                    <input className={cellClass} value={row.carrier || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'carrier', e.target.value)} placeholder="TIGO" />
                   </div>
-                  <Input label="Carrier" value={row.carrier || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'carrier', e.target.value)} placeholder="TIGO" className="mb-0" />
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Comentario</div>
+                    <input className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." />
+                  </div>
                 </div>
-                <Input label="Comentario" value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." className="mb-0" />
               </div>
             ))}
           </div>
@@ -185,22 +213,25 @@ export default function CarrierSection() {
             </table>
           </div>
 
-          {/* 3 Photos per carrier */}
+          {/* Photos */}
           <div className="p-4 border-t border-gray-100">
-            <div className="text-xs font-bold text-gray-600 mb-3">Fotos del carrier {carrier.nombre || `#${cIdx + 1}`}</div>
+            <div className="text-xs font-bold text-gray-600 mb-3">
+              Fotos — {carrier.nombre || `Carrier #${cIdx + 1}`}
+            </div>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Foto 1</label>
-                <PhotoUpload type="after" photo={carrier.foto1 || null} onCapture={(data) => updateCarrierField(cIdx, 'foto1', data)} onRemove={() => updateCarrierField(cIdx, 'foto1', null)} formCode="equipment-v2" assetType={`carrier:${cIdx}:foto1`} />
-              </div>
-              <div>
-                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Foto 2</label>
-                <PhotoUpload type="after" photo={carrier.foto2 || null} onCapture={(data) => updateCarrierField(cIdx, 'foto2', data)} onRemove={() => updateCarrierField(cIdx, 'foto2', null)} formCode="equipment-v2" assetType={`carrier:${cIdx}:foto2`} />
-              </div>
-              <div>
-                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Foto 3</label>
-                <PhotoUpload type="after" photo={carrier.foto3 || null} onCapture={(data) => updateCarrierField(cIdx, 'foto3', data)} onRemove={() => updateCarrierField(cIdx, 'foto3', null)} formCode="equipment-v2" assetType={`carrier:${cIdx}:foto3`} />
-              </div>
+              {[1, 2, 3].map(n => (
+                <div key={n}>
+                  <label className="block text-[10px] font-semibold text-gray-500 mb-1">Foto {n}</label>
+                  <PhotoUpload
+                    type="after"
+                    photo={carrier[`foto${n}`] || null}
+                    onCapture={(data) => updateCarrierField(cIdx, `foto${n}`, data)}
+                    onRemove={() => updateCarrierField(cIdx, `foto${n}`, null)}
+                    formCode="equipment-v2"
+                    assetType={`carrier:${cIdx}:foto${n}`}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
