@@ -18,7 +18,15 @@ export default function InventarioEquiposV2() {
   const navigate = useNavigate()
   const { step } = useParams()
 
-  const { showAutosaveIndicator, showToast, formMeta, equipmentInventoryV2Data, updateEquipmentV2SiteField, resetFormDraft, finalizeForm } = useAppStore()
+  const {
+    showAutosaveIndicator,
+    showToast,
+    formMeta,
+    equipmentInventoryV2Data,
+    updateEquipmentV2SiteField,
+    resetFormDraft,
+    finalizeForm,
+  } = useAppStore()
 
   const [completedSteps, setCompletedSteps] = useState([])
 
@@ -31,7 +39,6 @@ export default function InventarioEquiposV2() {
   const currentStep = equipmentInventoryV2Steps[stepIndex] || equipmentInventoryV2Steps[0]
   const totalSteps = equipmentInventoryV2Steps.length
 
-  // Marca como completados todos los pasos anteriores al actual (igual que v1)
   useEffect(() => {
     setCompletedSteps((prev) => {
       const ids = equipmentInventoryV2Steps.slice(0, stepIndex).map(s => s.id)
@@ -79,25 +86,54 @@ export default function InventarioEquiposV2() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <AppHeader title="Inventario de Equipos v2" subtitle={siteInfo.idSitio || siteInfo.nombreSitio || 'Nuevo'} badge="En progreso" onBack={() => navigate('/')} />
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <AutosaveIndicator />
+      <AppHeader
+        title="Inventario de Equipos v2"
+        subtitle={siteInfo.idSitio || siteInfo.nombreSitio || 'Nuevo'}
+        badge="En progreso"
+        onBack={() => navigate('/')}
+      />
+      <StepPills
+        steps={equipmentInventoryV2Steps}
+        currentStep={currentStepId}
+        completedSteps={completedSteps}
+        onStepClick={navigateToStep}
+      />
 
-      <StepPills steps={equipmentInventoryV2Steps} currentStep={currentStepId} completedSteps={completedSteps} onStepClick={navigateToStep} />
+      <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden">
+        {/* Meta bar + reset */}
+        <div className="flex items-start justify-between gap-2">
+          <FormMetaBar meta={meta} />
+          <button
+            className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95 flex-shrink-0"
+            onClick={() => {
+              if (confirm('Esto borrará los datos guardados de este formulario en este dispositivo. ¿Deseas reiniciar?')) {
+                resetFormDraft('inventario-v2')
+                showToast('Formulario reiniciado', 'info')
+              }
+            }}
+          >
+            Reiniciar
+          </button>
+        </div>
 
-      {showAutosaveIndicator && <AutosaveIndicator />}
-
-      <FormMetaBar meta={meta} onReset={() => { if (window.confirm('¿Reiniciar formulario?')) resetFormDraft('inventario-v2') }} />
-
-      <main className="flex-1 px-4 pb-32">
+        {/* Step header */}
         <div className="mb-4">
-          <div className="text-2xl">{currentStep.icon}</div>
-          <h2 className="text-lg font-extrabold text-gray-900">{currentStep.title}</h2>
+          <div className="text-3xl mb-1">{currentStep.icon}</div>
+          <h2 className="text-xl font-extrabold text-gray-900">{currentStep.title}</h2>
           <p className="text-sm text-gray-500">{currentStep.description}</p>
         </div>
+
         {renderStepContent()}
       </main>
 
-      <BottomNav onPrev={handlePrev} onNext={handleNext} showPrev={stepIndex > 0} nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'} />
+      <BottomNav
+        onPrev={handlePrev}
+        onNext={handleNext}
+        showPrev={stepIndex > 0}
+        nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'}
+      />
     </div>
   )
 }
