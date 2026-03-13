@@ -159,6 +159,7 @@ export default function FormIntro() {
 
   // Reset and start fresh
   const handleRestart = () => {
+    if (!confirm('¿Seguro que deseas reiniciar? Se borrarán todos los datos ingresados en este formulario.')) return
     setShowResumeDialog(false)
     const resetKey = resetKeyMap[normalizedId]
     if (resetKey) resetFormDraft(resetKey)
@@ -336,43 +337,49 @@ export default function FormIntro() {
 
       {/* Resume Dialog */}
       {showResumeDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-            <div className="p-5">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowResumeDialog(false)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative bg-white w-full sm:max-w-sm sm:mx-4 sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header strip */}
+            <div className="bg-primary px-5 pt-5 pb-6">
+              <div className="w-11 h-11 bg-white/15 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">📋</span>
               </div>
-              <h3 className="text-base font-extrabold text-gray-900 text-center">
+              <h3 className="text-base font-extrabold text-white text-center">
                 Datos previos encontrados
               </h3>
-              <p className="text-sm text-gray-500 text-center mt-2 leading-relaxed">
-                Este formulario tiene datos ingresados previamente.
-                ¿Desea continuar donde se quedó o iniciar desde cero?
+              <p className="text-xs text-white/70 text-center mt-1.5 leading-relaxed">
+                Este formulario tiene datos guardados. ¿Continuar o iniciar desde cero?
               </p>
-
-              {formMeta?.[normalizedId]?.startedAt && (
-                <div className="mt-3 bg-gray-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-400">Iniciado</p>
-                  <p className="text-sm font-bold text-gray-700">
-                    {new Date(formMeta[normalizedId].startedAt).toLocaleDateString('es', {
-                      day: 'numeric', month: 'short', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-              )}
             </div>
 
-            <div className="border-t border-gray-100 p-4 space-y-2">
+            {/* Date badge */}
+            {formMeta?.[normalizedId]?.startedAt && (
+              <div className="mx-5 -mt-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-center shadow-sm">
+                <p className="text-[11px] text-gray-400 font-medium">Iniciado</p>
+                <p className="text-sm font-extrabold text-gray-800 mt-0.5">
+                  {new Date(formMeta[normalizedId].startedAt).toLocaleDateString('es', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="p-5 pt-4 space-y-2">
               <button
                 onClick={handleResume}
-                className="w-full py-3 rounded-xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-all"
+                className="w-full py-3.5 rounded-xl bg-primary text-white text-sm font-bold active:scale-[0.98] transition-all shadow-sm"
               >
                 Continuar con datos previos
               </button>
               <button
                 onClick={handleRestart}
-                className="w-full py-3 rounded-xl border-2 border-red-300 bg-red-50 text-red-600 text-sm font-bold active:scale-[0.98] transition-all"
+                className="w-full py-3.5 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 text-sm font-bold active:scale-[0.98] transition-all"
               >
                 Reiniciar formulario
               </button>
@@ -383,6 +390,9 @@ export default function FormIntro() {
                 Cancelar
               </button>
             </div>
+
+            {/* Safe area spacer on mobile */}
+            <div className="h-safe-bottom pb-2" />
           </div>
         </div>
       )}
