@@ -105,6 +105,7 @@ export default function FormIntro() {
     resetFormDraft,
     formMeta,
     activeVisit,
+    isFormCompleted,
   } = useAppStore()
 
   // Check if this form has previous data
