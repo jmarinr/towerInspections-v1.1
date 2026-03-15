@@ -119,7 +119,18 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.15</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.16</p>
+      <p className="text-xs text-gray-400 mt-1">
+        by{' '}
+        <a
+          href="http://henkancx.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 underline underline-offset-2 hover:text-gray-600 transition-colors"
+        >
+          HenkanCX
+        </a>
+      </p>
       <button
         type="button"
         onClick={() => {
