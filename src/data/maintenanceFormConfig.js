@@ -19,7 +19,7 @@ export const maintenanceFormConfig = {
       type: 'form',
       fields: [
         { id: 'proveedor', label: 'Proveedor', type: 'text', required: true, placeholder: 'Ej: Servicios de Torres CR' },
-        { id: 'tipoVisita', label: 'Tipo de Visita', type: 'select', required: true, options: [
+        { id: 'tipoVisita', label: 'Tipo de Visita', type: 'select', required: true, defaultValue: 'preventivo', options: [
           { value: '', label: 'Seleccione...' },
           { value: 'preventivo', label: 'Mantenimiento Preventivo' },
           { value: 'correctivo', label: 'Mantenimiento Correctivo' },

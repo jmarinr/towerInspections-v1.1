@@ -253,7 +253,7 @@ export default function MantenimientoPreventivo() {
       <AutosaveIndicator />
       
       <AppHeader 
-        title="Mantenimiento Preventivo" 
+        title="Mantenimiento Preventivo (Checklist)" 
         subtitle={formData.idSitio || 'Nuevo'} 
         badge="En progreso" 
         progress={progress} 

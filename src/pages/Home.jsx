@@ -17,7 +17,7 @@ const ALL_FORMS = [
   },
   {
     id: 'mantenimiento',
-    title: 'Mantenimiento Preventivo',
+    title: 'Mantenimiento Preventivo (Checklist)',
     description: 'Registro de actividades para mantenimiento preventivo de torres',
     icon: Wrench,
     iconBg: 'bg-orange-500',
@@ -229,7 +229,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.17</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.18</p>
 
           {/* User info pill */}
           {session && (
@@ -308,7 +308,7 @@ export default function Home() {
               {visibleForms.map((form) => {
                 const IconComponent = form.icon
                 const isCompleted = (completedForms || []).includes(form.id)
-                const hasProgress = !!formMeta?.[form.id]?.startedAt && !isCompleted
+                const hasProgress = !!formMeta?.[form.id]?.startedAt && !isCompleted && !hydrating
 
                 const getStatus = () => {
                   if (isCompleted) return { label: 'Completado', badge: 'bg-green-50 text-green-600 border-green-200' }

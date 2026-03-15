@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.17'
+const APP_VERSION_DISPLAY = '2.5.18'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -110,7 +110,7 @@ const getDefaultMaintenanceData = () => ({
   completedSteps: [],
   formData: {
     proveedor: '',
-    tipoVisita: '',
+    tipoVisita: 'preventivo',
     nombreSitio: '',
     idSitio: '',
     coordenadas: '',
@@ -164,7 +164,7 @@ const getDefaultMaintenanceData = () => ({
 const getDefaultEquipmentInventoryData = () => ({
   siteInfo: {
     proveedor: '',
-    tipoVisita: '', // RoofTop | RawLand
+    tipoVisita: 'preventivo', // RoofTop | RawLand
     idSitio: '',
     nombreSitio: '',
     fechaInicio: '',
@@ -216,7 +216,7 @@ const getDefaultPMExecutedData = () => ({
   siteInfo: {
     proveedor: '',
     idSitio: '',
-    tipoVisita: '',
+    tipoVisita: 'preventivo',
     nombreSitio: '',
     tipoSitio: '', // rooftop | rawland
     fecha: '',
