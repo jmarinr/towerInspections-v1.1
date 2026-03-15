@@ -1,4 +1,5 @@
 import { MapPin, Camera, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
+import AutoTextarea from '../ui/AutoTextarea'
 import { useState, useEffect, useRef } from 'react'
 import { queueAssetUpload, flushSupabaseQueues } from '../../lib/supabaseSync'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
