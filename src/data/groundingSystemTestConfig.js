@@ -9,7 +9,7 @@ export const groundingSystemTestConfig = {
       description: 'Identificación del sitio y datos de la visita.',
       fields: [
         { id: 'proveedor', label: 'Proveedor', type: 'text', required: true, placeholder: 'Ej: PTI / Contratista' },
-        { id: 'tipoVisita', label: 'Tipo de visita', type: 'select', required: true, options: [
+        { id: 'tipoVisita', label: 'Tipo de visita', type: 'select', required: true, defaultValue: 'mantenimiento', options: [
           { value: '', label: 'Seleccione...' },
           { value: 'inspeccion', label: 'Inspección' },
           { value: 'mantenimiento', label: 'Mantenimiento' },

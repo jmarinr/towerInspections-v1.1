@@ -9,6 +9,7 @@ import PhotoUpload from '../components/ui/PhotoUpload'
 import SinglePhotoUpload from '../components/ui/SinglePhotoUpload'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { PM_EXECUTED_SITE_TYPES, groupActivities } from '../data/preventiveMaintenanceExecutedConfig'
 
 function normalizeSiteType(value) {
@@ -18,6 +19,7 @@ function normalizeSiteType(value) {
 }
 
 export default function PreventiveMaintenanceExecuted() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
   const {
     pmExecutedData,
@@ -67,6 +69,10 @@ export default function PreventiveMaintenanceExecuted() {
   }, [applicableItems.length, completedCount, siteType])
 
   const toggleGroup = (name) => setOpenGroups((prev) => ({ ...prev, [name]: !prev[name] }))
+
+  if (isFormCompleted('mantenimiento-ejecutado')) {
+    return <FormLockedScreen title="Mantenimiento Ejecutado" />
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,12 +133,17 @@ export default function PreventiveMaintenanceExecuted() {
               readOnly={!!siteInfo.idSitio}
             />
 
-            <Input
+            <Select
               label="Tipo de visita"
               required
-              placeholder="Ej: Mantenimiento Preventivo"
-              value={siteInfo.tipoVisita || ''}
+              value={siteInfo.tipoVisita || 'mantenimiento'}
               onChange={(e) => updatePMExecutedField('tipoVisita', e.target.value)}
+              options={[
+                { value: '', label: 'Seleccione...' },
+                { value: 'mantenimiento', label: 'Mantenimiento' },
+                { value: 'correctivo', label: 'Correctivo' },
+                { value: 'emergencia', label: 'Emergencia' },
+              ]}
             />
 
             <Input

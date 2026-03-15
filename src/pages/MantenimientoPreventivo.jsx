@@ -10,9 +10,11 @@ import DynamicForm from '../components/forms/DynamicForm'
 import InspectionChecklist from '../components/forms/InspectionChecklist'
 import DepartureTimeModal from '../components/ui/DepartureTimeModal'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
 export default function MantenimientoPreventivo() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
   const { maintenanceData, 
     updateMaintenanceField, 
@@ -246,6 +248,10 @@ export default function MantenimientoPreventivo() {
         </div>
       </div>
     )
+  }
+
+  if (isFormCompleted('mantenimiento')) {
+    return <FormLockedScreen title="Mantenimiento Preventivo (Checklist)" />
   }
 
   return (

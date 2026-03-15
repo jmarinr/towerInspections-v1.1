@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '../../hooks/useAppStore'
 import PhotoUpload from '../ui/PhotoUpload'
 import Input from '../ui/Input'
+import AutoTextarea from '../ui/AutoTextarea'
 
 const cellClass = "w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
 const selectClass = cellClass
@@ -106,7 +107,7 @@ export default function TowerInventoryTableV2() {
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-gray-500 mb-1">Comentario</div>
-                  <input className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." />
+                  <AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." />
                 </div>
               </div>
             </div>
@@ -151,7 +152,7 @@ export default function TowerInventoryTableV2() {
                   <td className="p-2"><input className={cellClass} value={row.profundidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'profundidad', e.target.value)} placeholder="m" /></td>
                   <td className="p-2"><div className="px-3 py-2 text-sm bg-gray-100 rounded-xl text-gray-700 font-mono text-center">{calcArea(row.alto, row.ancho)}</div></td>
                   <td className="p-2"><input className={cellClass} value={row.carrier || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'carrier', e.target.value)} placeholder="Claro" /></td>
-                  <td className="p-2"><input className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." /></td>
+                  <td className="p-2"><AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." /></td>
                   <td className="p-2">
                     <button type="button" onClick={() => removeTowerItemV2(idx)} className="w-9 h-9 rounded-xl border-2 border-gray-200 text-gray-600 bg-white hover:border-red-300 hover:text-red-600 active:scale-95 flex items-center justify-center">
                       <Trash2 size={16} />

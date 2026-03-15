@@ -287,7 +287,7 @@ export default function DynamicForm(props) {
 
       case 'textarea':
         return (
-          <textarea
+          <AutoTextarea
             value={value}
             onChange={(e) => {
               markTouched(field.id)
@@ -295,8 +295,7 @@ export default function DynamicForm(props) {
             }}
             onBlur={() => markTouched(field.id)}
             placeholder={field.placeholder}
-            rows={3}
-            className={`${baseInputClass} resize-none`}
+            className={baseInputClass}
           />
         )
 

@@ -9,8 +9,10 @@ import SiteInfoForm from '../components/forms/SiteInfoForm'
 import InspectionItem from '../components/forms/InspectionItem'
 import { inspectionSections, getTotalInspectionItems } from '../data/inspectionItems'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 
 export default function InspeccionSitio() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
   const { step } = useParams()
   const { inspectionData, showToast, formMeta, resetFormDraft, finalizeForm } = useAppStore()
@@ -74,6 +76,10 @@ export default function InspeccionSitio() {
   }
 
   const steps = inspectionSections.map(s => ({ id: s.id, title: s.title }))
+
+  if (isFormCompleted('inspeccion')) {
+    return <FormLockedScreen title="Inspección General" />
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

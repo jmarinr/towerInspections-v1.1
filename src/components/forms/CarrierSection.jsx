@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '../../hooks/useAppStore'
 import PhotoUpload from '../ui/PhotoUpload'
 import Input from '../ui/Input'
+import AutoTextarea from '../ui/AutoTextarea'
 
 const cellClass = "w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
 const selectClass = cellClass
@@ -164,7 +165,7 @@ export default function CarrierSection() {
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-gray-500 mb-1">Comentario</div>
-                    <input className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." />
+                    <AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." />
                   </div>
                 </div>
               </div>
@@ -200,7 +201,7 @@ export default function CarrierSection() {
                     <td className="p-1"><input className={cellClass} value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" /></td>
                     <td className="p-1"><div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-center">{calcArea(row.alto, row.ancho)}</div></td>
                     <td className="p-1"><input className={cellClass} value={row.carrier || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'carrier', e.target.value)} placeholder="TIGO" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." /></td>
+                    <td className="p-1"><AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." /></td>
                     <td className="p-1">
                       <button type="button" onClick={() => removeItem(cIdx, rIdx)} className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:text-red-500 active:scale-95 flex items-center justify-center">
                         <Trash2 size={14} />

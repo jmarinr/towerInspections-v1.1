@@ -7,6 +7,7 @@ import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import DynamicForm from '../components/forms/DynamicForm'
 import { groundingSystemTestConfig } from '../data/groundingSystemTestConfig'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 
 function isFilled(value) {
   if (value === null || value === undefined) return false
@@ -54,6 +55,7 @@ const SHORT_LABELS = {
 }
 
 export default function GroundingSystemTest() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
 
   const groundingData = useAppStore((s) => s.groundingSystemData || {})
@@ -165,6 +167,10 @@ export default function GroundingSystemTest() {
         <p className="text-gray-500">Cargando...</p>
       </div>
     )
+  }
+
+  if (isFormCompleted('grounding-system-test')) {
+    return <FormLockedScreen title="Prueba de Puesta a Tierra" />
   }
 
   return (

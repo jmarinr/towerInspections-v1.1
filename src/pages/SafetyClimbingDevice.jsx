@@ -6,6 +6,7 @@ import BottomNav from '../components/layout/BottomNav'
 import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import DynamicForm from '../components/forms/DynamicForm'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
 
 function isFilled(value) {
@@ -58,6 +59,7 @@ const SHORT_LABELS = {
 }
 
 export default function SafetyClimbingDevice() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
 
   const safetyData = useAppStore((s) => s.safetyClimbingData || {})
@@ -162,6 +164,10 @@ export default function SafetyClimbingDevice() {
         <p className="text-gray-500">Cargando...</p>
       </div>
     )
+  }
+
+  if (isFormCompleted('sistema-ascenso')) {
+    return <FormLockedScreen title="Sistema de Ascenso" />
   }
 
   return (

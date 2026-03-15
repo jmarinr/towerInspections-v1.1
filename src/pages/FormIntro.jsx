@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { Wrench, ClipboardList, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
 
 const FORM_MAP = {
@@ -140,6 +141,10 @@ export default function FormIntro() {
         </div>
       </div>
     )
+  }
+
+  if (isFormCompleted(normalizedId)) {
+    return <FormLockedScreen title={cfg.title} />
   }
 
   // Called when user taps "Iniciar Formulario"

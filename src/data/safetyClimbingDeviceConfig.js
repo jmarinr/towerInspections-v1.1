@@ -40,7 +40,12 @@ export const safetyClimbingSections = [
 export const safetySectionFields = {
   datos: [
     { id: 'proveedor', label: 'Proveedor', type: 'text', required: true, placeholder: 'Ej: Servicios de Torres CR' },
-    { id: 'tipoVisita', label: 'Tipo de visita', type: 'text', required: true, placeholder: 'Ej: Inspección anual' },
+    { id: 'tipoVisita', label: 'Tipo de visita', type: 'select', required: true, defaultValue: 'mantenimiento', options: [
+      { value: '', label: 'Seleccione...' },
+      { value: 'mantenimiento', label: 'Mantenimiento' },
+      { value: 'inspeccion', label: 'Inspección' },
+      { value: 'emergencia', label: 'Emergencia' },
+    ]},
     { id: 'idSitio', label: 'ID sitio', type: 'text', placeholder: 'Ej: PTI-CR-001' },
     { id: 'nombreSitio', label: 'Nombre sitio', type: 'text', placeholder: 'Ej: San José Centro' },
     { id: 'tipoSitio', label: 'Tipo sitio', type: 'select', options: [

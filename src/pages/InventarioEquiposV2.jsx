@@ -8,6 +8,7 @@ import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 
 import { equipmentInventoryV2Steps, getEquipmentV2StepIndex } from '../data/equipmentInventoryV2Config'
 import { useAppStore } from '../hooks/useAppStore'
+import FormLockedScreen from '../components/ui/FormLockedScreen'
 
 import EquipmentInventorySiteInfoForm from '../components/forms/EquipmentInventorySiteInfoForm'
 import TowerInventoryTableV2 from '../components/forms/TowerInventoryTableV2'
@@ -15,6 +16,7 @@ import FloorInventoryClientsV2 from '../components/forms/FloorInventoryClientsV2
 import CarrierSection from '../components/forms/CarrierSection'
 
 export default function InventarioEquiposV2() {
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
   const { step } = useParams()
 
@@ -83,6 +85,10 @@ export default function InventarioEquiposV2() {
       default:
         return <div className="text-gray-500 text-center py-8">Sección no implementada</div>
     }
+  }
+
+  if (isFormCompleted('equipment-v2')) {
+    return <FormLockedScreen title="Inventario de Equipos v2" />
   }
 
   return (

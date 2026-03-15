@@ -19,10 +19,10 @@ export const maintenanceFormConfig = {
       type: 'form',
       fields: [
         { id: 'proveedor', label: 'Proveedor', type: 'text', required: true, placeholder: 'Ej: Servicios de Torres CR' },
-        { id: 'tipoVisita', label: 'Tipo de Visita', type: 'select', required: true, defaultValue: 'preventivo', options: [
+        { id: 'tipoVisita', label: 'Tipo de Visita', type: 'select', required: true, defaultValue: 'mantenimiento', options: [
           { value: '', label: 'Seleccione...' },
-          { value: 'preventivo', label: 'Mantenimiento Preventivo' },
-          { value: 'correctivo', label: 'Mantenimiento Correctivo' },
+          { value: 'mantenimiento', label: 'Mantenimiento' },
+          { value: 'correctivo', label: 'Correctivo' },
           { value: 'emergencia', label: 'Emergencia' },
         ]},
         { id: 'nombreSitio', label: 'Nombre del Sitio', type: 'text', required: true, placeholder: 'Ej: San José Centro' },
