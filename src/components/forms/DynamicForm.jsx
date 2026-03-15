@@ -198,12 +198,14 @@ export default function DynamicForm(props) {
           <input
             type="time"
             value={value}
+            readOnly={!!field.readOnly}
             onChange={(e) => {
+              if (field.readOnly) return
               markTouched(field.id)
               onFieldChange(field.id, e.target.value)
             }}
             onBlur={() => markTouched(field.id)}
-            className={baseInputClass}
+            className={`${baseInputClass} ${field.readOnly ? 'bg-gray-50 text-gray-500 cursor-default' : ''}`}
           />
         )
 

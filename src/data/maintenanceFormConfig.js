@@ -33,6 +33,7 @@ export const maintenanceFormConfig = {
           { value: 'rawland', label: 'Rawland' },
           { value: 'rooftop', label: 'Rooftop' },
         ]},
+        { id: 'horaEntrada', label: 'Hora de inicio', type: 'time', readOnly: true, description: 'Se captura automáticamente al iniciar el formulario.' },
         { id: 'fotoGPS', label: 'Foto GPS', type: 'photo' },
       ]
     },
