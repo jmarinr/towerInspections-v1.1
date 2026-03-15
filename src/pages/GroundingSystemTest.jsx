@@ -54,9 +54,13 @@ const SHORT_LABELS = {
   evidencia: 'Fotos',
 }
 
+const FORM_ID = 'grounding-system-test'
+
 export default function GroundingSystemTest() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Prueba de Puesta a Tierra" />
+
 
   const groundingData = useAppStore((s) => s.groundingSystemData || {})
   const setGroundingField = useAppStore((s) => s.setGroundingField)
@@ -169,9 +173,6 @@ export default function GroundingSystemTest() {
     )
   }
 
-  if (isFormCompleted('grounding-system-test')) {
-    return <FormLockedScreen title="Prueba de Puesta a Tierra" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

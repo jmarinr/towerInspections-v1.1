@@ -13,9 +13,13 @@ import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
 
+const FORM_ID = 'mantenimiento'
+
 export default function MantenimientoPreventivo() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Preventivo (Checklist)" />
+
   const { maintenanceData, 
     updateMaintenanceField, 
     updateChecklistItem,
@@ -250,9 +254,6 @@ export default function MantenimientoPreventivo() {
     )
   }
 
-  if (isFormCompleted('mantenimiento')) {
-    return <FormLockedScreen title="Mantenimiento Preventivo (Checklist)" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

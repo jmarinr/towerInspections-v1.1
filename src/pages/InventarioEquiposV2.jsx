@@ -15,9 +15,13 @@ import TowerInventoryTableV2 from '../components/forms/TowerInventoryTableV2'
 import FloorInventoryClientsV2 from '../components/forms/FloorInventoryClientsV2'
 import CarrierSection from '../components/forms/CarrierSection'
 
+const FORM_ID = 'equipment-v2'
+
 export default function InventarioEquiposV2() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Inventario de Equipos v2" />
+
   const { step } = useParams()
 
   const {
@@ -87,9 +91,6 @@ export default function InventarioEquiposV2() {
     }
   }
 
-  if (isFormCompleted('equipment-v2')) {
-    return <FormLockedScreen title="Inventario de Equipos v2" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

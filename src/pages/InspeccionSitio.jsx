@@ -11,9 +11,13 @@ import { inspectionSections, getTotalInspectionItems } from '../data/inspectionI
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 
+const FORM_ID = 'inspeccion'
+
 export default function InspeccionSitio() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Inspección General" />
+
   const { step } = useParams()
   const { inspectionData, showToast, formMeta, resetFormDraft, finalizeForm } = useAppStore()
 
@@ -77,9 +81,6 @@ export default function InspeccionSitio() {
 
   const steps = inspectionSections.map(s => ({ id: s.id, title: s.title }))
 
-  if (isFormCompleted('inspeccion')) {
-    return <FormLockedScreen title="Inspección General" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

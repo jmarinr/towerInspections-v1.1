@@ -58,9 +58,13 @@ const SHORT_LABELS = {
   certificacion: 'Certificación',
 }
 
+const FORM_ID = 'sistema-ascenso'
+
 export default function SafetyClimbingDevice() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Sistema de Ascenso" />
+
 
   const safetyData = useAppStore((s) => s.safetyClimbingData || {})
   const setSafetyField = useAppStore((s) => s.setSafetyField)
@@ -166,9 +170,6 @@ export default function SafetyClimbingDevice() {
     )
   }
 
-  if (isFormCompleted('sistema-ascenso')) {
-    return <FormLockedScreen title="Sistema de Ascenso" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

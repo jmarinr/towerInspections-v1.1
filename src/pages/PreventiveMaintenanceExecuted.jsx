@@ -18,9 +18,13 @@ function normalizeSiteType(value) {
   return value
 }
 
+const FORM_ID = 'mantenimiento-ejecutado'
+
 export default function PreventiveMaintenanceExecuted() {
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
   const navigate = useNavigate()
+  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Ejecutado" />
+
   const {
     pmExecutedData,
     updatePMExecutedField,
@@ -70,9 +74,6 @@ export default function PreventiveMaintenanceExecuted() {
 
   const toggleGroup = (name) => setOpenGroups((prev) => ({ ...prev, [name]: !prev[name] }))
 
-  if (isFormCompleted('mantenimiento-ejecutado')) {
-    return <FormLockedScreen title="Mantenimiento Ejecutado" />
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
