@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.16';
+  return import.meta.env.VITE_APP_VERSION || '2.5.17';
 }
 
 function loadMap(key) {
@@ -176,12 +176,13 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
 
   // If not found, create a minimal row
   const row = {
-    org_code: ORG_CODE,
+    org_code: payload?.org_code || ORG_CODE,
     device_id: deviceId,
     form_code: canonicalCode,
     form_version: formVersion,
     app_version: getAppVersion(),
     site_visit_id: siteVisitId,
+    submitted_by_user_id: payload?.submitted_by_user_id || null,
     payload: {},
   };
 
@@ -325,12 +326,13 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           : NIL_UUID;
 
         const row = {
-          org_code: ORG_CODE,
+          org_code: item.payload?.org_code || ORG_CODE,
           device_id: deviceId,
           form_code: canonicalFormCode,
           form_version: item.formVersion,
           app_version: getAppVersion(),
           site_visit_id: siteVisitId,
+          submitted_by_user_id: item.payload?.submitted_by_user_id || null,
           payload: {
             ...item.payload,
             _meta: {
@@ -403,7 +405,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           const ext = String(mimeExt).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
           const safeType = String(asset.assetType).replace(/[^a-zA-Z0-9\-_.:]/g, '_')
 
-          const objectPath = `${ORG_CODE}/${getDeviceId()}/${fc}/${submissionId}/${safeType}.${ext}`
+          const objectPath = `${asset.payload?.org_code || ORG_CODE}/${getDeviceId()}/${fc}/${submissionId}/${safeType}.${ext}`
 
           // Upload to Storage (upsert: true replaces existing file)
           const { error: upErr } = await supabase.storage

@@ -1,47 +1,88 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, User, Eye, EyeOff } from 'lucide-react'
-import { authenticate } from '../lib/auth'
+import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
 import { useAppStore } from '../hooks/useAppStore'
 
 export default function Login() {
   const navigate = useNavigate()
   const setSession = useAppStore((s) => s.setSession)
 
-  const [username, setUsername] = useState('')
-  const [pin, setPin] = useState('')
-  const [showPin, setShowPin] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
-    if (!username.trim()) {
-      setError('Ingrese su usuario')
-      return
-    }
-    if (!pin.trim()) {
-      setError('Ingrese su PIN')
-      return
-    }
+    if (!email.trim()) { setError('Ingrese su correo electrónico'); return }
+    if (!password.trim()) { setError('Ingrese su contraseña'); return }
 
     setLoading(true)
+    try {
+      // 1. Supabase Auth sign in
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
 
-    setTimeout(() => {
-      const result = authenticate(username, pin)
-
-      if (!result.success) {
-        setError(result.error)
+      if (authError) {
+        setError('Credenciales incorrectas. Verifique su correo y contraseña.')
         setLoading(false)
         return
       }
 
-      setSession(result.user)
-      setLoading(false)
+      // 2. Load profile from app_users
+      const { data: profile, error: profileError } = await supabase
+        .from('app_users')
+        .select('id, full_name, role, company_id, supervisor_id, active, companies(org_code, name)')
+        .eq('id', authData.session.user.id)
+        .single()
+
+      if (profileError || !profile) {
+        setError('No se encontró un perfil de usuario. Contacte al administrador.')
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      if (!profile.active) {
+        setError('Su cuenta está desactivada. Contacte al administrador.')
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      // 3. Only inspectors can use this app
+      if (profile.role !== 'inspector') {
+        setError('Este acceso es solo para inspectores. Use el panel de administración.')
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      // 4. Save session in store
+      setSession({
+        userId: profile.id,
+        username: authData.session.user.email,
+        name: profile.full_name,
+        role: profile.role,
+        roleLabel: 'Inspector',
+        orgCode: profile.companies?.org_code || 'PTI',
+        companyId: profile.company_id,
+        supervisorId: profile.supervisor_id || null,
+      })
+
       navigate('/order')
-    }, 300)
+    } catch (err) {
+      console.error('[Login] unexpected error:', err)
+      setError('Error inesperado. Intente de nuevo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -59,17 +100,17 @@ export default function Login() {
         className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4"
       >
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Usuario</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Correo electrónico</label>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <User size={18} />
+              <Mail size={18} />
             </div>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setError('') }}
-              placeholder="Ej: inspector1"
-              autoComplete="username"
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError('') }}
+              placeholder="inspector@ejemplo.com"
+              autoComplete="email"
               autoCapitalize="none"
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
@@ -77,27 +118,25 @@ export default function Login() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">PIN</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Contraseña</label>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <Lock size={18} />
             </div>
             <input
-              type={showPin ? 'text' : 'password'}
-              value={pin}
-              onChange={(e) => { setPin(e.target.value); setError('') }}
-              placeholder="••••"
-              inputMode="numeric"
-              maxLength={6}
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError('') }}
+              placeholder="••••••••"
               autoComplete="current-password"
-              className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-300 text-sm font-medium tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+              className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-300 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
             <button
               type="button"
-              onClick={() => setShowPin(!showPin)}
+              onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 active:scale-95"
             >
-              {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
@@ -119,7 +158,7 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.16</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.17</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a

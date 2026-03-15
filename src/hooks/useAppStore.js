@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.16'
+const APP_VERSION_DISPLAY = '2.5.17'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -233,7 +233,11 @@ export const useAppStore = create(
       // ============ SESSION / AUTH ============
       session: null, // { username, name, role, roleLabel }
       setSession: (user) => set({ session: user }),
-      logout: () => set({ session: null, activeVisit: null }),
+      logout: () => {
+        // Sign out from Supabase Auth (non-blocking)
+        import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
+        set({ session: null, activeVisit: null })
+      },
 
       // ============ ACTIVE VISIT (ORDER) ============
       activeVisit: null, // site_visits row from Supabase
@@ -604,7 +608,7 @@ export const useAppStore = create(
       : []
 
     return {
-      org_code: 'PTI',
+      org_code: state.session?.orgCode || 'PTI',
       device_id: getDeviceId(),
       form_code: canonicalFormCode,
       app_version: APP_VERSION_DISPLAY,
@@ -612,6 +616,7 @@ export const useAppStore = create(
       site_visit_id: (state.activeVisit?.id && !String(state.activeVisit.id).startsWith('local-'))
         ? state.activeVisit.id
         : null,
+      submitted_by_user_id: state.session?.userId || null,
       payload: {
         meta: meta ? {
           ...meta,
@@ -622,9 +627,11 @@ export const useAppStore = create(
         finalized: false,
         data: snapshot,
         submitted_by: state.session ? {
+          userId: state.session.userId,
           username: state.session.username,
           name: state.session.name,
           role: state.session.role,
+          orgCode: state.session.orgCode,
         } : null,
         submitted_at: new Date().toISOString(),
       },

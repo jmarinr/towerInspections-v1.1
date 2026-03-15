@@ -6,16 +6,15 @@
 import { supabase } from './supabaseClient'
 import { getDeviceId } from './deviceId'
 
-const ORG_CODE = 'PTI'
-
 /**
  * Create a new site visit (order)
  */
 export async function createSiteVisit({ orderNumber, siteId, siteName, session, lat, lng }) {
   const deviceId = getDeviceId()
+  const orgCode = session?.orgCode || 'PTI'
 
   const row = {
-    org_code: ORG_CODE,
+    org_code: orgCode,
     order_number: orderNumber,
     site_id: siteId,
     site_name: siteName,
