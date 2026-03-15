@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, LayoutList, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
 import { useAppStore } from '../hooks/useAppStore'
 import { filterFormsByRole } from '../lib/auth'
 import { closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
@@ -29,7 +29,7 @@ const ALL_FORMS = [
     title: 'Mantenimiento Ejecutado',
     description: 'Trabajos ejecutados (Rawland/Rooftop) con fotos Antes/Después por actividad',
     icon: Camera,
-    iconBg: 'bg-teal-500',
+    iconBg: 'bg-emerald-500',
     stats: '32 actividades / 64 fotos',
     route: '/intro/mantenimiento-ejecutado',
   },
@@ -37,8 +37,8 @@ const ALL_FORMS = [
     id: 'equipment',
     title: 'Inventario de Equipos',
     description: 'Inventario de equipos (Torre + Piso) con croquis y plano',
-    icon: Package,
-    iconBg: 'bg-emerald-500',
+    icon: LayoutList,
+    iconBg: 'bg-rose-500',
     stats: '28 ítems / 6 pasos',
     route: '/intro/equipment',
   },
@@ -47,7 +47,7 @@ const ALL_FORMS = [
     title: 'Inventario de Equipos v2',
     description: 'Inventario con dimensiones desglosadas (Alto/Ancho/Profundidad) y fotos de evidencia',
     icon: Package,
-    iconBg: 'bg-lime-600',
+    iconBg: 'bg-cyan-400',
     stats: '4 pasos / 3 fotos',
     route: '/intro/equipment-v2',
   },
@@ -56,7 +56,7 @@ const ALL_FORMS = [
     title: 'Sistema de ascenso',
     description: 'Revisión de dispositivo de ascenso y componentes asociados',
     icon: Shield,
-    iconBg: 'bg-indigo-500',
+    iconBg: 'bg-yellow-400',
     stats: '34 ítems / 6 secciones',
     route: '/intro/sistema-ascenso',
   },
@@ -229,7 +229,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.14</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.15</p>
 
           {/* User info pill */}
           {session && (
