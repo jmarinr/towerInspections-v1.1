@@ -18,7 +18,6 @@ const FORM_ID = 'mantenimiento'
 export default function MantenimientoPreventivo() {
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Preventivo (Checklist)" />
 
   const { maintenanceData, 
     updateMaintenanceField, 
@@ -225,9 +224,9 @@ export default function MantenimientoPreventivo() {
     updateMaintenanceField('horaSalida', time)
 
     try {
-      await finalizeForm('mantenimiento')
-      showToast('¡Mantenimiento enviado!', 'success')
       navigate('/')
+      showToast('¡Mantenimiento enviado!', 'success')
+      finalizeForm('mantenimiento').catch((e) => console.error('[finalize]', e))
     } catch (e) {
       console.error('[Mantenimiento] finalize error:', e)
       showToast('Error al enviar. Intente de nuevo.', 'error')
@@ -254,6 +253,8 @@ export default function MantenimientoPreventivo() {
     )
   }
 
+
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Preventivo (Checklist)" />
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

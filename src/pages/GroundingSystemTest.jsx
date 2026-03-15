@@ -59,7 +59,6 @@ const FORM_ID = 'grounding-system-test'
 export default function GroundingSystemTest() {
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Prueba de Puesta a Tierra" />
 
 
   const groundingData = useAppStore((s) => s.groundingSystemData || {})
@@ -151,9 +150,9 @@ export default function GroundingSystemTest() {
         setStep(currentStep + 1)
       } else {
         try {
-          await finalizeForm('puesta-tierra')
-          showToast('¡Formulario enviado!', 'success')
           navigate('/')
+          showToast('¡Formulario enviado!', 'success')
+          finalizeForm('puesta-tierra').catch((e) => console.error('[finalize]', e))
         } catch (e) {
           console.error('[Grounding] finalize error:', e)
           showToast('Error al enviar. Intente de nuevo.', 'error')
@@ -173,6 +172,8 @@ export default function GroundingSystemTest() {
     )
   }
 
+
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Prueba de Puesta a Tierra" />
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

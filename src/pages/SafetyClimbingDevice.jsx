@@ -63,7 +63,6 @@ const FORM_ID = 'sistema-ascenso'
 export default function SafetyClimbingDevice() {
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Sistema de Ascenso" />
 
 
   const safetyData = useAppStore((s) => s.safetyClimbingData || {})
@@ -157,9 +156,9 @@ export default function SafetyClimbingDevice() {
       return
     }
 
-    await finalizeForm('safety-system')
-    showToast('¡Formulario enviado!', 'success')
     navigate('/')
+    showToast('¡Formulario enviado!', 'success')
+    finalizeForm('safety-system').catch((e) => console.error('[finalize]', e))
   }
 
   if (!currentSection) {
@@ -170,6 +169,8 @@ export default function SafetyClimbingDevice() {
     )
   }
 
+
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Sistema de Ascenso" />
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

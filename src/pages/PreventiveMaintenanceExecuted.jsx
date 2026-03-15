@@ -23,7 +23,6 @@ const FORM_ID = 'mantenimiento-ejecutado'
 export default function PreventiveMaintenanceExecuted() {
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Ejecutado" />
 
   const {
     pmExecutedData,
@@ -74,6 +73,8 @@ export default function PreventiveMaintenanceExecuted() {
 
   const toggleGroup = (name) => setOpenGroups((prev) => ({ ...prev, [name]: !prev[name] }))
 
+
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Mantenimiento Ejecutado" />
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -339,9 +340,9 @@ export default function PreventiveMaintenanceExecuted() {
             className="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white font-bold text-sm active:scale-95 shadow-sm"
             onClick={async () => {
               try {
-                await finalizeForm('mantenimiento-ejecutado')
-                showToast('¡Mantenimiento ejecutado enviado!', 'success')
                 navigate('/')
+                showToast('¡Mantenimiento ejecutado enviado!', 'success')
+                finalizeForm('mantenimiento-ejecutado').catch((e) => console.error('[finalize]', e))
               } catch (e) {
                 console.error('[PMExecuted] finalize error:', e)
                 showToast('Error al enviar. Intente de nuevo.', 'error')

@@ -20,7 +20,6 @@ const FORM_ID = 'equipment-v2'
 export default function InventarioEquiposV2() {
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Inventario de Equipos v2" />
 
   const { step } = useParams()
 
@@ -63,9 +62,9 @@ export default function InventarioEquiposV2() {
       navigateToStep(equipmentInventoryV2Steps[stepIndex + 1].id)
     } else {
       try {
-        await finalizeForm('inventario-v2')
-        showToast('¡Inventario v2 enviado!', 'success')
         navigate('/')
+        showToast('¡Inventario v2 enviado!', 'success')
+        finalizeForm('inventario-v2').catch((e) => console.error('[finalize]', e))
       } catch (e) {
         console.error('[InventarioV2] finalize error:', e)
         showToast('Error al enviar. Intente de nuevo.', 'error')
@@ -91,6 +90,8 @@ export default function InventarioEquiposV2() {
     }
   }
 
+
+  if (isFormCompleted(FORM_ID)) return <FormLockedScreen title="Inventario de Equipos v2" />
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
