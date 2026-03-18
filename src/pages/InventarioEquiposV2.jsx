@@ -62,9 +62,9 @@ export default function InventarioEquiposV2() {
       navigateToStep(equipmentInventoryV2Steps[stepIndex + 1].id)
     } else {
       try {
-        navigate('/')
+        await finalizeForm('inventario-v2')
         showToast('¡Inventario v2 enviado!', 'success')
-        finalizeForm('inventario-v2').catch((e) => console.error('[finalize]', e))
+        navigate('/')
       } catch (e) {
         console.error('[InventarioV2] finalize error:', e)
         showToast('Error al enviar. Intente de nuevo.', 'error')

@@ -340,9 +340,9 @@ export default function PreventiveMaintenanceExecuted() {
             className="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white font-bold text-sm active:scale-95 shadow-sm"
             onClick={async () => {
               try {
-                navigate('/')
+                await finalizeForm('mantenimiento-ejecutado')
                 showToast('¡Mantenimiento ejecutado enviado!', 'success')
-                finalizeForm('mantenimiento-ejecutado').catch((e) => console.error('[finalize]', e))
+                navigate('/')
               } catch (e) {
                 console.error('[PMExecuted] finalize error:', e)
                 showToast('Error al enviar. Intente de nuevo.', 'error')

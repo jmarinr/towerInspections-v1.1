@@ -224,9 +224,9 @@ export default function MantenimientoPreventivo() {
     updateMaintenanceField('horaSalida', time)
 
     try {
-      navigate('/')
+      await finalizeForm('mantenimiento')
       showToast('¡Mantenimiento enviado!', 'success')
-      finalizeForm('mantenimiento').catch((e) => console.error('[finalize]', e))
+      navigate('/')
     } catch (e) {
       console.error('[Mantenimiento] finalize error:', e)
       showToast('Error al enviar. Intente de nuevo.', 'error')

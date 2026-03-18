@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.27'
+const APP_VERSION_DISPLAY = '2.5.28'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -528,6 +528,10 @@ export const useAppStore = create(
         const cfg = map[formKey]
         if (!cfg) throw new Error('unknown form: ' + formKey)
 
+        // Mark as completed in store FIRST to prevent re-render loop
+        // (component checks isFormCompleted and shows locked screen immediately)
+        get().markFormCompleted(cfg.formId)
+
         // Build payload (photos are stripped automatically)
         const payload = get().getSupabasePayloadForForm(cfg.code)
         if (payload) {
@@ -546,12 +550,9 @@ export const useAppStore = create(
           console.warn('[finalizeForm] flush failed (will retry in background):', e?.message || e)
         }
 
-        // Always clean up local state and reset form
+        // Clean up local state and reset form
         try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
         get().resetFormDraft(formKey)
-
-        // Track form as completed in current visit
-        get().markFormCompleted(cfg.formId)
 
         return { synced: flushSuccess }
       },

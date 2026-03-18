@@ -150,9 +150,9 @@ export default function GroundingSystemTest() {
         setStep(currentStep + 1)
       } else {
         try {
-          navigate('/')
+          await finalizeForm('puesta-tierra')
           showToast('¡Formulario enviado!', 'success')
-          finalizeForm('puesta-tierra').catch((e) => console.error('[finalize]', e))
+          navigate('/')
         } catch (e) {
           console.error('[Grounding] finalize error:', e)
           showToast('Error al enviar. Intente de nuevo.', 'error')

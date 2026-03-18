@@ -156,9 +156,9 @@ export default function SafetyClimbingDevice() {
       return
     }
 
-    navigate('/')
+    await finalizeForm('safety-system')
     showToast('¡Formulario enviado!', 'success')
-    finalizeForm('safety-system').catch((e) => console.error('[finalize]', e))
+    navigate('/')
   }
 
   if (!currentSection) {

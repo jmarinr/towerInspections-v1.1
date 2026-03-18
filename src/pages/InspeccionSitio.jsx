@@ -68,9 +68,9 @@ export default function InspeccionSitio() {
     if (currentStepIndex < inspectionSections.length - 1) goToStep(inspectionSections[currentStepIndex + 1].id)
     else {
       try {
-        navigate('/')
+        await finalizeForm('inspeccion')
         showToast('¡Inspección enviada!', 'success')
-        finalizeForm('inspeccion').catch((e) => console.error('[finalize]', e))
+        navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
         return
