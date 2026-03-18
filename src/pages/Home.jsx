@@ -119,9 +119,10 @@ export default function Home() {
       'sistema-ascenso': 'sistema-ascenso',
     }
 
-    // Block form access while loading data for a different order
+    // Always show hydrating state while loading submissions
+    // This prevents showing "En progreso" before markFormCompleted runs
+    setHydrating(true)
     if (!isOwnOrder) {
-      setHydrating(true)
       resetAllForms()
     }
 
@@ -229,7 +230,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.26</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.27</p>
 
           {/* User info pill */}
           {session && (

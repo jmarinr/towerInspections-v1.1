@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.26'
+const APP_VERSION_DISPLAY = '2.5.27'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -236,7 +236,7 @@ export const useAppStore = create(
       logout: () => {
         // Sign out from Supabase Auth (non-blocking)
         import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
-        set({ session: null, activeVisit: null })
+        set({ session: null, activeVisit: null, completedForms: [], formDataOwnerId: null })
       },
 
       // ============ ACTIVE VISIT (ORDER) ============
@@ -282,9 +282,10 @@ export const useAppStore = create(
         }))
       },
 
-      // Continue existing order - never reset here, Home handles data sync
+      // Continue existing order - never reset completedForms here,
+      // hydration from Supabase will restore them via markFormCompleted
       setActiveVisit: (visit) => {
-        set({ activeVisit: visit, completedForms: [] })
+        set({ activeVisit: visit })
         get().injectVisitSiteData(visit)
       },
       // Create new order - always reset all form data, then inject site data
@@ -299,8 +300,8 @@ export const useAppStore = create(
       },
       // Navigate to order screen without resetting form data
       navigateToOrderScreen: () => {
-        // Keep formDataOwnerId so we know who owns the cached data
-        set({ activeVisit: null, completedForms: [] })
+        // Keep formDataOwnerId and completedForms so we know who owns the cached data
+        set({ activeVisit: null })
       },
       resetAllForms: () => {
         // Reset all 6 form data stores
