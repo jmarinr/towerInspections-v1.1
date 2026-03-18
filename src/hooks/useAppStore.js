@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.28'
+const APP_VERSION_DISPLAY = '2.5.29'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -361,7 +361,20 @@ export const useAppStore = create(
         set({ showAutosave: true })
         setTimeout(() => set({ showAutosave: false }), 1500)
 
-        // Option C: also queue a background upsert to Supabase on each local autosave.
+        // Do NOT autosave if this form is already finalized/completed
+        // This prevents overwriting finalized=true with finalized=false
+        const formIdMap = {
+          'preventive-maintenance': 'mantenimiento',
+          'inspection-general': 'inspeccion',
+          'executed-maintenance': 'mantenimiento-ejecutado',
+          'equipment-v2': 'equipment-v2',
+          'equipment': 'equipment',
+          'grounding-system-test': 'grounding-system-test',
+          'safety-system': 'sistema-ascenso',
+        }
+        const formId = formIdMap[formCode]
+        if (formId && (get().completedForms || []).includes(formId)) return
+
         try {
           if (formCode) {
             const payload = get().getSupabasePayloadForForm(formCode)
@@ -528,16 +541,16 @@ export const useAppStore = create(
         const cfg = map[formKey]
         if (!cfg) throw new Error('unknown form: ' + formKey)
 
-        // Mark as completed in store FIRST to prevent re-render loop
-        // (component checks isFormCompleted and shows locked screen immediately)
+        // Mark as completed in store FIRST
+        // This also blocks any further triggerAutosave calls for this form
         get().markFormCompleted(cfg.formId)
 
-        // Build payload (photos are stripped automatically)
+        // Build payload with finalized=true
         const payload = get().getSupabasePayloadForForm(cfg.code)
         if (payload) {
-          // Mark as finalized (distinguishes from autosave)
           payload.payload.finalized = true
           payload.payload.meta.finishedAt = new Date().toISOString()
+          // Overwrite any pending autosave in the queue with finalized version
           queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
         }
 
