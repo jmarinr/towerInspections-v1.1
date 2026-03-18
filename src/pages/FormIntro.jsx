@@ -1,9 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import { useAppStore } from '../hooks/useAppStore'
+import { fetchSubmissionForForm } from '../lib/siteVisitService'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { Wrench, ClipboardList, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
+
+// Maps normalizedId → form_code stored in submissions table
+const FORM_CODE_MAP = {
+  'inspeccion': 'inspeccion',
+  'mantenimiento': 'mantenimiento',
+  'equipment': 'inventario',
+  'equipment-v2': 'inventario-v2',
+  'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
+  'sistema-ascenso': 'sistema-ascenso',
+  'grounding-system-test': 'puesta-tierra',
+}
 
 const FORM_MAP = {
   inspeccion: {
@@ -89,6 +101,7 @@ export default function FormIntro() {
   const { formId } = useParams()
   const [loading, setLoading] = useState(false)
   const [showResumeDialog, setShowResumeDialog] = useState(false)
+  const [serverFinalized, setServerFinalized] = useState(null) // null=loading, true=finalized, false=not
 
   const cfg = useMemo(() => FORM_MAP[formId], [formId])
 
@@ -106,6 +119,7 @@ export default function FormIntro() {
     formMeta,
     activeVisit,
     isFormCompleted,
+    markFormCompleted,
   } = useAppStore()
 
   // Check if this form has previous data
@@ -113,6 +127,25 @@ export default function FormIntro() {
     if (!formId) return ''
     return formId === 'pm-executed' ? 'mantenimiento-ejecutado' : formId
   }, [formId])
+
+  // Check Supabase directly for finalized status — source of truth
+  useEffect(() => {
+    if (!normalizedId || !activeVisit?.id) return
+    setServerFinalized(null)
+    const formCode = FORM_CODE_MAP[normalizedId]
+    if (!formCode) return
+    fetchSubmissionForForm(activeVisit.id, formCode)
+      .then((submission) => {
+        const inner = submission?.payload?.payload || submission?.payload
+        if (inner?.finalized === true) {
+          setServerFinalized(true)
+          markFormCompleted(normalizedId)
+        } else {
+          setServerFinalized(false)
+        }
+      })
+      .catch(() => setServerFinalized(false))
+  }, [normalizedId, activeVisit?.id])
 
   const hasPreviousData = useMemo(() => {
     if (!normalizedId) return false
@@ -144,7 +177,17 @@ export default function FormIntro() {
     )
   }
 
-  if (isFormCompleted(normalizedId)) {
+  // Show loading while checking Supabase
+  if (serverFinalized === null && activeVisit?.id) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-sm text-gray-400">Verificando estado...</div>
+      </div>
+    )
+  }
+
+  // Server says finalized OR local store says completed
+  if (serverFinalized === true || isFormCompleted(normalizedId)) {
     return <FormLockedScreen title={cfg.title} />
   }
 
