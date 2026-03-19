@@ -7,7 +7,7 @@ import AutoTextarea from '../ui/AutoTextarea'
 const cellClass = "w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
 const selectClass = cellClass
 
-const ORIENTACION_OPTS = ['', 'Cara 1', 'Cara 2', 'Cara 3', 'Pierna A', 'Pierna B', 'Pierna C', 'Mástil']
+const ORIENTACION_OPTS = ['', '0°', '15°', '30°', '45°', '60°', '75°', '90°', '105°', '120°', '135°', '150°', '165°', '180°', '195°', '210°', '225°', '240°', '255°', '270°', '285°', '300°', '315°', '330°', '345°']
 const TIPO_EQUIPO_OPTS = ['', 'RF', 'RRU', 'MW', 'Omni', 'Herraje Vacío', 'Soporte Vacío', 'Otro']
 
 function calcArea(alto, ancho) {
