@@ -570,7 +570,7 @@ export const useAppStore = create(
 
         // Safety net: direct column update even if queue flush had issues
         try {
-          const { supabase } = await import('./supabaseClient')
+          const { supabase } = await import('../lib/supabaseClient')
           const visitId = get().activeVisit?.id
           if (visitId && !String(visitId).startsWith('local-')) {
             await supabase
