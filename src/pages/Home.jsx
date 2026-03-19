@@ -148,7 +148,8 @@ export default function Home() {
           const assets = assetsMap[s.id] || []
           console.log(`[Home] Hydrating ${s.form_code}, finalized=${inner?.finalized}, hasData=${!!inner?.data}, assets=${assets.length}`)
 
-          if (inner?.finalized === true) {
+          // Check column (reliable) OR JSONB fallback
+          if (s.finalized === true || inner?.finalized === true) {
             markFormCompleted(formId)
           }
 
@@ -230,7 +231,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.30</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.31</p>
 
           {/* User info pill */}
           {session && (

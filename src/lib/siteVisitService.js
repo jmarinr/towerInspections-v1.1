@@ -95,7 +95,7 @@ export async function closeSiteVisit(visitId, { lat, lng } = {}) {
 export async function fetchVisitSubmissions(visitId) {
   const { data, error } = await supabase
     .from('submissions')
-    .select('id, form_code, payload, updated_at')
+    .select('id, form_code, finalized, payload, updated_at')
     .eq('site_visit_id', visitId)
 
   if (error) throw error
@@ -135,7 +135,7 @@ export async function fetchSubmissionAssets(submissionIds) {
 export async function fetchSubmissionForForm(visitId, formCode) {
   const { data, error } = await supabase
     .from('submissions')
-    .select('form_code, payload, updated_at')
+    .select('form_code, finalized, payload, updated_at')
     .eq('site_visit_id', visitId)
     .eq('form_code', formCode)
     .order('updated_at', { ascending: false })

@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.30'
+const APP_VERSION_DISPLAY = '2.5.31'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -554,7 +554,12 @@ export const useAppStore = create(
           queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
         }
 
-        // Try to flush to Supabase — if it fails, data stays in queue for retry
+        // Clean up local state and reset form BEFORE flush
+        // so no more autosaves can queue after this point
+        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
+        get().resetFormDraft(formKey)
+
+        // Flush finalized=true to Supabase (column + JSONB)
         let flushSuccess = false
         try {
           await flushSupabaseQueues({ formCode: cfg.code })
@@ -563,9 +568,20 @@ export const useAppStore = create(
           console.warn('[finalizeForm] flush failed (will retry in background):', e?.message || e)
         }
 
-        // Clean up local state and reset form
-        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
-        get().resetFormDraft(formKey)
+        // Safety net: direct column update even if queue flush had issues
+        try {
+          const { supabase } = await import('./supabaseClient')
+          const visitId = get().activeVisit?.id
+          if (visitId && !String(visitId).startsWith('local-')) {
+            await supabase
+              .from('submissions')
+              .update({ finalized: true })
+              .eq('site_visit_id', visitId)
+              .eq('form_code', cfg.code)
+          }
+        } catch (e) {
+          console.warn('[finalizeForm] direct finalized update failed:', e?.message || e)
+        }
 
         return { synced: flushSuccess }
       },

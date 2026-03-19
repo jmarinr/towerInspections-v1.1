@@ -136,8 +136,11 @@ export default function FormIntro() {
     if (!formCode) return
     fetchSubmissionForForm(activeVisit.id, formCode)
       .then((submission) => {
+        // Check column first (reliable), fallback to JSONB
+        const colFinalized = submission?.finalized === true
         const inner = submission?.payload?.payload || submission?.payload
-        if (inner?.finalized === true) {
+        const jsonbFinalized = inner?.finalized === true
+        if (colFinalized || jsonbFinalized) {
           setServerFinalized(true)
           markFormCompleted(normalizedId)
         } else {

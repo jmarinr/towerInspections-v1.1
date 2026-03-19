@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.30';
+  return import.meta.env.VITE_APP_VERSION || '2.5.31';
 }
 
 function loadMap(key) {
@@ -183,6 +183,7 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
     app_version: getAppVersion(),
     site_visit_id: siteVisitId,
     submitted_by_user_id: payload?.submitted_by_user_id || null,
+    finalized: false,
     payload: {},
   };
 
@@ -333,6 +334,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           app_version: getAppVersion(),
           site_visit_id: siteVisitId,
           submitted_by_user_id: item.payload?.submitted_by_user_id || null,
+          finalized: item.payload?.payload?.finalized === true,
           payload: {
             ...item.payload,
             _meta: {
