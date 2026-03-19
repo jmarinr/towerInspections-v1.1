@@ -10,7 +10,13 @@ const selectClass = cellClass
 const ORIENTACION_OPTS = ['', '0°', '15°', '30°', '45°', '60°', '75°', '90°', '105°', '120°', '135°', '150°', '165°', '180°', '195°', '210°', '225°', '240°', '255°', '270°', '285°', '300°', '315°', '330°', '345°']
 const TIPO_EQUIPO_OPTS = ['', 'RF', 'RRU', 'MW', 'Omni', 'Herraje Vacío', 'Soporte Vacío', 'Otro']
 
-function calcArea(alto, ancho) {
+function calcArea(alto, ancho, tipoEquipo) {
+  if (tipoEquipo === 'MW') {
+    // Circular: area = π × (diámetro/2)²
+    const d = parseFloat(alto) // alto field used as diameter for MW
+    if (Number.isFinite(d) && d > 0) return (Math.PI * Math.pow(d / 2, 2)).toFixed(4)
+    return '0'
+  }
   const a = parseFloat(alto)
   const b = parseFloat(ancho)
   if (Number.isFinite(a) && Number.isFinite(b)) return (a * b).toFixed(4)
@@ -144,19 +150,37 @@ export default function CarrierSection() {
                   </div>
                 </div>
 
-                <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  {[['Alto', 'alto'], ['Ancho', 'ancho']].map(([lbl, f]) => (
-                    <div key={f}>
-                      <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
-                      <input className={cellClass} value={row[f] || ''} onChange={(e) => updateItemField(cIdx, rIdx, f, e.target.value)} placeholder="m" />
+                {row.tipoEquipo === 'MW' ? (
+                  <div className="mb-2">
+                    <div className="text-[11px] font-bold text-blue-500 uppercase mb-1">Figura circular — ingrese diámetro</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-500 mb-1">Diámetro (m)</div>
+                        <input className={`${cellClass} border-blue-300`} value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder="ej: 0.6" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
+                        <div className="px-2 py-2 text-xs bg-blue-50 rounded-xl font-mono text-blue-700">π×(d/2)² = {calcArea(row.alto, row.ancho, 'MW')}</div>
+                      </div>
                     </div>
-                  ))}
-                  <div>
-                    <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
-                    <div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho)}</div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mb-2">
+                    <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[['Alto', 'alto'], ['Ancho', 'ancho']].map(([lbl, f]) => (
+                        <div key={f}>
+                          <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
+                          <input className={cellClass} value={row[f] || ''} onChange={(e) => updateItemField(cIdx, rIdx, f, e.target.value)} placeholder="m" />
+                        </div>
+                      ))}
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
+                        <div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -178,7 +202,7 @@ export default function CarrierSection() {
               <thead className="bg-gray-50">
                 <tr className="text-left text-[11px] font-extrabold text-gray-600">
                   <th className="p-2">Altura</th><th className="p-2">Orient.</th><th className="p-2">Tipo</th><th className="p-2">Núm.</th>
-                  <th className="p-2">Alto</th><th className="p-2">Ancho</th><th className="p-2">Área M2</th>
+                  <th className="p-2">Alto/Diám.</th><th className="p-2">Ancho</th><th className="p-2">Área M2</th>
                   <th className="p-2">Carrier</th><th className="p-2">Comentario</th><th className="p-2 w-[40px]"></th>
                 </tr>
               </thead>
@@ -197,9 +221,18 @@ export default function CarrierSection() {
                       </select>
                     </td>
                     <td className="p-1"><input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'cantidad', e.target.value)} placeholder="1" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder="m" /></td>
-                    <td className="p-1"><input className={cellClass} value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" /></td>
-                    <td className="p-1"><div className="px-2 py-2 text-xs bg-gray-100 rounded-xl font-mono text-center">{calcArea(row.alto, row.ancho)}</div></td>
+                    <td className="p-1">
+                      <div className="relative">
+                        <input className={cellClass} value={row.alto || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'alto', e.target.value)} placeholder={row.tipoEquipo === 'MW' ? 'diám.' : 'm'} />
+                        {row.tipoEquipo === 'MW' && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-blue-500 font-bold pointer-events-none">⌀</span>}
+                      </div>
+                    </td>
+                    <td className="p-1">
+                      {row.tipoEquipo === 'MW'
+                        ? <div className="px-2 py-2 text-[10px] text-blue-400 rounded-xl text-center italic">— circular —</div>
+                        : <input className={cellClass} value={row.ancho || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'ancho', e.target.value)} placeholder="m" />}
+                    </td>
+                    <td className="p-1"><div className={`px-2 py-2 text-xs rounded-xl font-mono text-center ${row.tipoEquipo === 'MW' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100'}`}>{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div></td>
                     <td className="p-1"><input className={cellClass} value={row.carrier || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'carrier', e.target.value)} placeholder="TIGO" /></td>
                     <td className="p-1"><AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateItemField(cIdx, rIdx, 'comentario', e.target.value)} placeholder="..." /></td>
                     <td className="p-1">
