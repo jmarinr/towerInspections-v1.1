@@ -60,12 +60,10 @@ export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp,
           <Select
             label="Tipo de Visita"
             required
-            value={data.tipoVisita || ''}
+            value={data.tipoVisita || 'mantenimiento'}
             onChange={(e) => update('tipoVisita', e.target.value)}
             options={[
-              { value: '', label: 'Seleccione...' },
-              { value: 'RoofTop', label: 'RoofTop' },
-              { value: 'RawLand', label: 'RawLand' },
+              { value: 'mantenimiento', label: 'Mantenimiento' },
             ]}
           />
         </div>
