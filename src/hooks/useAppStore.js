@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.36'
+const APP_VERSION_DISPLAY = '2.5.37'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -304,11 +304,12 @@ export const useAppStore = create(
         set({ activeVisit: null })
       },
       resetAllForms: () => {
-        // Reset all 6 form data stores
+        // Reset all form data stores
         const allFormKeys = [
           'inspeccion',
           'mantenimiento',
           'inventario',
+          'inventario-v2',
           'mantenimiento-ejecutado',
           'puesta-tierra',
           'safety-system',
