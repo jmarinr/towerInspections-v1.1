@@ -82,17 +82,27 @@ export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp,
       <div className="bg-white rounded-2xl p-4 border border-gray-200">
         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Estructura</div>
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <Select
             label="Tipo Sitio"
-            placeholder="Ej: RoofTop"
             value={data.tipoSitio || ''}
             onChange={(e) => update('tipoSitio', e.target.value)}
+            options={[
+              { value: '', label: 'Seleccione...' },
+              { value: 'Rooftop', label: 'Rooftop' },
+              { value: 'Rawland', label: 'Rawland' },
+            ]}
           />
-          <Input
+          <Select
             label="Tipo Estructura"
-            placeholder="Ej: Monopolo"
             value={data.tipoEstructura || ''}
             onChange={(e) => update('tipoEstructura', e.target.value)}
+            options={[
+              { value: '', label: 'Seleccione...' },
+              { value: 'Autosoportada', label: 'Autosoportada' },
+              { value: 'Arriostrada', label: 'Arriostrada' },
+              { value: 'Monopolo', label: 'Monopolo' },
+              { value: 'Otro', label: 'Otro' },
+            ]}
           />
         </div>
         <Input
