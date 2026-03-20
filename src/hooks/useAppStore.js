@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.38'
+const APP_VERSION_DISPLAY = '2.5.39'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -236,11 +236,12 @@ export const useAppStore = create(
       logout: () => {
         // Sign out from Supabase Auth (non-blocking)
         import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
-        set({ session: null, activeVisit: null, completedForms: [], formDataOwnerId: null })
+        set({ session: null, activeVisit: null, completedForms: [], formDataOwnerId: null, selectedSite: null })
       },
 
       // ============ ACTIVE VISIT (ORDER) ============
-      activeVisit: null, // site_visits row from Supabase
+      activeVisit: null,
+      selectedSite: null,  // { id, site_id, name, province, height_m, region_id } // site_visits row from Supabase
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
       formDataOwnerId: null, // ID of the order that owns the current form data in localStorage
 
@@ -284,6 +285,32 @@ export const useAppStore = create(
 
       // Continue existing order - never reset completedForms here,
       // hydration from Supabase will restore them via markFormCompleted
+      selectSite: (site) => {
+        // Store selected site and inject into all form siteInfo fields
+        set({ selectedSite: site })
+        if (!site) return
+        const sId = site.site_id || ''
+        const sName = site.name || ''
+        const sRef = site.id || null
+        const sRegion = site.region_id || null
+        set((state) => ({
+          inspectionData: { ...state.inspectionData,
+            siteInfo: { ...(state.inspectionData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          maintenanceData: { ...state.maintenanceData,
+            formData: { ...(state.maintenanceData?.formData || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          pmExecutedData: { ...state.pmExecutedData,
+            siteInfo: { ...(state.pmExecutedData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          equipmentInventoryV2Data: { ...state.equipmentInventoryV2Data,
+            siteInfo: { ...(state.equipmentInventoryV2Data?.siteInfo || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          equipmentInventoryData: { ...state.equipmentInventoryData,
+            siteInfo: { ...(state.equipmentInventoryData?.siteInfo || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          safetyClimbingData: { ...state.safetyClimbingData,
+            datos: { ...(state.safetyClimbingData?.datos || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+          groundingSystemData: { ...state.groundingSystemData,
+            datos: { ...(state.groundingSystemData?.datos || {}), idSitio: sId, nombreSitio: sName, siteRef: sRef, region_id: sRegion } },
+        }))
+      },
+
       setActiveVisit: (visit) => {
         set({ activeVisit: visit })
         get().injectVisitSiteData(visit)
@@ -291,7 +318,7 @@ export const useAppStore = create(
       // Create new order - always reset all form data, then inject site data
       setNewActiveVisit: (visit) => {
         get().resetAllForms()
-        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
+        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null, selectedSite: null })
         get().injectVisitSiteData(visit)
       },
       clearActiveVisit: () => {

@@ -4,6 +4,7 @@ import AppHeader from '../components/layout/AppHeader'
 import { useAppStore } from '../hooks/useAppStore'
 import { fetchSubmissionForForm } from '../lib/siteVisitService'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
+import SiteSelector from '../components/ui/SiteSelector'
 import { Wrench, ClipboardList, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
 
 // Maps normalizedId → form_code stored in submissions table
@@ -120,6 +121,8 @@ export default function FormIntro() {
     activeVisit,
     isFormCompleted,
     markFormCompleted,
+    selectedSite,
+    selectSite,
   } = useAppStore()
 
   // Check if this form has previous data
@@ -351,6 +354,16 @@ export default function FormIntro() {
       <AppHeader title={cfg.title} showBack onBack={() => navigate('/')} />
 
       <div className="max-w-xl mx-auto px-4 pt-6 pb-28">
+
+        {/* Site Selector */}
+        <div className="mb-4">
+          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sitio de la visita</div>
+          <SiteSelector
+            selectedSite={selectedSite}
+            onSelect={(site) => selectSite(site)}
+          />
+        </div>
+
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-start gap-3">
             <div className="h-12 w-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center flex-shrink-0">
@@ -380,9 +393,9 @@ export default function FormIntro() {
             type="button"
             className="mt-6 w-full px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 text-white font-semibold shadow-sm active:scale-[0.99] disabled:opacity-70"
             onClick={handleStart}
-            disabled={loading}
+            disabled={loading || !selectedSite}
           >
-            {loading ? 'Iniciando…' : hasPreviousData ? 'Continuar / Reiniciar →' : 'Iniciar Formulario →'}
+            {loading ? 'Iniciando…' : !selectedSite ? 'Seleccione un sitio primero' : hasPreviousData ? 'Continuar / Reiniciar →' : 'Iniciar Formulario →'}
           </button>
         </div>
       </div>

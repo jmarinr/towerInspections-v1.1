@@ -3,7 +3,7 @@ import Select from '../ui/Select'
 import { useAppStore } from '../../hooks/useAppStore'
 
 export default function SiteInfoForm({ type = 'inspection' }) {
-  const { inspectionData, maintenanceData, updateSiteInfo, updateMaintenanceSiteInfo } = useAppStore()
+  const { inspectionData, maintenanceData, updateSiteInfo, updateMaintenanceSiteInfo, selectedSite } = useAppStore()
   const data = type === 'inspection' ? inspectionData.siteInfo : maintenanceData.formData
   const updateFn = type === 'inspection' ? updateSiteInfo : updateMaintenanceSiteInfo
 
@@ -34,7 +34,7 @@ export default function SiteInfoForm({ type = 'inspection' }) {
         placeholder="Ej: PTI-CR-SJ-001"
         value={data.idSitio || ''}
         onChange={(e) => updateFn('idSitio', e.target.value)}
-        readOnly={!!data.idSitio}
+        readOnly={!!selectedSite || !!data.idSitio}
       />
 
       <Input
@@ -43,7 +43,7 @@ export default function SiteInfoForm({ type = 'inspection' }) {
         placeholder="Ej: San José Centro"
         value={data.nombreSitio || ''}
         onChange={(e) => updateFn('nombreSitio', e.target.value)}
-        readOnly={!!data.nombreSitio}
+        readOnly={!!selectedSite || !!data.nombreSitio}
       />
 
       <Select

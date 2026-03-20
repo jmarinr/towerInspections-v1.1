@@ -3,7 +3,7 @@ import Select from '../ui/Select'
 import { useAppStore } from '../../hooks/useAppStore'
 
 export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp, onChange: onChangeProp } = {}) {
-  const { equipmentInventoryData, updateEquipmentSiteField } = useAppStore()
+  const { equipmentInventoryData, updateEquipmentSiteField, selectedSite } = useAppStore()
 
   const data = siteInfoProp ?? (equipmentInventoryData?.siteInfo || {})
   const update = onChangeProp
@@ -32,7 +32,7 @@ export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp,
               placeholder="Ej: PTI-XXX"
               value={data.idSitio || ''}
               onChange={(e) => update('idSitio', e.target.value)}
-              readOnly={!!data.idSitio}
+              readOnly={!!selectedSite || !!data.idSitio}
             />
             <Input
               label="Nombre Sitio"
@@ -40,7 +40,7 @@ export default function EquipmentInventorySiteInfoForm({ siteInfo: siteInfoProp,
               placeholder="Ej: Torre San José"
               value={data.nombreSitio || ''}
               onChange={(e) => update('nombreSitio', e.target.value)}
-              readOnly={!!data.nombreSitio}
+              readOnly={!!selectedSite || !!data.nombreSitio}
             />
           </div>
         </div>
