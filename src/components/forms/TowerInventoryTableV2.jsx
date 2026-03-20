@@ -89,38 +89,31 @@ export default function TowerInventoryTableV2() {
                 </div>
               </div>
 
-              {/* Row 3: Dimensiones — MW=circular, resto=rectangular */}
-              {row.tipoEquipo === 'MW' ? (
-                <div className="mb-2">
-                  <div className="text-[11px] font-bold text-blue-500 uppercase mb-1">Figura circular — ingrese diámetro</div>
-                  <div className="grid grid-cols-2 gap-2">
+              {/* Row 3: Dimensiones */}
+              <div className="mb-2">
+                <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {row.tipoEquipo === 'MW' ? (
                     <div>
-                      <div className="text-[11px] font-bold text-gray-500 mb-1">Diámetro (m)</div>
-                      <input className={`${cellClass} border-blue-300`} value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder="ej: 0.6" />
+                      <div className="text-[11px] font-bold text-gray-500 mb-1">Diámetro</div>
+                      <input className={cellClass} value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder="m" />
                     </div>
-                    <div>
-                      <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
-                      <div className="px-3 py-2 text-sm bg-blue-50 rounded-xl font-mono text-blue-700">π×(d/2)² = {calcArea(row.alto, row.ancho, 'MW')}</div>
-                    </div>
+                  ) : (
+                    <>
+                      {[['Alto', 'alto'], ['Ancho', 'ancho'], ['Prof.', 'profundidad']].map(([lbl, f]) => (
+                        <div key={f}>
+                          <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
+                          <input className={cellClass} value={row[f] || ''} onChange={(e) => updateTowerItemFieldV2(idx, f, e.target.value)} placeholder="m" />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
+                    <div className="px-3 py-2 text-sm bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div>
                   </div>
                 </div>
-              ) : (
-                <div className="mb-2">
-                  <div className="text-[11px] font-bold text-gray-400 uppercase mb-1">Dimensiones (m)</div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[['Alto', 'alto'], ['Ancho', 'ancho'], ['Prof.', 'profundidad']].map(([lbl, f]) => (
-                      <div key={f}>
-                        <div className="text-[11px] font-bold text-gray-500 mb-1">{lbl}</div>
-                        <input className={cellClass} value={row[f] || ''} onChange={(e) => updateTowerItemFieldV2(idx, f, e.target.value)} placeholder="m" />
-                      </div>
-                    ))}
-                    <div>
-                      <div className="text-[11px] font-bold text-gray-500 mb-1">Área M2</div>
-                      <div className="px-3 py-2 text-sm bg-gray-100 rounded-xl font-mono text-gray-700">{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Row 4: Carrier + Comentario */}
               <div className="grid grid-cols-2 gap-2">
@@ -146,7 +139,8 @@ export default function TowerInventoryTableV2() {
                 <th className="p-3">Orientación</th>
                 <th className="p-3">Tipo Antena/Equipo</th>
                 <th className="p-3">Número</th>
-                <th className="p-3">Alto/Diám.</th>
+                <th className="p-3">Alto</th>
+                <th className="p-3">Diám.</th>
                 <th className="p-3">Ancho</th>
                 <th className="p-3">Prof.</th>
                 <th className="p-3">Área M2</th>
@@ -171,22 +165,26 @@ export default function TowerInventoryTableV2() {
                   </td>
                   <td className="p-2"><input className={cellClass} value={row.cantidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'cantidad', e.target.value)} placeholder="1" /></td>
                   <td className="p-2">
-                    <div className="relative">
-                      <input className={`${cellClass}${row.tipoEquipo === 'MW' ? ' border-blue-300' : ''}`} value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder={row.tipoEquipo === 'MW' ? 'diám.' : 'm'} />
-                      {row.tipoEquipo === 'MW' && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-blue-500 font-bold pointer-events-none">⌀</span>}
-                    </div>
+                    {row.tipoEquipo !== 'MW'
+                      ? <input className={cellClass} value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder="m" />
+                      : <div className="px-2 py-2 text-xs text-gray-300 text-center">—</div>}
                   </td>
                   <td className="p-2">
                     {row.tipoEquipo === 'MW'
-                      ? <div className="px-2 py-2 text-[10px] text-blue-400 rounded-xl text-center italic">— circular —</div>
-                      : <input className={cellClass} value={row.ancho || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'ancho', e.target.value)} placeholder="m" />}
+                      ? <input className={cellClass} value={row.alto || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'alto', e.target.value)} placeholder="m" />
+                      : <div className="px-2 py-2 text-xs text-gray-300 text-center">—</div>}
                   </td>
                   <td className="p-2">
-                    {row.tipoEquipo === 'MW'
-                      ? <div className="px-2 py-2 text-[10px] text-blue-400 rounded-xl text-center italic">—</div>
-                      : <input className={cellClass} value={row.profundidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'profundidad', e.target.value)} placeholder="m" />}
+                    {row.tipoEquipo !== 'MW'
+                      ? <input className={cellClass} value={row.ancho || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'ancho', e.target.value)} placeholder="m" />
+                      : <div className="px-2 py-2 text-xs text-gray-300 text-center">—</div>}
                   </td>
-                  <td className="p-2"><div className={`px-3 py-2 text-sm rounded-xl text-gray-700 font-mono text-center ${row.tipoEquipo === 'MW' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100'}`}>{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div></td>
+                  <td className="p-2">
+                    {row.tipoEquipo !== 'MW'
+                      ? <input className={cellClass} value={row.profundidad || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'profundidad', e.target.value)} placeholder="m" />
+                      : <div className="px-2 py-2 text-xs text-gray-300 text-center">—</div>}
+                  </td>
+                  <td className="p-2"><div className="px-3 py-2 text-sm bg-gray-100 rounded-xl text-gray-700 font-mono text-center">{calcArea(row.alto, row.ancho, row.tipoEquipo)}</div></td>
                   <td className="p-2"><input className={cellClass} value={row.carrier || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'carrier', e.target.value)} placeholder="Claro" /></td>
                   <td className="p-2"><AutoTextarea className={cellClass} value={row.comentario || ''} onChange={(e) => updateTowerItemFieldV2(idx, 'comentario', e.target.value)} placeholder="..." /></td>
                   <td className="p-2">
