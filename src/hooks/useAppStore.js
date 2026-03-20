@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.37'
+const APP_VERSION_DISPLAY = '2.5.38'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -1402,6 +1402,34 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           } : state.equipmentInventoryData.planoPlanta,
         } : state.equipmentInventoryData
 
+        // Strip data URL photos from equipmentInventoryV2Data
+        const equipmentInventoryV2Data = state.equipmentInventoryV2Data ? {
+          ...state.equipmentInventoryV2Data,
+          torre: state.equipmentInventoryV2Data.torre ? {
+            ...state.equipmentInventoryV2Data.torre,
+            items: (state.equipmentInventoryV2Data.torre.items || []).map(item => ({
+              ...item,
+              foto1: stripSingle(item.foto1),
+              foto2: stripSingle(item.foto2),
+              foto3: stripSingle(item.foto3),
+            })),
+            fotos: stripDataUrls(state.equipmentInventoryV2Data.torre.fotos || {}),
+          } : state.equipmentInventoryV2Data.torre,
+          piso: state.equipmentInventoryV2Data.piso ? {
+            ...state.equipmentInventoryV2Data.piso,
+            fotos: stripDataUrls(state.equipmentInventoryV2Data.piso.fotos || {}),
+          } : state.equipmentInventoryV2Data.piso,
+          carriers: (state.equipmentInventoryV2Data.carriers || []).map(carrier => ({
+            ...carrier,
+            items: (carrier.items || []).map(item => ({
+              ...item,
+              foto1: stripSingle(item.foto1),
+              foto2: stripSingle(item.foto2),
+              foto3: stripSingle(item.foto3),
+            })),
+          })),
+        } : state.equipmentInventoryV2Data
+
         // Strip data URL photos from safetyClimbingData (nested sections)
         const safetyClimbingData = state.safetyClimbingData
           ? Object.fromEntries(
@@ -1436,6 +1464,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           maintenanceData,
           pmExecutedData,
           equipmentInventoryData,
+          equipmentInventoryV2Data,
           safetyClimbingData,
           groundingSystemData,
           // Never persist transient UI state
