@@ -46,13 +46,13 @@ export default function AppHeader({ title, subtitle, badge, progress, onMenuClic
             {badge && <span className="bg-accent px-2 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0">{badge}</span>}
           </div>
         </div>
-        <div className="relative flex-shrink-0" ref={menuRef}>
+        <div className="relative flex-shrink-0 z-[200]" ref={menuRef}>
           <button onClick={() => setOpen((v) => !v)} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 flex items-center justify-center text-white active:scale-95 transition-all">
             <MoreVertical size={20} />
           </button>
 
           {open && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-[300]">
               <button
                 type="button"
                 onClick={logout}
