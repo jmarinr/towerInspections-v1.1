@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.46';
+  return import.meta.env.VITE_APP_VERSION || '2.5.47';
 }
 
 function loadMap(key) {
@@ -268,55 +268,15 @@ async function uploadToStorage(path, blob) {
 
 /**
  * Upsert a row in submission_assets.
- * Always uses DELETE+INSERT to avoid 409 conflicts with unique index.
+ * Uses native Supabase upsert on (submission_id, asset_type) constraint.
+ * DB constraint: submission_assets_submission_asset_type_key
  */
 async function upsertSubmissionAsset(row) {
-  // Step 1: Delete any existing record for this submission + asset_type slot
-  try {
-    await supabase
-      .from('submission_assets')
-      .delete()
-      .eq('submission_id', row.submission_id)
-      .eq('asset_type', row.asset_type)
-  } catch (_) {}
-
-  // Step 2: Delete any record with the same asset_key regardless of submission
-  // (same path = same file slot, could be from a previous order)
-  if (row.asset_key) {
-    try {
-      await supabase
-        .from('submission_assets')
-        .delete()
-        .eq('asset_key', row.asset_key)
-    } catch (_) {}
-  }
-
-  // Step 3: Try INSERT — if still conflicts, try UPDATE as last resort
-  const { error: insErr } = await supabase
+  const { error } = await supabase
     .from('submission_assets')
-    .insert([row])
+    .upsert(row, { onConflict: 'submission_id,asset_type' })
 
-  if (!insErr) return
-
-  // Last resort: UPDATE the conflicting row directly
-  if (insErr.code === '23505') {
-    try {
-      await supabase
-        .from('submission_assets')
-        .update({
-          public_url: row.public_url,
-          path: row.path,
-          asset_key: row.asset_key,
-          mime: row.mime,
-          size_bytes: row.size_bytes,
-        })
-        .eq('submission_id', row.submission_id)
-        .eq('asset_type', row.asset_type)
-    } catch (_) {}
-    return
-  }
-
-  throw insErr
+  if (error) throw error
 }
 
 export async function flushSupabaseQueues({ formCode } = {}) {
