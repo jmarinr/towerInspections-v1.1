@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.42';
+  return import.meta.env.VITE_APP_VERSION || '2.5.44';
 }
 
 function loadMap(key) {
@@ -268,23 +268,18 @@ async function uploadToStorage(path, blob) {
 
 /**
  * Upsert a row in submission_assets.
- * Strategy: DELETE any existing rows for the same (submission_id, asset_type),
- * then INSERT the new row. This avoids 409 Conflict errors regardless of which
- * unique constraints exist on the table (asset_key, submission_id+asset_type, etc.).
+ * Always uses DELETE+INSERT to avoid 409 conflicts with unique index.
  */
 async function upsertSubmissionAsset(row) {
-  // 1) Delete any existing rows for this slot
+  // Always DELETE first to avoid duplicate key conflicts
   try {
     await supabase
       .from('submission_assets')
       .delete()
       .eq('submission_id', row.submission_id)
       .eq('asset_type', row.asset_type)
-  } catch (_) {
-    // Ignore delete errors – row may not exist yet
-  }
+  } catch (_) {}
 
-  // Also delete by asset_key in case asset_type changed but path is the same
   if (row.asset_key) {
     try {
       await supabase
@@ -294,7 +289,6 @@ async function upsertSubmissionAsset(row) {
     } catch (_) {}
   }
 
-  // 2) INSERT the new row (should always succeed now)
   const { error: insErr } = await supabase
     .from('submission_assets')
     .insert([row])

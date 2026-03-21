@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.42'
+const APP_VERSION_DISPLAY = '2.5.44'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -992,21 +992,18 @@ export const useAppStore = create(
           const current = state.equipmentInventoryV2Data || {}
           return { equipmentInventoryV2Data: { ...current, carriers } }
         })
-        // Queue photo uploads for any carrier photos that are data URLs
-        if (Array.isArray(carriers)) {
-          carriers.forEach((c, idx) => {
-            ['foto1', 'foto2', 'foto3'].forEach((fKey) => {
-              const val = c[fKey]
-              if (val && typeof val === 'string' && val.startsWith('data:image')) {
-                try {
-                  queueAssetUpload('equipment-v2', `carrier:${idx}:${fKey}`, val)
-                  flushSupabaseQueues({ formCode: 'equipment-v2' })
-                } catch (_) {}
-              }
-            })
-          })
-        }
+        // Photo uploads are handled directly by CarrierSection via queueCarrierPhoto
+        // NOT here — scanning all carriers on every field change caused duplicate uploads
         get().triggerAutosave('equipment-v2')
+      },
+
+      // Called by CarrierSection ONLY when a new photo is captured (once per capture)
+      queueCarrierPhoto: (carrierIdx, fotoKey, dataUrl) => {
+        if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image')) return
+        try {
+          queueAssetUpload('equipment-v2', `carrier:${carrierIdx}:${fotoKey}`, dataUrl)
+          flushSupabaseQueues({ formCode: 'equipment-v2' })
+        } catch (_) {}
       },
 
       updateEquipmentSiteField: (field, value) => {

@@ -24,7 +24,7 @@ function calcArea(alto, ancho, tipoEquipo) {
 }
 
 export default function CarrierSection() {
-  const { equipmentInventoryV2Data, updateEquipmentV2Carriers } = useAppStore()
+  const { equipmentInventoryV2Data, updateEquipmentV2Carriers, queueCarrierPhoto } = useAppStore()
   const carriers = equipmentInventoryV2Data?.carriers || []
 
   const emptyItem = () => ({ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', carrier: '', comentario: '' })
@@ -257,7 +257,10 @@ export default function CarrierSection() {
                   <PhotoUpload
                     type="after"
                     photo={carrier[`foto${n}`] || null}
-                    onCapture={(data) => updateCarrierField(cIdx, `foto${n}`, data)}
+                    onCapture={(data) => {
+                      updateCarrierField(cIdx, `foto${n}`, data)
+                      queueCarrierPhoto(cIdx, `foto${n}`, data)
+                    }}
                     onRemove={() => updateCarrierField(cIdx, `foto${n}`, null)}
                     formCode="equipment-v2"
                     assetType={`carrier:${cIdx}:foto${n}`}
