@@ -60,6 +60,34 @@ export async function fetchSitesForInspector() {
 }
 
 /**
+ * Fetch regions available to the current inspector's company.
+ * Returns array of { id, name } sorted by name.
+ */
+export async function fetchRegionsForUser() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No authenticated user')
+
+  const { data: userData, error: userError } = await supabase
+    .from('app_users')
+    .select('company_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (userError || !userData?.company_id) throw new Error('Could not load user company')
+
+  const { data, error } = await supabase
+    .from('company_regions')
+    .select('regions(id, name)')
+    .eq('company_id', userData.company_id)
+
+  if (error) throw error
+  return (data || [])
+    .map(r => r.regions)
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
  * Direct query — relies on Supabase RLS to scope correctly,
  * or falls back to fetching all active sites.
  */
