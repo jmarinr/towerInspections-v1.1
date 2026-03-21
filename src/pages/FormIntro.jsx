@@ -394,9 +394,12 @@ export default function FormIntro() {
             type="button"
             className="mt-6 w-full px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-500 text-white font-semibold shadow-sm active:scale-[0.99] disabled:opacity-70"
             onClick={handleStart}
-            disabled={loading || !selectedSite}
+            disabled={loading || (!selectedSite && !activeVisit?.site_id)}
           >
-            {loading ? 'Iniciando…' : !selectedSite ? 'Seleccione un sitio primero' : hasPreviousData ? 'Continuar / Reiniciar →' : 'Iniciar Formulario →'}
+            {loading ? 'Iniciando…'
+              : (!selectedSite && !activeVisit?.site_id) ? 'Seleccione un sitio primero'
+              : hasPreviousData ? 'Continuar / Reiniciar →'
+              : 'Iniciar Formulario →'}
           </button>
         </div>
       </div>

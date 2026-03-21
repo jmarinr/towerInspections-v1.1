@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.41'
+const APP_VERSION_DISPLAY = '2.5.42'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -318,7 +318,7 @@ export const useAppStore = create(
       // Create new order - always reset all form data, then inject site data
       setNewActiveVisit: (visit) => {
         get().resetAllForms()
-        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null, selectedSite: null })
+        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
         get().injectVisitSiteData(visit)
       },
       clearActiveVisit: () => {
