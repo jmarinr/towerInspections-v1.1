@@ -9,7 +9,7 @@ import { getDeviceId } from './deviceId'
 /**
  * Create a new site visit (order)
  */
-export async function createSiteVisit({ orderNumber, siteId, siteName, session, lat, lng }) {
+export async function createSiteVisit({ orderNumber, siteId, siteName, siteRef, regionId, session, lat, lng }) {
   const deviceId = getDeviceId()
   const orgCode = session?.orgCode || 'PTI'
 
@@ -18,6 +18,8 @@ export async function createSiteVisit({ orderNumber, siteId, siteName, session, 
     order_number: orderNumber,
     site_id: siteId,
     site_name: siteName,
+    site_ref: siteRef || null,
+    region_id: regionId || null,
     device_id: deviceId,
     inspector_username: session.username,
     inspector_name: session.name || null,

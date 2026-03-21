@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, MapPin, ChevronRight, Loader2, FileText, Clock, LogOut } from 'lucide-react'
+import SiteSelector from '../components/ui/SiteSelector'
 import { useAppStore } from '../hooks/useAppStore'
 import { createSiteVisit, fetchOpenVisits, searchVisitByOrder } from '../lib/siteVisitService'
 
@@ -22,14 +23,14 @@ export default function OrderScreen() {
   const activeVisit = useAppStore((s) => s.activeVisit)
   const showToast = useAppStore((s) => s.showToast)
   const logout = useAppStore((s) => s.logout)
+  const selectSite = useAppStore((s) => s.selectSite)
+  const selectedSite = useAppStore((s) => s.selectedSite)
 
   const [tab, setTab] = useState('new') // 'new' | 'continue'
   const [loading, setLoading] = useState(false)
 
   // New order fields
   const [orderNumber, setOrderNumber] = useState('')
-  const [siteId, setSiteId] = useState('')
-  const [siteName, setSiteName] = useState('')
 
   // Continue order
   const [searchQuery, setSearchQuery] = useState('')
@@ -71,12 +72,8 @@ export default function OrderScreen() {
       showToast('Ingrese el número de orden', 'error')
       return
     }
-    if (!siteId.trim()) {
-      showToast('Ingrese el ID del sitio', 'error')
-      return
-    }
-    if (!siteName.trim()) {
-      showToast('Ingrese el nombre del sitio', 'error')
+    if (!selectedSite) {
+      showToast('Seleccione un sitio del catálogo', 'error')
       return
     }
 
@@ -91,8 +88,10 @@ export default function OrderScreen() {
     try {
       const visit = await createSiteVisit({
         orderNumber: orderNumber.trim(),
-        siteId: siteId.trim(),
-        siteName: siteName.trim(),
+        siteId: selectedSite.site_id,
+        siteName: selectedSite.name,
+        siteRef: selectedSite.id,
+        regionId: selectedSite.region_id,
         session,
         lat: geo.lat,
         lng: geo.lng,
@@ -247,42 +246,15 @@ export default function OrderScreen() {
               </div>
             </div>
 
-            {/* Site ID */}
-            <div className="mb-3">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                ID Sitio <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <span className="text-sm">🏷️</span>
-                </div>
-                <input
-                  type="text"
-                  value={siteId}
-                  onChange={(e) => setSiteId(e.target.value)}
-                  placeholder="Ej: CR-SJ-0343"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Site Name */}
+            {/* Site Selector */}
             <div className="mb-4">
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Nombre del Sitio <span className="text-red-500">*</span>
+                Sitio <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <span className="text-sm">🗼</span>
-                </div>
-                <input
-                  type="text"
-                  value={siteName}
-                  onChange={(e) => setSiteName(e.target.value)}
-                  placeholder="Ej: Torre San José Centro"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                />
-              </div>
+              <SiteSelector
+                selectedSite={selectedSite}
+                onSelect={(site) => selectSite(site)}
+              />
             </div>
 
             {/* GPS note */}
@@ -296,9 +268,9 @@ export default function OrderScreen() {
 
             <button
               onClick={handleCreateOrder}
-              disabled={loading}
+              disabled={loading || !selectedSite}
               className={`w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all active:scale-[0.98] ${
-                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary shadow-sm'
+                loading || !selectedSite ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary shadow-sm'
               }`}
             >
               {loading ? (

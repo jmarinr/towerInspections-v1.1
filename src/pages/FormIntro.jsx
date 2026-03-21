@@ -4,7 +4,6 @@ import AppHeader from '../components/layout/AppHeader'
 import { useAppStore } from '../hooks/useAppStore'
 import { fetchSubmissionForForm } from '../lib/siteVisitService'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
-import SiteSelector from '../components/ui/SiteSelector'
 import { Wrench, ClipboardList, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
 
 // Maps normalizedId → form_code stored in submissions table
@@ -122,7 +121,6 @@ export default function FormIntro() {
     isFormCompleted,
     markFormCompleted,
     selectedSite,
-    selectSite,
   } = useAppStore()
 
   // Check if this form has previous data
@@ -355,15 +353,6 @@ export default function FormIntro() {
 
       <div className="max-w-xl mx-auto px-4 pt-6 pb-28">
 
-        {/* Site Selector */}
-        <div className="mb-4">
-          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sitio de la visita</div>
-          <SiteSelector
-            selectedSite={selectedSite}
-            onSelect={(site) => selectSite(site)}
-          />
-        </div>
-
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-start gap-3">
             <div className="h-12 w-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center flex-shrink-0">
@@ -374,6 +363,18 @@ export default function FormIntro() {
               <div className="text-sm text-gray-600 mt-1">{cfg.description}</div>
             </div>
           </div>
+
+          {selectedSite && (
+            <div className="mt-4 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200">
+              <span className="text-xs font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg flex-shrink-0">
+                {selectedSite.site_id}
+              </span>
+              <span className="text-sm font-semibold text-gray-800 truncate">{selectedSite.name}</span>
+              {selectedSite.province && (
+                <span className="text-xs text-gray-400 flex-shrink-0">{selectedSite.province}</span>
+              )}
+            </div>
+          )}
 
           <div className="mt-5">
             <div className="text-sm font-bold text-gray-900">Resumen</div>
