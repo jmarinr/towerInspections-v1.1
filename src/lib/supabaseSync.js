@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.45';
+  return import.meta.env.VITE_APP_VERSION || '2.5.46';
 }
 
 function loadMap(key) {
@@ -271,7 +271,7 @@ async function uploadToStorage(path, blob) {
  * Always uses DELETE+INSERT to avoid 409 conflicts with unique index.
  */
 async function upsertSubmissionAsset(row) {
-  // Always DELETE first to avoid duplicate key conflicts
+  // Step 1: Delete any existing record for this submission + asset_type slot
   try {
     await supabase
       .from('submission_assets')
@@ -280,6 +280,8 @@ async function upsertSubmissionAsset(row) {
       .eq('asset_type', row.asset_type)
   } catch (_) {}
 
+  // Step 2: Delete any record with the same asset_key regardless of submission
+  // (same path = same file slot, could be from a previous order)
   if (row.asset_key) {
     try {
       await supabase
@@ -289,11 +291,32 @@ async function upsertSubmissionAsset(row) {
     } catch (_) {}
   }
 
+  // Step 3: Try INSERT — if still conflicts, try UPDATE as last resort
   const { error: insErr } = await supabase
     .from('submission_assets')
     .insert([row])
 
-  if (insErr) throw insErr
+  if (!insErr) return
+
+  // Last resort: UPDATE the conflicting row directly
+  if (insErr.code === '23505') {
+    try {
+      await supabase
+        .from('submission_assets')
+        .update({
+          public_url: row.public_url,
+          path: row.path,
+          asset_key: row.asset_key,
+          mime: row.mime,
+          size_bytes: row.size_bytes,
+        })
+        .eq('submission_id', row.submission_id)
+        .eq('asset_type', row.asset_type)
+    } catch (_) {}
+    return
+  }
+
+  throw insErr
 }
 
 export async function flushSupabaseQueues({ formCode } = {}) {
@@ -329,10 +352,10 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           site_visit_id: siteVisitId,
           submitted_by_user_id: item.payload?.submitted_by_user_id || null,
           finalized: item.payload?.payload?.finalized === true,
-          // Site catalog references (nullable — existing submissions unaffected)
-          site_id: item.payload?.payload?.data?.siteInfo?.siteRef || null,
-          region_id: item.payload?.payload?.data?.siteInfo?.region_id ||
-                     item.payload?.payload?.data?.datos?.region_id || null,
+          // Site catalog references — only include if columns exist in DB
+          // Run migration first: ALTER TABLE submissions ADD COLUMN IF NOT EXISTS site_id uuid, region_id uuid
+          // site_id: item.payload?.payload?.data?.siteInfo?.siteRef || null,
+          // region_id: item.payload?.payload?.data?.siteInfo?.region_id || null,
           payload: {
             ...item.payload,
             _meta: {
