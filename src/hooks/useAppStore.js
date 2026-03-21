@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.47'
+const APP_VERSION_DISPLAY = '2.5.48'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -377,7 +377,7 @@ export const useAppStore = create(
           } catch (_) {
             // If set() fails (e.g. persist/localStorage error), force-hide via DOM
           }
-        }, 3000)
+        }, 5000)
         // Store timer id (best effort, don't let this fail)
         try { set({ _toastTimer: timer }) } catch (_) {}
       },
