@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.48'
+const APP_VERSION_DISPLAY = '2.5.49'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -569,47 +569,105 @@ export const useAppStore = create(
         const cfg = map[formKey]
         if (!cfg) throw new Error('unknown form: ' + formKey)
 
-        // Mark as completed in store FIRST
-        // This also blocks any further triggerAutosave calls for this form
-        get().markFormCompleted(cfg.formId)
+        console.log(`[finalizeForm] START formKey=${formKey} code=${cfg.code}`)
 
-        // Build payload with finalized=true
+        // 1. Mark completed in store FIRST — blocks further triggerAutosave calls
+        get().markFormCompleted(cfg.formId)
+        console.log(`[finalizeForm] marked completed`)
+
+        // 2. Build payload with finalized=true and finishedAt timestamp
+        const finishedAt = new Date().toISOString()
         const payload = get().getSupabasePayloadForForm(cfg.code)
         if (payload) {
           payload.payload.finalized = true
-          payload.payload.meta.finishedAt = new Date().toISOString()
-          // Overwrite any pending autosave in the queue with finalized version
+          payload.payload.meta = { ...(payload.payload.meta || {}), finishedAt }
+          console.log(`[finalizeForm] payload built, finalized=true, finishedAt=${finishedAt}`)
+          // Queue the finalized payload — this MUST happen before clearSupabaseLocalForForm
           queueSubmissionSync(cfg.code, payload, APP_VERSION_DISPLAY)
+          console.log(`[finalizeForm] queued submission sync`)
+        } else {
+          console.warn(`[finalizeForm] no payload built — form data may be empty`)
         }
 
-        // Clean up local state and reset form BEFORE flush
-        // so no more autosaves can queue after this point
-        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
-        get().resetFormDraft(formKey)
-
-        // Flush finalized=true to Supabase (column + JSONB)
+        // 3. Flush to Supabase BEFORE clearing local state
+        // Critical: flush FIRST, clear AFTER — previous bug had these reversed
         let flushSuccess = false
         try {
+          console.log(`[finalizeForm] flushing queues...`)
           await flushSupabaseQueues({ formCode: cfg.code })
           flushSuccess = true
+          console.log(`[finalizeForm] flush SUCCESS`)
         } catch (e) {
-          console.warn('[finalizeForm] flush failed (will retry in background):', e?.message || e)
+          console.warn('[finalizeForm] flush failed:', e?.message || e)
         }
 
-        // Safety net: direct column update even if queue flush had issues
+        // 4. Safety net: direct UPDATE by submission ID (most reliable)
         try {
           const { supabase } = await import('../lib/supabaseClient')
-          const visitId = get().activeVisit?.id
+          const state = get()
+          const orgCode = state.session?.orgCode || 'PTI'
+          const visitId = state.activeVisit?.id
+
+          // Build the full updated payload for the direct UPDATE
+          const directPayload = get().getSupabasePayloadForForm(cfg.code)
+          let payloadForUpdate = null
+          if (directPayload) {
+            directPayload.payload.finalized = true
+            directPayload.payload.meta = { ...(directPayload.payload.meta || {}), finishedAt }
+            payloadForUpdate = directPayload.payload
+          }
+
+          // Find the submission by site_visit_id + form_code
+          let query = supabase
+            .from('submissions')
+            .select('id')
+            .eq('form_code', cfg.code)
+            .eq('org_code', orgCode)
+
           if (visitId && !String(visitId).startsWith('local-')) {
-            await supabase
+            query = query.eq('site_visit_id', visitId)
+          }
+
+          const { data: rows, error: selErr } = await query
+            .order('updated_at', { ascending: false })
+            .limit(1)
+
+          if (selErr) {
+            console.warn('[finalizeForm] submission lookup failed:', selErr.message)
+          } else if (rows && rows.length > 0) {
+            const submissionId = rows[0].id
+            console.log(`[finalizeForm] found submission ${submissionId}, updating finalized=true`)
+
+            const updateObj = { finalized: true }
+            if (payloadForUpdate) {
+              updateObj.payload = {
+                ...payloadForUpdate,
+                _meta: { ...(payloadForUpdate._meta || {}), last_saved_at: finishedAt }
+              }
+            }
+
+            const { error: updErr } = await supabase
               .from('submissions')
-              .update({ finalized: true })
-              .eq('site_visit_id', visitId)
-              .eq('form_code', cfg.code)
+              .update(updateObj)
+              .eq('id', submissionId)
+
+            if (updErr) {
+              console.warn('[finalizeForm] direct update failed:', updErr.message)
+            } else {
+              console.log(`[finalizeForm] direct update SUCCESS — finalized=true confirmed in DB`)
+              flushSuccess = true
+            }
+          } else {
+            console.warn('[finalizeForm] no submission row found for direct update')
           }
         } catch (e) {
-          console.warn('[finalizeForm] direct finalized update failed:', e?.message || e)
+          console.warn('[finalizeForm] safety net failed:', e?.message || e)
         }
+
+        // 5. Clear local state AFTER flush (previous bug had this before flush)
+        try { clearSupabaseLocalForForm(cfg.code) } catch (e) {}
+        get().resetFormDraft(formKey)
+        console.log(`[finalizeForm] DONE synced=${flushSuccess}`)
 
         return { synced: flushSuccess }
       },
