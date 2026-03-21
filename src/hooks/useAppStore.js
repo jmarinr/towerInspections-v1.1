@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.40'
+const APP_VERSION_DISPLAY = '2.5.41'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
