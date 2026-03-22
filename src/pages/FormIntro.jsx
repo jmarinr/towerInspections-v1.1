@@ -4,7 +4,7 @@ import AppHeader from '../components/layout/AppHeader'
 import { useAppStore } from '../hooks/useAppStore'
 import { fetchSubmissionForForm } from '../lib/siteVisitService'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
-import { Wrench, ClipboardList, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
+import { Wrench, ClipboardList, Camera as CameraIcon, Package, Shield, Activity, CheckCircle2 } from 'lucide-react'
 
 // Maps normalizedId → form_code stored in submissions table
 const FORM_CODE_MAP = {
@@ -15,6 +15,7 @@ const FORM_CODE_MAP = {
   'mantenimiento-ejecutado': 'mantenimiento-ejecutado',
   'sistema-ascenso': 'sistema-ascenso',
   'grounding-system-test': 'puesta-tierra',
+  'additional-photo-report': 'additional-photo-report',
 }
 
 const FORM_MAP = {
@@ -67,6 +68,13 @@ const FORM_MAP = {
     summary: ['Datos de ejecución', 'Actividades', 'Fotos antes / después'],
     route: '/mantenimiento-ejecutado',
     icon: CheckCircle2,
+  },
+  'additional-photo-report': {
+    title: 'Reporte Adicional de Fotografías',
+    description: 'Capture las 16 categorías fotográficas requeridas para el expediente del sitio.',
+    summary: ['16 categorías (ACC, CAM, EQTT…)', 'Acrónimos para nomenclatura de archivos', 'Fotos variables por categoría'],
+    route: '/reporte-fotos',
+    icon: CameraIcon,
   },
   // compatibilidad
   'pm-executed': {

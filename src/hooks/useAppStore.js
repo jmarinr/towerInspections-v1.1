@@ -7,7 +7,8 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.50'
+const APP_VERSION_DISPLAY = '2.5.52'
+const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
   typeof value === 'string' && value.startsWith('data:')
@@ -399,6 +400,7 @@ export const useAppStore = create(
           'equipment': 'equipment',
           'grounding-system-test': 'grounding-system-test',
           'safety-system': 'sistema-ascenso',
+          [FORM_CODE_ADDITIONAL]: FORM_CODE_ADDITIONAL,
         }
         const formId = formIdMap[formCode]
         if (formId && (get().completedForms || []).includes(formId)) return
@@ -542,6 +544,7 @@ export const useAppStore = create(
           'mantenimiento-ejecutado': { code: 'executed-maintenance', reset: 'resetPMExecutedData', metaKey: 'mantenimiento-ejecutado' },
           'puesta-tierra': { code: 'grounding-system-test', reset: 'resetGroundingSystemData', metaKey: 'grounding-system-test' },
           'safety-system': { code: 'safety-system', reset: 'resetSafetyClimbingData', metaKey: 'sistema-ascenso' },
+          'additional-photo': { code: FORM_CODE_ADDITIONAL, reset: 'resetAdditionalPhotoData', metaKey: FORM_CODE_ADDITIONAL },
         }
         const cfg = map[formKey]
         if (!cfg) return
@@ -563,6 +566,7 @@ export const useAppStore = create(
           'inventario': { code: 'equipment', formId: 'equipment' },
           'inventario-v2': { code: 'equipment-v2', formId: 'equipment-v2' },
           'mantenimiento-ejecutado': { code: 'executed-maintenance', formId: 'mantenimiento-ejecutado' },
+          'additional-photo': { code: FORM_CODE_ADDITIONAL, formId: FORM_CODE_ADDITIONAL },
           'puesta-tierra': { code: 'grounding-system-test', formId: 'grounding-system-test' },
           'safety-system': { code: 'safety-system', formId: 'sistema-ascenso' },
         }
@@ -686,6 +690,7 @@ export const useAppStore = create(
       if (code === 'equipment-v2') return 'inventario-v2'
       if (code === 'grounding-system-test') return 'puesta-tierra'
       if (code === 'safety-system') return 'sistema-ascenso'
+      if (code === FORM_CODE_ADDITIONAL || code === 'additional-photo') return FORM_CODE_ADDITIONAL
       return code
     }
 
@@ -700,6 +705,7 @@ export const useAppStore = create(
       'inventario-v2': 'equipment-v2',
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
+      [FORM_CODE_ADDITIONAL]: FORM_CODE_ADDITIONAL,
     }
     const metaKey = metaKeyMap[canonicalFormCode] || canonicalFormCode
     const meta = (state.formMeta && state.formMeta[metaKey]) ? state.formMeta[metaKey] : null
@@ -713,6 +719,7 @@ export const useAppStore = create(
       : canonicalFormCode === 'inventario-v2' ? state.equipmentInventoryV2Data
       : canonicalFormCode === 'puesta-tierra' ? state.groundingSystemData
       : canonicalFormCode === 'sistema-ascenso' ? state.safetyClimbingData
+      : canonicalFormCode === FORM_CODE_ADDITIONAL ? state.additionalPhotoData
       : null
 
     // CRITICAL: Strip all data URLs from payload to avoid Supabase JSONB overflow
@@ -900,6 +907,10 @@ export const useAppStore = create(
 
       // ============ SAFETY CLIMBING DEVICE (Nuevo formulario) ============
       safetyClimbingData: {},
+
+      // ============ ADDITIONAL PHOTO REPORT ============
+      additionalPhotoData: { photos: {}, notes: '' },
+      additionalPhotoStep: 1,
 
       // ============ EQUIPMENT INVENTORY V2 ============
       equipmentInventoryV2Data: {
@@ -1304,6 +1315,49 @@ setSafetyField: (sectionId, fieldId, value) => {
   get().triggerAutosave('safety-system')
 },
 resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep: 1 }),
+
+      // ============ ADDITIONAL PHOTO REPORT — actions ============
+
+      setAdditionalPhotoField: (field, value) => {
+        set((state) => ({
+          additionalPhotoData: { ...(state.additionalPhotoData || {}), [field]: value },
+        }))
+        get().triggerAutosave(FORM_CODE_ADDITIONAL)
+      },
+
+      setAdditionalPhoto: (acronym, index, dataUrl) => {
+        set((state) => {
+          const prev = state.additionalPhotoData || {}
+          const prevPhotos = prev.photos || {}
+          const arr = [...(prevPhotos[acronym] || [])]
+          arr[index] = dataUrl
+          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+        })
+        get().triggerAutosave(FORM_CODE_ADDITIONAL)
+      },
+
+      addAdditionalPhotoSlot: (acronym) => {
+        set((state) => {
+          const prev = state.additionalPhotoData || {}
+          const prevPhotos = prev.photos || {}
+          const arr = [...(prevPhotos[acronym] || []), null]
+          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+        })
+      },
+
+      removeAdditionalPhotoSlot: (acronym, index) => {
+        set((state) => {
+          const prev = state.additionalPhotoData || {}
+          const prevPhotos = prev.photos || {}
+          const arr = [...(prevPhotos[acronym] || [])]
+          arr.splice(index, 1)
+          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+        })
+        get().triggerAutosave(FORM_CODE_ADDITIONAL)
+      },
+
+      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, notes: '' }, additionalPhotoStep: 1 }),
+
 
 
       // Actualizar campo de formulario

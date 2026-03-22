@@ -1,9 +1,9 @@
-import { useMemo, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardCheck, Wrench, Shield, Package, LayoutList, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
-import { useAppStore } from '../hooks/useAppStore'
-import { filterFormsByRole } from '../lib/auth'
-import { closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
+import { ImageIcon, useMemo, useEffect, useState } from 'react'
+import { ImageIcon, useNavigate } from 'react-router-dom'
+import { ImageIcon, ChevronRight, ClipboardCheck, Wrench, Shield, Package, LayoutList, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
+import { ImageIcon, useAppStore } from '../hooks/useAppStore'
+import { ImageIcon, filterFormsByRole } from '../lib/auth'
+import { ImageIcon, closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
 
 const ALL_FORMS = [
   {
@@ -59,6 +59,15 @@ const ALL_FORMS = [
     iconBg: 'bg-yellow-400',
     stats: '34 ítems / 6 secciones',
     route: '/intro/sistema-ascenso',
+  },
+  {
+    id: 'additional-photo-report',
+    title: 'Reporte Adicional de Fotografías',
+    description: 'Captura y organiza las 16 categorías fotográficas requeridas (ACC, CAM, EQTT, VIPANTT…)',
+    icon: ImageIcon,
+    iconBg: 'bg-teal-500',
+    stats: '16 categorías / ACC → MANTPREV',
+    route: '/intro/additional-photo-report',
   },
   {
     id: 'grounding-system-test',

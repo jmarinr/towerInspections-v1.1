@@ -7,6 +7,7 @@ import InventarioEquipos from './pages/InventarioEquipos'
 import InventarioEquiposV2 from './pages/InventarioEquiposV2'
 import SafetyClimbingDevice from './pages/SafetyClimbingDevice'
 import GroundingSystemTest from './pages/GroundingSystemTest'
+import AdditionalPhotoReport from './pages/AdditionalPhotoReport'
 import PreventiveMaintenanceExecuted from './pages/PreventiveMaintenanceExecuted'
 import Login from './pages/Login'
 import OrderScreen from './pages/OrderScreen'
@@ -84,6 +85,8 @@ function App() {
           <Route path="/sistema-ascenso" element={<SafetyClimbingDevice />} />
 
           <Route path="/grounding-system-test" element={<GroundingSystemTest />} />
+
+          <Route path="/reporte-fotos" element={<AdditionalPhotoReport />} />
 
           {/* Fallback para evitar pantalla en blanco en rutas no registradas */}
           <Route path="*" element={<NotFound />} />
