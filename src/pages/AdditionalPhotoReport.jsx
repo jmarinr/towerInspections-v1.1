@@ -390,7 +390,10 @@ export default function AdditionalPhotoReport() {
       {/* Step pills */}
       <div className="px-4 pt-3">
         <StepPills
-          steps={PHOTO_CATEGORIES.map((cat) => ({ id: cat.id, label: cat.id, emoji: cat.emoji }))}
+          steps={PHOTO_CATEGORIES.map((cat, i) => ({
+            id: i + 1,
+            title: `${cat.emoji} ${cat.id}`,
+          }))}
           currentStep={currentStep}
           completedSteps={PHOTO_CATEGORIES.map((_, i) => i + 1).filter((i) => completedSteps[i - 1])}
           onStepClick={(i) => setStep(i)}
