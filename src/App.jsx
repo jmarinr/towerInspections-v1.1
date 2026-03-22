@@ -17,6 +17,7 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
+import { supabase } from './lib/supabaseClient'
 import RequireAuth from './components/auth/RequireAuth'
 
 function NotFound() {
@@ -38,12 +39,22 @@ function NotFound() {
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
-  const { toast, hideToast } = useAppStore()
+  const { toast, hideToast, logout } = useAppStore()
 
 
   useEffect(() => {
     startSupabaseBackgroundSync()
   }, [])
+
+  // ── Session watchdog: if Supabase token expires/invalidates, force logout ──
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        logout()
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [logout])
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1800)

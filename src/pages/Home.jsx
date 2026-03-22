@@ -240,7 +240,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.50</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.52</p>
 
           {/* User info pill */}
           {session && (

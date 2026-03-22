@@ -24,23 +24,24 @@ const FORM_CODE = 'additional-photo-report'
 const FORM_ID   = 'additional-photo-report'
 
 // ─────────────────────────────────────────────
-// Single photo slot
+// Single photo slot — matches SinglePhotoUpload style
 // ─────────────────────────────────────────────
 function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required = false }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [error, setError]     = useState(null)
 
-  const inputId = `photo-${acronym}-${index}`
-  const assetType = `photos:${acronym}:${index}`
+  const inputId  = `photo-${acronym}-${index}`
+  const assetKey = `photos:${acronym}:${index}`
+  const fileCode = `${acronym}_${String(index + 1).padStart(2, '0')}`
 
   const recovered = useMemo(() => {
     if (isDisplayablePhoto(value)) return value
-    if (value) return recoverPhotoFromQueue(FORM_CODE, assetType)
+    if (value) return recoverPhotoFromQueue(FORM_CODE, assetKey)
     return null
-  }, [value, assetType])
+  }, [value, assetKey])
 
-  const displayable = recovered || (isDisplayablePhoto(value) ? value : null)
-  const uploaded = !!value && !displayable
+  const displayable  = recovered || (isDisplayablePhoto(value) ? value : null)
+  const isUploaded   = !!value && !displayable
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
@@ -55,71 +56,96 @@ function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required 
       return
     }
     onChange(result.dataUrl)
-    // Queue upload immediately
-    queueAssetUpload(FORM_CODE, assetType, result.dataUrl)
+    queueAssetUpload(FORM_CODE, assetKey, result.dataUrl)
     flushSupabaseQueues({ formCode: FORM_CODE })
     setLoading(false)
     e.target.value = ''
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* Label row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
+    <div className="mb-1">
+      {/* Label */}
+      <label className="block mb-2">
+        <span className="text-sm font-semibold text-gray-700 flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg">
-            {acronym}_{String(index + 1).padStart(2, '0')}
+            {fileCode}
           </span>
-          <span className="text-xs font-semibold text-gray-600">{label}</span>
-          {required && <span className="text-red-400 text-xs">*</span>}
-        </div>
-        {value && onRemove && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="w-6 h-6 rounded-lg bg-red-100 text-red-500 flex items-center justify-center active:scale-95"
-          >
-            <Trash2 size={11} />
-          </button>
-        )}
-      </div>
+          {label}
+          {required && <span className="text-red-500">*</span>}
+        </span>
+      </label>
 
-      <input id={inputId} type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+      {/* Hidden input — no capture attr so user can choose camera OR gallery */}
+      <input id={inputId} type="file" accept="image/*" onChange={handleFile} className="hidden" />
 
+      {/* Error */}
       {error && (
-        <div className="flex items-start gap-2 p-2 rounded-xl bg-red-50 border border-red-200">
-          <AlertCircle size={13} className="text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-red-600">{error}</p>
+        <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
         </div>
       )}
 
       {loading ? (
-        <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2">
-          <Loader2 size={20} className="animate-spin text-blue-500" />
-          <span className="text-xs font-semibold text-blue-600">Procesando...</span>
+        <div className="w-full rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2 py-8">
+          <Loader2 size={24} className="animate-spin text-blue-500" />
+          <p className="text-sm font-semibold text-blue-600">Procesando foto...</p>
+          <p className="text-xs text-blue-400">Comprimiendo imagen</p>
         </div>
       ) : displayable ? (
-        <div className="relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-emerald-500">
-          <img src={displayable} alt={label} className="w-full h-full object-cover" />
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/50 backdrop-blur-sm">
-            <span className="text-[9px] font-mono font-bold text-white">{acronym}_{String(index + 1).padStart(2, '0')}</span>
-          </div>
-          <label htmlFor={inputId} className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-black/50 backdrop-blur-sm flex items-center justify-center cursor-pointer active:scale-95">
+        <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
+          <img src={displayable} alt={label} className="w-full h-48 object-cover" />
+          {/* Replace button */}
+          <label
+            htmlFor={inputId}
+            className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer active:scale-95"
+          >
             <RefreshCw size={14} className="text-white" />
           </label>
+          {/* File code badge */}
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-black/50 backdrop-blur-sm">
+            <span className="text-[9px] font-mono font-bold text-white">{fileCode}</span>
+          </div>
+          {/* Remove button (only for non-required slots) */}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="absolute bottom-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95"
+              aria-label="Eliminar foto"
+            >
+              <X size={14} />
+            </button>
+          )}
+          <div className="px-4 py-2 bg-white">
+            <p className="text-xs font-semibold text-emerald-600">✓ Foto cargada</p>
+          </div>
         </div>
-      ) : uploaded ? (
-        <label htmlFor={inputId} className="aspect-[4/3] rounded-xl border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center gap-1 cursor-pointer">
-          <UploadCloud size={20} className="text-emerald-500" />
-          <span className="text-xs font-semibold text-emerald-700">Foto guardada en nube</span>
-          <span className="text-[10px] text-emerald-500">Toque para reemplazar</span>
+      ) : isUploaded ? (
+        <label
+          htmlFor={inputId}
+          className="w-full rounded-2xl border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center gap-2 py-8 cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+            <Camera size={22} className="text-emerald-500" />
+          </div>
+          <div className="text-center px-4">
+            <p className="text-sm font-bold text-emerald-700">📷 Foto subida</p>
+            <p className="text-xs text-emerald-500 mt-1">Toque para reemplazar</p>
+          </div>
         </label>
       ) : (
-        <label htmlFor={inputId} className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-[0.98]">
-          <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
-            <Camera size={18} className="text-gray-400" />
+        <label
+          htmlFor={inputId}
+          className="w-full rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 py-8 cursor-pointer hover:border-gray-400 hover:bg-gray-100 transition-all active:scale-[0.98]"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+            <Camera size={22} className="text-gray-500" />
           </div>
-          <span className="text-xs font-semibold text-gray-600">Tomar foto</span>
+          <div className="text-center px-4">
+            <p className="text-sm font-bold text-gray-700">Tomar / subir foto</p>
+            <p className="text-xs text-gray-500 mt-1">Cámara o galería</p>
+          </div>
         </label>
       )}
     </div>
@@ -132,7 +158,6 @@ function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required 
 function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePhoto }) {
   const { id: acronym, title, description, minPhotos, variable, subLabels, subGroups, hint, quality, emoji } = category
 
-  // Ensure we always show at least minPhotos slots
   const slotCount = Math.max(photos.length, minPhotos)
   const slots = Array.from({ length: slotCount }, (_, i) => ({
     index: i,
@@ -140,14 +165,16 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
     value: photos[i] ?? null,
   }))
 
+  const captured = photos.filter(Boolean).length
+
   return (
     <div className="space-y-4">
-      {/* Category header */}
+      {/* Category header card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="text-2xl">{emoji}</span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
               <h2 className="text-base font-extrabold text-gray-900">{title}</h2>
               <span className="text-[10px] font-mono font-bold bg-primary text-white px-2 py-0.5 rounded-lg flex-shrink-0">
                 {acronym}
@@ -157,7 +184,7 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
           </div>
         </div>
 
-        {/* Metadata pills */}
+        {/* Pills */}
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
             📷 Mín. {minPhotos} foto{minPhotos !== 1 ? 's' : ''}
@@ -166,13 +193,13 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
             🔍 {quality}
           </span>
           {variable && (
-            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
               ± Cantidad variable
             </span>
           )}
         </div>
 
-        {/* Sub-groups legend (when applicable) */}
+        {/* Sub-groups legend */}
         {subGroups && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-1.5 mb-2">
@@ -182,13 +209,14 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
             <div className="flex flex-wrap gap-1.5">
               {subGroups.map((sg) => (
                 <span key={sg.key} className="text-[10px] font-mono bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg">
-                  {acronym}_{sg.key}
+                  {acronym}_{sg.key} · {sg.label}
                 </span>
               ))}
             </div>
           </div>
         )}
 
+        {/* Hint */}
         {hint && (
           <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-gray-100">
             <Info size={12} className="text-blue-400 flex-shrink-0 mt-0.5" />
@@ -197,8 +225,8 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
         )}
       </div>
 
-      {/* Photo grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Photo slots */}
+      <div className="space-y-4">
         {slots.map((slot) => (
           <PhotoSlot
             key={`${acronym}-${slot.index}`}
@@ -213,12 +241,12 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
         ))}
       </div>
 
-      {/* Add photo button (variable categories) */}
+      {/* Add photo button */}
       {variable && (
         <button
           type="button"
           onClick={() => onAddPhoto(acronym)}
-          className="w-full py-3 rounded-2xl border-2 border-dashed border-primary/30 text-primary text-sm font-bold flex items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all"
+          className="w-full py-3.5 rounded-2xl border-2 border-dashed border-primary/30 text-primary text-sm font-bold flex items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all"
         >
           <Plus size={16} />
           Agregar foto adicional
@@ -226,11 +254,11 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
       )}
 
       {/* Completion badge */}
-      {photos.filter(Boolean).length >= minPhotos && (
+      {captured >= minPhotos && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
           <Check size={14} className="text-emerald-600 flex-shrink-0" />
           <span className="text-xs font-bold text-emerald-700">
-            {photos.filter(Boolean).length} foto{photos.filter(Boolean).length !== 1 ? 's' : ''} capturada{photos.filter(Boolean).length !== 1 ? 's' : ''} · Mínimo cumplido
+            {captured} foto{captured !== 1 ? 's' : ''} capturada{captured !== 1 ? 's' : ''} · Mínimo cumplido
           </span>
         </div>
       )}
@@ -244,27 +272,27 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
 export default function AdditionalPhotoReport() {
   const navigate = useNavigate()
 
-  const isFormCompleted = useAppStore((s) => s.isFormCompleted)
-  const additionalPhotoData = useAppStore((s) => s.additionalPhotoData || {})
+  const isFormCompleted        = useAppStore((s) => s.isFormCompleted)
+  const additionalPhotoData    = useAppStore((s) => s.additionalPhotoData || {})
   const setAdditionalPhotoField = useAppStore((s) => s.setAdditionalPhotoField)
-  const setAdditionalPhoto = useAppStore((s) => s.setAdditionalPhoto)
+  const setAdditionalPhoto     = useAppStore((s) => s.setAdditionalPhoto)
   const addAdditionalPhotoSlot = useAppStore((s) => s.addAdditionalPhotoSlot)
   const removeAdditionalPhotoSlot = useAppStore((s) => s.removeAdditionalPhotoSlot)
-  const resetFormDraft = useAppStore((s) => s.resetFormDraft)
-  const finalizeForm = useAppStore((s) => s.finalizeForm)
-  const showToast = useAppStore((s) => s.showToast)
-  const formMeta = useAppStore((s) => s.formMeta)
+  const resetFormDraft         = useAppStore((s) => s.resetFormDraft)
+  const finalizeForm           = useAppStore((s) => s.finalizeForm)
+  const showToast              = useAppStore((s) => s.showToast)
+  const formMeta               = useAppStore((s) => s.formMeta)
 
   const locked = isFormCompleted(FORM_ID)
 
   const currentStepRaw = useAppStore((s) => s.additionalPhotoStep ?? 1)
   const setStep = (step) => useAppStore.setState({ additionalPhotoStep: step })
 
-  const totalSteps = PHOTO_CATEGORIES.length
-  const currentStep = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
+  const totalSteps    = PHOTO_CATEGORIES.length
+  const currentStep   = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
   const currentCategory = PHOTO_CATEGORIES[currentStep - 1]
 
-  // ── Progress ──
+  // Progress
   const completedSteps = useMemo(() => {
     return PHOTO_CATEGORIES.map((cat) => {
       const photos = additionalPhotoData?.photos?.[cat.id] || []
@@ -277,10 +305,9 @@ export default function AdditionalPhotoReport() {
     return Math.round((done / totalSteps) * 100)
   }, [completedSteps, totalSteps])
 
-  // ── Notes (free text field at end) ──
   const notes = additionalPhotoData?.notes || ''
 
-  // ── Handlers ──
+  // Handlers
   const handlePhotoChange = useCallback((acronym, index, dataUrl) => {
     setAdditionalPhoto(acronym, index, dataUrl)
   }, [setAdditionalPhoto])
@@ -294,28 +321,20 @@ export default function AdditionalPhotoReport() {
   }, [removeAdditionalPhotoSlot])
 
   const handlePrev = () => {
-    if (currentStep > 1) setStep(currentStep - 1)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (currentStep > 1) { setStep(currentStep - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
 
   const handleNext = () => {
-    const photos = additionalPhotoData?.photos?.[currentCategory.id] || []
+    const photos  = additionalPhotoData?.photos?.[currentCategory.id] || []
     const captured = photos.filter(Boolean).length
     if (captured < currentCategory.minPhotos) {
-      showToast(
-        `Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`,
-        'error'
-      )
+      showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
       return
     }
-    if (currentStep < totalSteps) {
-      setStep(currentStep + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    if (currentStep < totalSteps) { setStep(currentStep + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
 
   const handleFinalize = async () => {
-    // Validate all categories
     const missing = PHOTO_CATEGORIES.filter((cat) => {
       const photos = additionalPhotoData?.photos?.[cat.id] || []
       return photos.filter(Boolean).length < cat.minPhotos
@@ -328,7 +347,7 @@ export default function AdditionalPhotoReport() {
       await finalizeForm('additional-photo')
       showToast('Reporte de fotos completado ✓', 'success')
       navigate('/')
-    } catch (e) {
+    } catch {
       showToast('Error al finalizar el formulario', 'error')
     }
   }
@@ -341,13 +360,7 @@ export default function AdditionalPhotoReport() {
   }
 
   if (locked) {
-    return (
-      <FormLockedScreen
-        title="Reporte de Fotos"
-        formId={FORM_ID}
-        onReset={handleReset}
-      />
-    )
+    return <FormLockedScreen title="Reporte de Fotos" formId={FORM_ID} onReset={handleReset} />
   }
 
   const categoryPhotos = additionalPhotoData?.photos?.[currentCategory.id] || []
@@ -358,7 +371,7 @@ export default function AdditionalPhotoReport() {
       <FormMetaBar formId={FORM_ID} formCode={FORM_CODE} />
       <AutosaveIndicator />
 
-      {/* Overall progress bar */}
+      {/* Overall progress */}
       <div className="px-4 pt-3">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold text-gray-500">
@@ -377,20 +390,14 @@ export default function AdditionalPhotoReport() {
       {/* Step pills */}
       <div className="px-4 pt-3">
         <StepPills
-          steps={PHOTO_CATEGORIES.map((cat, i) => ({
-            id: cat.id,
-            label: cat.id,
-            emoji: cat.emoji,
-          }))}
+          steps={PHOTO_CATEGORIES.map((cat) => ({ id: cat.id, label: cat.id, emoji: cat.emoji }))}
           currentStep={currentStep}
-          completedSteps={PHOTO_CATEGORIES
-            .map((_, i) => i + 1)
-            .filter((i) => completedSteps[i - 1])}
+          completedSteps={PHOTO_CATEGORIES.map((_, i) => i + 1).filter((i) => completedSteps[i - 1])}
           onStepClick={(i) => setStep(i)}
         />
       </div>
 
-      {/* Main content */}
+      {/* Content */}
       <main className="flex-1 px-4 pt-4 pb-2">
         <CategoryStep
           category={currentCategory}
@@ -400,7 +407,7 @@ export default function AdditionalPhotoReport() {
           onRemovePhoto={handleRemoveSlot}
         />
 
-        {/* Notes — shown on last step */}
+        {/* Notes on last step */}
         {currentStep === totalSteps && (
           <div className="mt-4 bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
             <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -417,7 +424,7 @@ export default function AdditionalPhotoReport() {
         )}
       </main>
 
-      {/* Navigation */}
+      {/* Bottom nav */}
       <BottomNav
         currentStep={currentStep}
         totalSteps={totalSteps}
@@ -425,7 +432,7 @@ export default function AdditionalPhotoReport() {
         onNext={currentStep < totalSteps ? handleNext : undefined}
         onFinalize={currentStep === totalSteps ? handleFinalize : undefined}
         prevDisabled={currentStep === 1}
-        nextLabel={`Siguiente: ${currentStep < totalSteps ? PHOTO_CATEGORIES[currentStep]?.id : ''}`}
+        nextLabel={currentStep < totalSteps ? `Siguiente: ${PHOTO_CATEGORIES[currentStep]?.id}` : ''}
         finalizeLabel="Completar Reporte"
       />
     </div>
