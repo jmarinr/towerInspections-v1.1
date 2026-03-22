@@ -1,9 +1,9 @@
-import { ImageIcon, useMemo, useEffect, useState } from 'react'
-import { ImageIcon, useNavigate } from 'react-router-dom'
+import { useMemo, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ImageIcon, ChevronRight, ClipboardCheck, Wrench, Shield, Package, LayoutList, Zap, Camera, LogOut, User, Check, Lock } from 'lucide-react'
-import { ImageIcon, useAppStore } from '../hooks/useAppStore'
-import { ImageIcon, filterFormsByRole } from '../lib/auth'
-import { ImageIcon, closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
+import { useAppStore } from '../hooks/useAppStore'
+import { filterFormsByRole } from '../lib/auth'
+import { closeSiteVisit, fetchVisitSubmissions, fetchSubmissionAssets } from '../lib/siteVisitService'
 
 const ALL_FORMS = [
   {
