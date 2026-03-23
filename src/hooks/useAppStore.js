@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.54'
+const APP_VERSION_DISPLAY = '2.5.56'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -909,7 +909,7 @@ export const useAppStore = create(
       safetyClimbingData: {},
 
       // ============ ADDITIONAL PHOTO REPORT ============
-      additionalPhotoData: { photos: {}, notes: '' },
+      additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' },
       additionalPhotoStep: 1,
 
       // ============ EQUIPMENT INVENTORY V2 ============
@@ -1325,13 +1325,21 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
         get().triggerAutosave(FORM_CODE_ADDITIONAL)
       },
 
-      setAdditionalPhoto: (acronym, index, dataUrl) => {
+      setAdditionalPhoto: (acronym, index, dataUrl, meta) => {
         set((state) => {
           const prev = state.additionalPhotoData || {}
           const prevPhotos = prev.photos || {}
+          const prevMeta = prev.photoMeta || {}
           const arr = [...(prevPhotos[acronym] || [])]
           arr[index] = dataUrl
-          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+          const metaKey = `${acronym}:${index}`
+          return {
+            additionalPhotoData: {
+              ...prev,
+              photos: { ...prevPhotos, [acronym]: arr },
+              photoMeta: meta ? { ...prevMeta, [metaKey]: meta } : prevMeta,
+            }
+          }
         })
         get().triggerAutosave(FORM_CODE_ADDITIONAL)
       },
@@ -1356,7 +1364,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
         get().triggerAutosave(FORM_CODE_ADDITIONAL)
       },
 
-      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, notes: '' }, additionalPhotoStep: 1 }),
+      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' }, additionalPhotoStep: 1 }),
 
 
 

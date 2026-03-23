@@ -1,13 +1,14 @@
 /**
- * AdditionalPhotoReport.jsx
- * Reporte Adicional de Fotografías — formulario paso a paso
- * formCode: 'additional-photo-report'
+ * AdditionalPhotoReport.jsx  v2.5.56
+ * Reporte Adicional de Fotografías
+ * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
+ * Ejemplo: MJA0007_ACC_100817_(1)
  */
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Camera, ChevronLeft, ChevronRight, Check, Plus, Trash2,
-  X, Loader2, AlertCircle, UploadCloud, Info, RefreshCw,
+  Camera, Check, Plus, X, Loader2, AlertCircle,
+  UploadCloud, Info, RefreshCw, Clock,
 } from 'lucide-react'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
@@ -23,25 +24,45 @@ import { queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
 const FORM_CODE = 'additional-photo-report'
 const FORM_ID   = 'additional-photo-report'
 
-// ─────────────────────────────────────────────
-// Single photo slot — matches SinglePhotoUpload style
-// ─────────────────────────────────────────────
-function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required = false }) {
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Build PTI-standard filename: SITEID_ACRONYM_DDMMYY_(N) */
+function buildFilename(siteId, acronym, index, timestamp) {
+  const safe = (siteId || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const d    = timestamp ? new Date(timestamp) : new Date()
+  const dd   = String(d.getDate()).padStart(2, '0')
+  const mm   = String(d.getMonth() + 1).padStart(2, '0')
+  const yy   = String(d.getFullYear()).slice(-2)
+  return `${safe}_${acronym}_${dd}${mm}${yy}_(${index + 1})`
+}
+
+/** Format timestamp for display: "15 ene 2024 · 10:32" */
+function formatTs(ts) {
+  if (!ts) return null
+  const d = new Date(ts)
+  const date = d.toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })
+  const time = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+  return `${date} · ${time}`
+}
+
+// ─── Single photo slot ───────────────────────────────────────────────────────
+
+function PhotoSlot({ label, acronym, index, value, meta, siteId, onChange, onRemove, required }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
   const inputId  = `photo-${acronym}-${index}`
-  const assetKey = `photos:${acronym}:${index}`
-  const fileCode = `${acronym}_${String(index + 1).padStart(2, '0')}`
+  const filename = meta?.filename || buildFilename(siteId, acronym, index, meta?.timestamp)
+  const assetKey = filename   // filename IS the asset key → Storage path matches nomenclatura
 
-  const recovered = useMemo(() => {
+  const recovered   = useMemo(() => {
     if (isDisplayablePhoto(value)) return value
     if (value) return recoverPhotoFromQueue(FORM_CODE, assetKey)
     return null
   }, [value, assetKey])
 
-  const displayable  = recovered || (isDisplayablePhoto(value) ? value : null)
-  const isUploaded   = !!value && !displayable
+  const displayable = recovered || (isDisplayablePhoto(value) ? value : null)
+  const isUploaded  = !!value && !displayable
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
@@ -55,8 +76,10 @@ function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required 
       setTimeout(() => setError(null), 6000)
       return
     }
-    onChange(result.dataUrl)
-    queueAssetUpload(FORM_CODE, assetKey, result.dataUrl)
+    const now = new Date().toISOString()
+    const fname = buildFilename(siteId, acronym, index, now)
+    onChange(result.dataUrl, { filename: fname, timestamp: now })
+    queueAssetUpload(FORM_CODE, fname, result.dataUrl)
     flushSupabaseQueues({ formCode: FORM_CODE })
     setLoading(false)
     e.target.value = ''
@@ -67,18 +90,13 @@ function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required 
       {/* Label */}
       <label className="block mb-2">
         <span className="text-sm font-semibold text-gray-700 flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg">
-            {fileCode}
-          </span>
           {label}
           {required && <span className="text-red-500">*</span>}
         </span>
       </label>
 
-      {/* Hidden input — no capture attr so user can choose camera OR gallery */}
       <input id={inputId} type="file" accept="image/*" onChange={handleFile} className="hidden" />
 
-      {/* Error */}
       {error && (
         <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
           <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
@@ -93,83 +111,95 @@ function PhotoSlot({ label, acronym, index, value, onChange, onRemove, required 
           <p className="text-xs text-blue-400">Comprimiendo imagen</p>
         </div>
       ) : displayable ? (
-        <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
-          <img src={displayable} alt={label} className="w-full h-48 object-cover" />
-          {/* Replace button */}
-          <label
-            htmlFor={inputId}
-            className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer active:scale-95"
-          >
-            <RefreshCw size={14} className="text-white" />
-          </label>
-          {/* File code badge */}
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-black/50 backdrop-blur-sm">
-            <span className="text-[9px] font-mono font-bold text-white">{fileCode}</span>
+        <div className="rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
+          <div className="relative">
+            <img src={displayable} alt={label} className="w-full h-48 sm:h-44 object-cover" />
+            {/* Replace */}
+            <label htmlFor={inputId}
+              className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer active:scale-95">
+              <RefreshCw size={14} className="text-white" />
+            </label>
+            {/* Remove (non-required) */}
+            {onRemove && (
+              <button type="button" onClick={onRemove}
+                className="absolute bottom-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95">
+                <X size={14} />
+              </button>
+            )}
           </div>
-          {/* Remove button (only for non-required slots) */}
-          {onRemove && (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="absolute bottom-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white active:scale-95"
-              aria-label="Eliminar foto"
-            >
-              <X size={14} />
-            </button>
-          )}
-          <div className="px-4 py-2 bg-white">
-            <p className="text-xs font-semibold text-emerald-600">✓ Foto cargada</p>
+          {/* Filename + timestamp bar */}
+          <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+            <p className="text-[11px] font-mono font-bold text-primary truncate">{filename}.jpg</p>
+            {meta?.timestamp && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Clock size={10} className="text-gray-400 flex-shrink-0" />
+                <p className="text-[10px] text-gray-400">{formatTs(meta.timestamp)}</p>
+              </div>
+            )}
           </div>
         </div>
       ) : isUploaded ? (
-        <label
-          htmlFor={inputId}
-          className="w-full rounded-2xl border-2 border-emerald-500 bg-emerald-50 flex flex-col items-center justify-center gap-2 py-8 cursor-pointer"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
-            <Camera size={22} className="text-emerald-500" />
+        <div className="rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
+          <label htmlFor={inputId}
+            className="w-full bg-emerald-50 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer">
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+              <Camera size={22} className="text-emerald-500" />
+            </div>
+            <div className="text-center px-4">
+              <p className="text-sm font-bold text-emerald-700">📷 Foto subida</p>
+              <p className="text-xs text-emerald-500 mt-1">Toque para reemplazar</p>
+            </div>
+          </label>
+          <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+            <p className="text-[11px] font-mono font-bold text-primary truncate">{filename}.jpg</p>
+            {meta?.timestamp && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Clock size={10} className="text-gray-400 flex-shrink-0" />
+                <p className="text-[10px] text-gray-400">{formatTs(meta.timestamp)}</p>
+              </div>
+            )}
           </div>
-          <div className="text-center px-4">
-            <p className="text-sm font-bold text-emerald-700">📷 Foto subida</p>
-            <p className="text-xs text-emerald-500 mt-1">Toque para reemplazar</p>
-          </div>
-        </label>
+        </div>
       ) : (
-        <label
-          htmlFor={inputId}
-          className="w-full rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 py-8 cursor-pointer hover:border-gray-400 hover:bg-gray-100 transition-all active:scale-[0.98]"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
-            <Camera size={22} className="text-gray-500" />
+        <div className="rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 bg-white">
+          <label htmlFor={inputId}
+            className="w-full bg-gray-50 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer hover:bg-gray-100 transition-all active:scale-[0.98]">
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+              <Camera size={22} className="text-gray-500" />
+            </div>
+            <div className="text-center px-4">
+              <p className="text-sm font-bold text-gray-700">Tomar / subir foto</p>
+              <p className="text-xs text-gray-500 mt-1">Cámara o galería</p>
+            </div>
+          </label>
+          {/* Preview filename before capture */}
+          <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+            <p className="text-[11px] font-mono text-gray-400 truncate">{buildFilename(siteId, acronym, index, null)}.jpg</p>
           </div>
-          <div className="text-center px-4">
-            <p className="text-sm font-bold text-gray-700">Tomar / subir foto</p>
-            <p className="text-xs text-gray-500 mt-1">Cámara o galería</p>
-          </div>
-        </label>
+        </div>
       )}
     </div>
   )
 }
 
-// ─────────────────────────────────────────────
-// Category step — renders all photo slots
-// ─────────────────────────────────────────────
-function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePhoto }) {
+// ─── Category step ───────────────────────────────────────────────────────────
+
+function CategoryStep({ category, photos, photoMeta, siteId, onPhotoChange, onAddPhoto, onRemovePhoto }) {
   const { id: acronym, title, description, minPhotos, variable, subLabels, subGroups, hint, quality, emoji } = category
 
   const slotCount = Math.max(photos.length, minPhotos)
   const slots = Array.from({ length: slotCount }, (_, i) => ({
     index: i,
-    label: subLabels?.[i] ?? (subGroups ? `Foto ${i + 1}` : `Foto ${i + 1}`),
+    label: subLabels?.[i] ?? `Foto ${i + 1}`,
     value: photos[i] ?? null,
+    meta: photoMeta?.[`${acronym}:${i}`] ?? null,
   }))
 
   const captured = photos.filter(Boolean).length
 
   return (
     <div className="space-y-4">
-      {/* Category header card */}
+      {/* Header card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="text-2xl">{emoji}</span>
@@ -180,11 +210,10 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
                 {acronym}
               </span>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
+            <p className="text-xs text-gray-500 leading-relaxed line-clamp-4 md:line-clamp-none">{description}</p>
           </div>
         </div>
 
-        {/* Pills */}
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
             📷 Mín. {minPhotos} foto{minPhotos !== 1 ? 's' : ''}
@@ -199,7 +228,14 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
           )}
         </div>
 
-        {/* Sub-groups legend */}
+        {/* Nomenclatura example */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Nomenclatura de archivo</p>
+          <p className="text-[11px] font-mono text-gray-600 bg-gray-100 rounded-lg px-2 py-1.5 truncate">
+            {buildFilename(siteId || 'SITEID', acronym, 0, new Date().toISOString())}.jpg
+          </p>
+        </div>
+
         {subGroups && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-1.5 mb-2">
@@ -216,7 +252,6 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
           </div>
         )}
 
-        {/* Hint */}
         {hint && (
           <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-gray-100">
             <Info size={12} className="text-blue-400 flex-shrink-0 mt-0.5" />
@@ -225,8 +260,8 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
         )}
       </div>
 
-      {/* Photo slots */}
-      <div className="space-y-4">
+      {/* Photo slots — 1 col mobile, 2 col tablet, 3 col desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {slots.map((slot) => (
           <PhotoSlot
             key={`${acronym}-${slot.index}`}
@@ -234,26 +269,23 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
             acronym={acronym}
             index={slot.index}
             value={slot.value}
-            onChange={(dataUrl) => onPhotoChange(acronym, slot.index, dataUrl)}
+            meta={slot.meta}
+            siteId={siteId}
+            onChange={(dataUrl, meta) => onPhotoChange(acronym, slot.index, dataUrl, meta)}
             onRemove={slot.index >= minPhotos ? () => onRemovePhoto(acronym, slot.index) : undefined}
             required={slot.index < minPhotos}
           />
         ))}
       </div>
 
-      {/* Add photo button */}
       {variable && (
-        <button
-          type="button"
-          onClick={() => onAddPhoto(acronym)}
-          className="w-full py-3.5 rounded-2xl border-2 border-dashed border-primary/30 text-primary text-sm font-bold flex items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all"
-        >
+        <button type="button" onClick={() => onAddPhoto(acronym)}
+          className="w-full py-3.5 rounded-2xl border-2 border-dashed border-primary/30 text-primary text-sm font-bold flex items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 active:scale-[0.98] transition-all">
           <Plus size={16} />
           Agregar foto adicional
         </button>
       )}
 
-      {/* Completion badge */}
       {captured >= minPhotos && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
           <Check size={14} className="text-emerald-600 flex-shrink-0" />
@@ -266,33 +298,32 @@ function CategoryStep({ category, photos, onPhotoChange, onAddPhoto, onRemovePho
   )
 }
 
-// ─────────────────────────────────────────────
-// Main page
-// ─────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function AdditionalPhotoReport() {
   const navigate = useNavigate()
 
-  const isFormCompleted        = useAppStore((s) => s.isFormCompleted)
-  const additionalPhotoData    = useAppStore((s) => s.additionalPhotoData || {})
-  const setAdditionalPhotoField = useAppStore((s) => s.setAdditionalPhotoField)
-  const setAdditionalPhoto     = useAppStore((s) => s.setAdditionalPhoto)
-  const addAdditionalPhotoSlot = useAppStore((s) => s.addAdditionalPhotoSlot)
+  const isFormCompleted          = useAppStore((s) => s.isFormCompleted)
+  const additionalPhotoData      = useAppStore((s) => s.additionalPhotoData || {})
+  const setAdditionalPhotoField  = useAppStore((s) => s.setAdditionalPhotoField)
+  const setAdditionalPhoto       = useAppStore((s) => s.setAdditionalPhoto)
+  const addAdditionalPhotoSlot   = useAppStore((s) => s.addAdditionalPhotoSlot)
   const removeAdditionalPhotoSlot = useAppStore((s) => s.removeAdditionalPhotoSlot)
-  const resetFormDraft         = useAppStore((s) => s.resetFormDraft)
-  const finalizeForm           = useAppStore((s) => s.finalizeForm)
-  const showToast              = useAppStore((s) => s.showToast)
-  const formMeta               = useAppStore((s) => s.formMeta)
+  const resetFormDraft           = useAppStore((s) => s.resetFormDraft)
+  const finalizeForm             = useAppStore((s) => s.finalizeForm)
+  const showToast                = useAppStore((s) => s.showToast)
+  const activeVisit              = useAppStore((s) => s.activeVisit)
+  const siteId                   = activeVisit?.site_id || ''
 
   const locked = isFormCompleted(FORM_ID)
 
   const currentStepRaw = useAppStore((s) => s.additionalPhotoStep ?? 1)
   const setStep = (step) => useAppStore.setState({ additionalPhotoStep: step })
 
-  const totalSteps    = PHOTO_CATEGORIES.length
-  const currentStep   = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
+  const totalSteps      = PHOTO_CATEGORIES.length
+  const currentStep     = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
   const currentCategory = PHOTO_CATEGORIES[currentStep - 1]
 
-  // Progress
   const completedSteps = useMemo(() => {
     return PHOTO_CATEGORIES.map((cat) => {
       const photos = additionalPhotoData?.photos?.[cat.id] || []
@@ -307,25 +338,19 @@ export default function AdditionalPhotoReport() {
 
   const notes = additionalPhotoData?.notes || ''
 
-  // Handlers
-  const handlePhotoChange = useCallback((acronym, index, dataUrl) => {
-    setAdditionalPhoto(acronym, index, dataUrl)
+  const handlePhotoChange = useCallback((acronym, index, dataUrl, meta) => {
+    setAdditionalPhoto(acronym, index, dataUrl, meta)
   }, [setAdditionalPhoto])
 
-  const handleAddSlot = useCallback((acronym) => {
-    addAdditionalPhotoSlot(acronym)
-  }, [addAdditionalPhotoSlot])
-
-  const handleRemoveSlot = useCallback((acronym, index) => {
-    removeAdditionalPhotoSlot(acronym, index)
-  }, [removeAdditionalPhotoSlot])
+  const handleAddSlot    = useCallback((acronym) => addAdditionalPhotoSlot(acronym), [addAdditionalPhotoSlot])
+  const handleRemoveSlot = useCallback((acronym, index) => removeAdditionalPhotoSlot(acronym, index), [removeAdditionalPhotoSlot])
 
   const handlePrev = () => {
     if (currentStep > 1) { setStep(currentStep - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
 
   const handleNext = () => {
-    const photos  = additionalPhotoData?.photos?.[currentCategory.id] || []
+    const photos   = additionalPhotoData?.photos?.[currentCategory.id] || []
     const captured = photos.filter(Boolean).length
     if (captured < currentCategory.minPhotos) {
       showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
@@ -359,11 +384,10 @@ export default function AdditionalPhotoReport() {
     }
   }
 
-  if (locked) {
-    return <FormLockedScreen title="Reporte de Fotos" formId={FORM_ID} onReset={handleReset} />
-  }
+  if (locked) return <FormLockedScreen title="Reporte de Fotos" formId={FORM_ID} onReset={handleReset} />
 
   const categoryPhotos = additionalPhotoData?.photos?.[currentCategory.id] || []
+  const categoryMeta   = additionalPhotoData?.photoMeta || {}
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col pb-24">
@@ -371,8 +395,8 @@ export default function AdditionalPhotoReport() {
       <FormMetaBar formId={FORM_ID} formCode={FORM_CODE} />
       <AutosaveIndicator />
 
-      {/* Overall progress */}
-      <div className="px-4 pt-3">
+      {/* Progress */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-3 max-w-6xl mx-auto w-full">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-bold text-gray-500">
             {completedSteps.filter(Boolean).length} / {totalSteps} categorías completadas
@@ -380,54 +404,49 @@ export default function AdditionalPhotoReport() {
           <span className="text-[11px] font-bold text-primary">{overallProgress}%</span>
         </div>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary rounded-full transition-all duration-500"
-            style={{ width: `${overallProgress}%` }}
-          />
+          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${overallProgress}%` }} />
         </div>
       </div>
 
-      {/* Step pills */}
-      <div className="px-4 pt-3">
+      {/* Step pills — acrónimos */}
+      <div className="max-w-2xl mx-auto w-full px-4 pt-3">
         <StepPills
-          steps={PHOTO_CATEGORIES.map((cat, i) => ({
-            id: i + 1,
-            title: `${cat.emoji} ${cat.id}`,
-          }))}
+          steps={PHOTO_CATEGORIES.map((cat, i) => ({ id: i + 1, title: cat.id, emoji: cat.emoji }))}
           currentStep={currentStep}
           completedSteps={PHOTO_CATEGORIES.map((_, i) => i + 1).filter((i) => completedSteps[i - 1])}
           onStepClick={(i) => setStep(i)}
+          showIndex={false}
         />
       </div>
 
       {/* Content */}
-      <main className="flex-1 px-4 pt-4 pb-2">
-        <CategoryStep
-          category={currentCategory}
-          photos={categoryPhotos}
-          onPhotoChange={handlePhotoChange}
-          onAddPhoto={handleAddSlot}
-          onRemovePhoto={handleRemoveSlot}
-        />
+      <main className="flex-1 pt-4 pb-2">
+        <div className="max-w-2xl mx-auto px-4">
+          <CategoryStep
+            category={currentCategory}
+            photos={categoryPhotos}
+            photoMeta={categoryMeta}
+            siteId={siteId}
+            onPhotoChange={handlePhotoChange}
+            onAddPhoto={handleAddSlot}
+            onRemovePhoto={handleRemoveSlot}
+          />
 
-        {/* Notes on last step */}
-        {currentStep === totalSteps && (
-          <div className="mt-4 bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Observaciones adicionales
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setAdditionalPhotoField('notes', e.target.value)}
-              placeholder="Notas, condiciones especiales, aclaraciones..."
-              rows={3}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-            />
-          </div>
-        )}
+          {currentStep === totalSteps && (
+            <div className="mt-4 bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Observaciones adicionales</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setAdditionalPhotoField('notes', e.target.value)}
+                placeholder="Notas, condiciones especiales, aclaraciones..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+              />
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Bottom nav */}
       <BottomNav
         currentStep={currentStep}
         totalSteps={totalSteps}
