@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.58';
+  return import.meta.env.VITE_APP_VERSION || '2.5.62';
 }
 
 function loadMap(key) {
@@ -120,6 +120,7 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
     if (code === 'equipment-v2') return 'inventario-v2';
     if (code === 'grounding-system-test') return 'puesta-tierra';
     if (code === 'safety-system') return 'sistema-ascenso';
+    if (code === 'additional-photo-report' || code === 'additional-photo') return 'additional-photo-report';
     return code;
   };
   const canonicalCode = toCanonical(formCode);

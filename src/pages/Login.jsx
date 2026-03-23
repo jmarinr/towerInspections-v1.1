@@ -57,7 +57,7 @@ export default function Login() {
       }
 
       // 3. Only inspectors can use this app
-      if (profile.role !== 'inspector') {
+      if (!['inspector', 'inspector-beta'].includes(profile.role)) {
         setError('Este acceso es solo para inspectores. Use el panel de administración.')
         await supabase.auth.signOut()
         setLoading(false)
@@ -158,7 +158,7 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.58</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.62</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a
