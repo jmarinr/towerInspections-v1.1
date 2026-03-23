@@ -126,6 +126,7 @@ export default function Home() {
       'inventario-v2': 'equipment-v2',
       'puesta-tierra': 'grounding-system-test',
       'sistema-ascenso': 'sistema-ascenso',
+      'additional-photo-report': 'additional-photo-report',
     }
 
     // Always show hydrating state while loading submissions
@@ -240,7 +241,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="text-xl font-bold tracking-tight">PTI Inspect</h1>
-          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.58</p>
+          <p className="text-white/70 text-sm mt-0.5">Sistema de Inspección v2.5.60</p>
 
           {/* User info pill */}
           {session && (
