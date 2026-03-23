@@ -262,6 +262,7 @@ export default function FormIntro() {
       if (normalizedId === 'grounding-system-test') {
         setGroundingField('datos', 'fechaInicio', base.date)
       }
+      // additional-photo-report: meta only, no inner fields
     } catch (e) {
       // no bloquear
     }
@@ -340,6 +341,7 @@ export default function FormIntro() {
             setGroundingField('datos', 'latitud', String(lat))
             setGroundingField('datos', 'longitud', String(lng))
           }
+          // additional-photo-report: GPS stored only in formMeta, no inner fields needed
         } catch (e) {
           // no bloquear
         }

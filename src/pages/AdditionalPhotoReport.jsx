@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.56
+ * AdditionalPhotoReport.jsx  v2.5.57
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -27,9 +27,13 @@ const FORM_ID   = 'additional-photo-report'
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /** Build PTI-standard filename: SITEID_ACRONYM_DDMMYY_(N) */
-function buildFilename(siteId, acronym, index, timestamp) {
+/** Build PTI-standard filename using visit startedAt for the date component.
+ *  Format: {SITEID}_{ACRONIMO}_{DDMMAA}_(N)
+ *  Example: MJA0007_ACC_100817_(1)
+ */
+function buildFilename(siteId, acronym, index, startedAt) {
   const safe = (siteId || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const d    = timestamp ? new Date(timestamp) : new Date()
+  const d    = startedAt ? new Date(startedAt) : new Date()
   const dd   = String(d.getDate()).padStart(2, '0')
   const mm   = String(d.getMonth() + 1).padStart(2, '0')
   const yy   = String(d.getFullYear()).slice(-2)
@@ -47,12 +51,12 @@ function formatTs(ts) {
 
 // ─── Single photo slot ───────────────────────────────────────────────────────
 
-function PhotoSlot({ label, acronym, index, value, meta, siteId, onChange, onRemove, required }) {
+function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onChange, onRemove, required }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
   const inputId  = `photo-${acronym}-${index}`
-  const filename = meta?.filename || buildFilename(siteId, acronym, index, meta?.timestamp)
+  const filename = meta?.filename || buildFilename(siteId, acronym, index, startedAt)
   const assetKey = filename   // filename IS the asset key → Storage path matches nomenclatura
 
   const recovered   = useMemo(() => {
@@ -77,7 +81,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, onChange, onRem
       return
     }
     const now = new Date().toISOString()
-    const fname = buildFilename(siteId, acronym, index, now)
+    const fname = buildFilename(siteId, acronym, index, startedAt)
     onChange(result.dataUrl, { filename: fname, timestamp: now })
     queueAssetUpload(FORM_CODE, fname, result.dataUrl)
     flushSupabaseQueues({ formCode: FORM_CODE })
@@ -174,7 +178,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, onChange, onRem
           </label>
           {/* Preview filename before capture */}
           <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
-            <p className="text-[11px] font-mono text-gray-400 truncate">{buildFilename(siteId, acronym, index, null)}.jpg</p>
+            <p className="text-[11px] font-mono text-gray-400 truncate">{buildFilename(siteId, acronym, index, startedAt)}.jpg</p>
           </div>
         </div>
       )}
@@ -184,7 +188,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, onChange, onRem
 
 // ─── Category step ───────────────────────────────────────────────────────────
 
-function CategoryStep({ category, photos, photoMeta, siteId, onPhotoChange, onAddPhoto, onRemovePhoto }) {
+function CategoryStep({ category, photos, photoMeta, siteId, startedAt, onPhotoChange, onAddPhoto, onRemovePhoto }) {
   const { id: acronym, title, description, minPhotos, variable, subLabels, subGroups, hint, quality, emoji } = category
 
   const slotCount = Math.max(photos.length, minPhotos)
@@ -232,7 +236,7 @@ function CategoryStep({ category, photos, photoMeta, siteId, onPhotoChange, onAd
         <div className="mt-3 pt-3 border-t border-gray-100">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Nomenclatura de archivo</p>
           <p className="text-[11px] font-mono text-gray-600 bg-gray-100 rounded-lg px-2 py-1.5 truncate">
-            {buildFilename(siteId || 'SITEID', acronym, 0, new Date().toISOString())}.jpg
+            {buildFilename(siteId || 'SITEID', acronym, 0, startedAt)}.jpg
           </p>
         </div>
 
@@ -271,6 +275,7 @@ function CategoryStep({ category, photos, photoMeta, siteId, onPhotoChange, onAd
             value={slot.value}
             meta={slot.meta}
             siteId={siteId}
+            startedAt={startedAt}
             onChange={(dataUrl, meta) => onPhotoChange(acronym, slot.index, dataUrl, meta)}
             onRemove={slot.index >= minPhotos ? () => onRemovePhoto(acronym, slot.index) : undefined}
             required={slot.index < minPhotos}
@@ -314,6 +319,8 @@ export default function AdditionalPhotoReport() {
   const showToast                = useAppStore((s) => s.showToast)
   const activeVisit              = useAppStore((s) => s.activeVisit)
   const siteId                   = activeVisit?.site_id || ''
+  const formMeta               = useAppStore((s) => s.formMeta)
+  const startedAt              = formMeta?.[FORM_ID]?.startedAt || null
 
   const locked = isFormCompleted(FORM_ID)
 
@@ -349,31 +356,40 @@ export default function AdditionalPhotoReport() {
     if (currentStep > 1) { setStep(currentStep - 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
 
-  const handleNext = () => {
-    const photos   = additionalPhotoData?.photos?.[currentCategory.id] || []
-    const captured = photos.filter(Boolean).length
-    if (captured < currentCategory.minPhotos) {
-      showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
-      return
-    }
-    if (currentStep < totalSteps) { setStep(currentStep + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  }
-
-  const handleFinalize = async () => {
-    const missing = PHOTO_CATEGORIES.filter((cat) => {
-      const photos = additionalPhotoData?.photos?.[cat.id] || []
-      return photos.filter(Boolean).length < cat.minPhotos
-    })
-    if (missing.length > 0) {
-      showToast(`Faltan fotos en: ${missing.slice(0, 2).map((c) => c.title).join(', ')}${missing.length > 2 ? '...' : ''}`, 'error')
-      return
-    }
+  const handleNext = async () => {
     try {
-      await finalizeForm('additional-photo')
-      showToast('Reporte de fotos completado ✓', 'success')
-      navigate('/')
-    } catch {
-      showToast('Error al finalizar el formulario', 'error')
+      const photos   = additionalPhotoData?.photos?.[currentCategory.id] || []
+      const captured = photos.filter(Boolean).length
+      if (captured < currentCategory.minPhotos) {
+        showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
+        return
+      }
+
+      if (currentStep < totalSteps) {
+        setStep(currentStep + 1)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        // Last step — finalize
+        const missing = PHOTO_CATEGORIES.filter((cat) => {
+          const p = additionalPhotoData?.photos?.[cat.id] || []
+          return p.filter(Boolean).length < cat.minPhotos
+        })
+        if (missing.length > 0) {
+          showToast(`Faltan fotos en: ${missing.slice(0, 2).map((c) => c.title).join(', ')}${missing.length > 2 ? '...' : ''}`, 'error')
+          return
+        }
+        try {
+          await finalizeForm('additional-photo')
+          showToast('¡Reporte de fotos completado!', 'success')
+          navigate('/')
+        } catch (e) {
+          console.error('[AdditionalPhoto] finalize error:', e)
+          showToast('Error al enviar. Intente de nuevo.', 'error')
+        }
+      }
+    } catch (e) {
+      console.error('[AdditionalPhoto] handleNext error:', e)
+      showToast('Error al avanzar. Intente de nuevo.', 'error')
     }
   }
 
@@ -448,14 +464,10 @@ export default function AdditionalPhotoReport() {
       </main>
 
       <BottomNav
-        currentStep={currentStep}
-        totalSteps={totalSteps}
         onPrev={handlePrev}
-        onNext={currentStep < totalSteps ? handleNext : undefined}
-        onFinalize={currentStep === totalSteps ? handleFinalize : undefined}
-        prevDisabled={currentStep === 1}
-        nextLabel={currentStep < totalSteps ? `Siguiente: ${PHOTO_CATEGORIES[currentStep]?.id}` : ''}
-        finalizeLabel="Completar Reporte"
+        onNext={handleNext}
+        showPrev={currentStep > 1}
+        nextLabel={currentStep === totalSteps ? 'Finalizar' : `Siguiente: ${PHOTO_CATEGORIES[currentStep]?.id || ''}`}
       />
     </div>
   )
