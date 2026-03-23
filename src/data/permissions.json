@@ -45,15 +45,12 @@
         "mantenimiento-ejecutado",
         "equipment-v2",
         "sistema-ascenso",
-        "grounding-system-test",
-        "additional-photo-report"
+        "grounding-system-test"
       ]
     },
     "supervisor": {
       "label": "Supervisor",
-      "forms": [
-        "additional-photo-report"
-      ]
+      "forms": []
     }
   }
 }
