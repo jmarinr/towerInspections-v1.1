@@ -327,6 +327,7 @@ export default function MantenimientoPreventivo() {
               formData={formData}
               onItemChange={updateChecklistItem}
               onPhotoChange={updateChecklistPhoto}
+              hideEvidence={[6,7,8,9,10,11,12,13,14,15,16].includes(currentStepData.id)}
             />
           )}
         </div>

@@ -5,7 +5,7 @@ import { processImageFile } from '../../lib/photoUtils'
 import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
 import { flushSupabaseQueues } from '../../lib/supabaseSync'
 
-export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {} }) {
+export default function InspectionChecklist({ step, checklistData = {}, photos = {}, onItemChange, onPhotoChange, formData = {}, hideEvidence = false }) {
   const [expandedItems, setExpandedItems] = useState({})
   const [loadingPhotos, setLoadingPhotos] = useState({})
   // Upload status per photo: { 'itemId-before': 'uploading' | 'done' | 'error' }
@@ -238,7 +238,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
               />
             </div>
 
-            {!status.isNA && (
+            {!status.isNA && !hideEvidence && (
               <div className="border-t border-gray-100">
                 <button
                   onClick={() => toggleExpand(item.id)}
