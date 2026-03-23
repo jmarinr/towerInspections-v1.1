@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.62'
+const APP_VERSION_DISPLAY = '2.5.58'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -312,13 +312,11 @@ export const useAppStore = create(
         }))
       },
 
-      // Continue existing order — always reset to avoid cross-order data bleed
       setActiveVisit: (visit) => {
-        get().resetAllForms()
-        set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
+        set({ activeVisit: visit })
         get().injectVisitSiteData(visit)
       },
-      // Create new order — same reset behavior, semantically distinct for clarity
+      // Create new order - always reset all form data, then inject site data
       setNewActiveVisit: (visit) => {
         get().resetAllForms()
         set({ activeVisit: visit, completedForms: [], formDataOwnerId: visit?.id || null })
@@ -343,7 +341,6 @@ export const useAppStore = create(
           'mantenimiento-ejecutado',
           'puesta-tierra',
           'safety-system',
-          'additional-photo',
         ]
         for (const key of allFormKeys) {
           try { get().resetFormDraft(key) } catch (_) {}
@@ -403,7 +400,7 @@ export const useAppStore = create(
           'equipment': 'equipment',
           'grounding-system-test': 'grounding-system-test',
           'safety-system': 'sistema-ascenso',
-          [FORM_CODE_ADDITIONAL]: FORM_CODE_ADDITIONAL,  // triggers guard check
+          [FORM_CODE_ADDITIONAL]: FORM_CODE_ADDITIONAL,
         }
         const formId = formIdMap[formCode]
         if (formId && (get().completedForms || []).includes(formId)) return
@@ -511,7 +508,6 @@ export const useAppStore = create(
           'inventario-v2': 'equipmentInventoryV2Data',
           'puesta-tierra': 'groundingSystemData',
           'sistema-ascenso': 'safetyClimbingData',
-          'additional-photo-report': 'additionalPhotoData',
         }
 
         const metaKeyMap = {
@@ -522,7 +518,6 @@ export const useAppStore = create(
           'inventario-v2': 'equipment-v2',
           'puesta-tierra': 'grounding-system-test',
           'sistema-ascenso': 'sistema-ascenso',
-          'additional-photo-report': 'additional-photo-report',
         }
 
         const stateKey = stateMap[formCode]
