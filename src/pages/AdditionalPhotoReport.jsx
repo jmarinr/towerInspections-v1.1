@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.67
+ * AdditionalPhotoReport.jsx  v2.5.68
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -7,7 +7,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Camera, Check, Plus, X, Loader2, AlertCircle,
+  Camera, Image, Check, Plus, X, Loader2, AlertCircle,
   UploadCloud, Info, RefreshCw, Clock,
 } from 'lucide-react'
 import AppHeader from '../components/layout/AppHeader'
@@ -18,7 +18,6 @@ import FormLockedScreen from '../components/ui/FormLockedScreen'
 import StepPills from '../components/layout/StepPills'
 import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../hooks/useAppStore'
 import { processImageFile } from '../lib/photoUtils'
-import PhotoButtons from '../components/ui/PhotoButtons'
 import { PHOTO_CATEGORIES } from '../data/additionalPhotoConfig'
 import { queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
 
@@ -100,7 +99,9 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
         </span>
       </label>
 
-      {/* Camera and gallery inputs rendered by PhotoButtons below */}
+      {/* Two inputs: one for camera, one for gallery */}
+      <input id={`${inputId}-cam`} type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+      <input id={`${inputId}-gal`} type="file" accept="image/*" onChange={handleFile} className="hidden" />
 
       {error && (
         <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
@@ -120,7 +121,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
           <div className="relative">
             <img src={displayable} alt={label} className="w-full h-48 sm:h-44 object-cover" />
             {/* Replace */}
-            <label htmlFor={inputId}
+            <label htmlFor={`${inputId}-gal`}
               className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer active:scale-95">
               <RefreshCw size={14} className="text-white" />
             </label>
@@ -145,7 +146,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
         </div>
       ) : isUploaded ? (
         <div className="rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white">
-          <label htmlFor={inputId}
+          <label htmlFor={`${inputId}-gal`}
             className="w-full bg-emerald-50 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer">
             <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
               <Camera size={22} className="text-emerald-500" />
@@ -166,19 +167,22 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 bg-white">
-          <label htmlFor={inputId}
-            className="w-full bg-gray-50 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer hover:bg-gray-100 transition-all active:scale-[0.98]">
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white overflow-hidden">
+          {/* Two action buttons — camera and gallery */}
+          <div className="flex gap-3 justify-center items-center py-5 bg-gray-50">
+            <label htmlFor={`${inputId}-cam`}
+              className="flex flex-col items-center gap-1.5 w-20 py-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white cursor-pointer hover:border-primary hover:bg-primary/5 active:scale-95 transition-all">
               <Camera size={22} className="text-gray-500" />
-            </div>
-            <div className="text-center px-4">
-              <p className="text-sm font-bold text-gray-700">Tomar / subir foto</p>
-              <p className="text-xs text-gray-500 mt-1">Cámara o galería</p>
-            </div>
-          </label>
-          {/* Preview filename before capture */}
-          <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+              <span className="text-[10px] font-bold text-gray-500">Cámara</span>
+            </label>
+            <label htmlFor={`${inputId}-gal`}
+              className="flex flex-col items-center gap-1.5 w-20 py-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white cursor-pointer hover:border-primary hover:bg-primary/5 active:scale-95 transition-all">
+              <Image size={22} className="text-gray-500" />
+              <span className="text-[10px] font-bold text-gray-500">Galería</span>
+            </label>
+          </div>
+          {/* Preview filename */}
+          <div className="px-3 py-2 bg-white border-t border-gray-100">
             <p className="text-[11px] font-mono text-gray-400 truncate">{buildFilename(siteId, acronym, index, startedAt)}.jpg</p>
           </div>
         </div>
