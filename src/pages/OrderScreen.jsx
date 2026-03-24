@@ -5,6 +5,31 @@ import SiteSelector from '../components/ui/SiteSelector'
 import { useAppStore } from '../hooks/useAppStore'
 import { createSiteVisit, fetchOpenVisits, searchVisitByOrder } from '../lib/siteVisitService'
 
+// ── Build order number from site ──────────────────────────────────────────
+function buildOrderNumber(site) {
+  if (!site) return ''
+  const now  = new Date()
+  const yyyy = now.getFullYear()
+  const mm   = String(now.getMonth() + 1).padStart(2, '0')
+
+  // Region: remove accents, uppercase, strip leading "REGION " or "REGIÓN " prefix,
+  // replace spaces with hyphen, keep only alphanum + hyphen
+  const region = (site.region_name || 'REGION')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^REGI[OÓ]N[\s-]*/i, '')   // strip "REGION " or "REGIÓN " prefix
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9-]/g, '')
+    || 'REGION'
+
+  // Site ID: extract only the trailing numeric part  e.g. PA-CH-1036 → 1036
+  const numericPart = (site.site_id || '').match(/(\d+)$/)?.[1] || site.site_id || ''
+
+  return `OT-${region}-${yyyy}-${mm}-${numericPart}`
+}
+
+
 const getGeo = () =>
   new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('No soportado'))
@@ -232,7 +257,21 @@ export default function OrderScreen() {
               Estos datos se compartirán entre todos los formularios
             </p>
 
-            {/* Order Number */}
+            {/* Site Selector — first so order number auto-generates */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Sitio <span className="text-red-500">*</span>
+              </label>
+              <SiteSelector
+                selectedSite={selectedSite}
+                onSelect={(site) => {
+                  selectSite(site)
+                  setOrderNumber(buildOrderNumber(site))
+                }}
+              />
+            </div>
+
+            {/* Order Number — auto-generated, read-only */}
             <div className="mb-3">
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
                 Número de Orden <span className="text-red-500">*</span>
@@ -244,22 +283,11 @@ export default function OrderScreen() {
                 <input
                   type="text"
                   value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  placeholder="Ej: OT-2026-0451"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  readOnly
+                  placeholder="Selecciona un sitio para generar"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm font-mono font-semibold text-gray-700 cursor-default select-all"
                 />
               </div>
-            </div>
-
-            {/* Site Selector */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Sitio <span className="text-red-500">*</span>
-              </label>
-              <SiteSelector
-                selectedSite={selectedSite}
-                onSelect={(site) => selectSite(site)}
-              />
             </div>
 
             {/* GPS note */}

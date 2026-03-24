@@ -188,7 +188,7 @@ export default function SiteSelector({ selectedSite, onSelect }) {
             <button
               key={site.id}
               type="button"
-              onClick={() => { onSelect(site); setOpen(false); setQuery('') }}
+              onClick={() => { onSelect({ ...site, region_name: regions.find(r => r.id === site.region_id)?.name || '' }); setOpen(false); setQuery('') }}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 active:bg-primary/5 transition-colors border-b border-gray-50 last:border-0 ${
                 selectedSite?.id === site.id ? 'bg-primary/5' : ''
               }`}

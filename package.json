@@ -1,6 +1,6 @@
 {
   "name": "pti-inspect",
-  "version": "2.5.65",
+  "version": "2.5.66",
   "type": "module",
   "scripts": {
     "dev": "vite",
