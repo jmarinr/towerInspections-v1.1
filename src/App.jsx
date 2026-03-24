@@ -47,10 +47,14 @@ function App() {
   }, [])
 
   // ── Session watchdog: if Supabase token expires/invalidates, force logout ──
+  // Guard: only act if session still exists in store to avoid logout → signOut → SIGNED_OUT → logout loop
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-        logout()
+        const currentSession = useAppStore.getState().session
+        if (currentSession) {
+          logout()
+        }
       }
     })
     return () => subscription.unsubscribe()
