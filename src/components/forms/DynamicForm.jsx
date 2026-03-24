@@ -5,6 +5,7 @@ import { queueAssetUpload, flushSupabaseQueues } from '../../lib/supabaseSync'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
 import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
+import PhotoButtons from '../ui/PhotoButtons'
 
 /**
  * DynamicForm supports two calling conventions used across the app:
