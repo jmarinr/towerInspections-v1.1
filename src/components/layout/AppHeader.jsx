@@ -6,6 +6,7 @@ import { useAppStore } from '../../hooks/useAppStore'
 export default function AppHeader({ title, subtitle, badge, progress, onMenuClick }) {
   const navigate = useNavigate()
   const storeLogout = useAppStore((s) => s.logout)
+  const activeVisit = useAppStore((s) => s.activeVisit)
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -44,6 +45,11 @@ export default function AppHeader({ title, subtitle, badge, progress, onMenuClic
           <div className="text-[11px] sm:text-xs text-white/70 flex items-center gap-2 flex-wrap">
             <span className="truncate">{subtitle}</span>
             {badge && <span className="bg-accent px-2 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0">{badge}</span>}
+            {activeVisit?.order_number && (
+              <span className="bg-white/15 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold text-white/90 flex-shrink-0">
+                {activeVisit.order_number}
+              </span>
+            )}
           </div>
         </div>
         <div className="relative flex-shrink-0 z-[200]" ref={menuRef}>
