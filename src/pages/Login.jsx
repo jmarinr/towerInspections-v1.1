@@ -158,7 +158,7 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.64</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.65</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a

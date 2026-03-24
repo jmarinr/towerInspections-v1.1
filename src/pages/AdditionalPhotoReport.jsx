@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.64
+ * AdditionalPhotoReport.jsx  v2.5.65
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -18,6 +18,7 @@ import FormLockedScreen from '../components/ui/FormLockedScreen'
 import StepPills from '../components/layout/StepPills'
 import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../hooks/useAppStore'
 import { processImageFile } from '../lib/photoUtils'
+import PhotoButtons from '../components/ui/PhotoButtons'
 import { PHOTO_CATEGORIES } from '../data/additionalPhotoConfig'
 import { queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
 
@@ -99,7 +100,7 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
         </span>
       </label>
 
-      <input id={inputId} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {/* Camera and gallery inputs rendered by PhotoButtons below */}
 
       {error && (
         <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Camera, X, Loader2, AlertCircle, Check, UploadCloud, RefreshCw } from 'lucide-react'
+import PhotoButtons from './PhotoButtons'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
 import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
@@ -119,7 +120,7 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove, f
 
   return (
     <div className="relative">
-      <input id={id} type="file" accept="image/*" onChange={handleChange} className="hidden" />
+      {/* Camera and gallery inputs rendered by PhotoButtons */}
 
       {error && (
         <div className="mb-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
@@ -154,13 +155,12 @@ export default function PhotoUpload({ type, photo, value, onCapture, onRemove, f
           <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
         </label>
       ) : (
-        <label htmlFor={id} className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 cursor-pointer bg-white hover:border-primary transition-all">
-          <span className={`px-2 py-1 rounded text-[9px] font-bold uppercase text-white ${isBefore ? 'bg-blue-500' : 'bg-green-500'}`}>
+        <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-2">
+          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white ${isBefore ? 'bg-blue-500' : 'bg-green-500'}`}>
             {isBefore ? 'Antes' : 'Después'}
           </span>
-          <Camera size={24} className="text-gray-400" />
-          <span className="text-xs font-semibold text-gray-600">Tomar foto</span>
-        </label>
+          <PhotoButtons inputId={id} onChange={handleChange} color={isBefore ? 'blue' : 'green'} />
+        </div>
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import PhotoButtons from '../ui/PhotoButtons'
 import { Camera, ChevronDown, ChevronUp, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
 import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
@@ -229,14 +230,7 @@ export default function MaintenanceActivity({ activity, index }) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Foto ANTES */}
                 <div>
-                  <input
-                    id={`photo-before-${activity.id}`}
-                    type="file"
-                    accept="image/*"
-                    
-                    onChange={handlePhotoCapture('before')}
-                    className="hidden"
-                  />
+                  {/* Inputs via PhotoButtons */}
                   {loadingBefore ? (
                     <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-2">
                       <Loader2 size={20} className="animate-spin text-blue-500" />
@@ -270,29 +264,16 @@ export default function MaintenanceActivity({ activity, index }) {
                       <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
                     </label>
                   ) : (
-                    <label
-                      htmlFor={`photo-before-${activity.id}`}
-                      className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-all"
-                    >
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-blue-500">
-                        Antes
-                      </span>
-                      <Camera size={20} className="text-blue-400" />
-                      <span className="text-[10px] font-semibold text-blue-500">Tomar foto</span>
-                    </label>
+                    <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 flex flex-col items-center justify-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-blue-500">Antes</span>
+                      <PhotoButtons inputId={`photo-before-${activity.id}`} onChange={handlePhotoCapture('before')} color="blue" />
+                    </div>
                   )}
                 </div>
 
                 {/* Foto DESPUÉS */}
                 <div>
-                  <input
-                    id={`photo-after-${activity.id}`}
-                    type="file"
-                    accept="image/*"
-                    
-                    onChange={handlePhotoCapture('after')}
-                    className="hidden"
-                  />
+                  {/* Inputs via PhotoButtons */}
                   {loadingAfter ? (
                     <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-2">
                       <Loader2 size={20} className="animate-spin text-green-500" />
@@ -326,16 +307,10 @@ export default function MaintenanceActivity({ activity, index }) {
                       <span className="text-[9px] text-gray-400">Toque para reemplazar</span>
                     </label>
                   ) : (
-                    <label
-                      htmlFor={`photo-after-${activity.id}`}
-                      className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-green-400 hover:bg-green-100 transition-all"
-                    >
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-green-500">
-                        Después
-                      </span>
-                      <Camera size={20} className="text-green-400" />
-                      <span className="text-[10px] font-semibold text-green-500">Tomar foto</span>
-                    </label>
+                    <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-200 bg-green-50 flex flex-col items-center justify-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase text-white bg-green-500">Después</span>
+                      <PhotoButtons inputId={`photo-after-${activity.id}`} onChange={handlePhotoCapture('after')} color="green" />
+                    </div>
                   )}
                 </div>
               </div>

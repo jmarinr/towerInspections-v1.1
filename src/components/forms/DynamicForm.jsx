@@ -369,14 +369,7 @@ export default function DynamicForm(props) {
 
         return (
           <div>
-            <input
-              id={`photo-${field.id}`}
-              type="file"
-              accept="image/*"
-              
-              onChange={handlePhotoCapture(field.id)}
-              className="hidden"
-            />
+            {/* Camera and gallery inputs rendered by PhotoButtons */}
             {photoLoading ? (
               <div className="w-36 aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1">
                 <Loader2 size={20} className="animate-spin text-blue-500" />
@@ -404,13 +397,9 @@ export default function DynamicForm(props) {
                 <span className="text-[9px] text-green-500">Toque para reemplazar</span>
               </label>
             ) : (
-              <label
-                htmlFor={`photo-${field.id}`}
-                className="w-36 aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
-              >
-                <Camera size={22} className="text-gray-400" />
-                <span className="text-[10px] font-semibold text-gray-500">Tomar foto</span>
-              </label>
+              <div className="w-36 aspect-[4/3] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-1">
+                <PhotoButtons inputId={`photo-${field.id}`} onChange={handlePhotoCapture(field.id)} color="gray" />
+              </div>
             )}
           </div>
         )

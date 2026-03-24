@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Camera, ChevronDown, ChevronUp, X, Loader2, Check, UploadCloud, RefreshCw } from 'lucide-react'
+import PhotoButtons from '../ui/PhotoButtons'
 import { isDisplayablePhoto, recoverPhotoFromQueue } from '../../hooks/useAppStore'
 import { processImageFile } from '../../lib/photoUtils'
 import { onPhotoStatus, PhotoUploadStatus } from '../../lib/photoEvents'
@@ -271,14 +272,7 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                     <div className="grid grid-cols-2 gap-2">
                       {/* Foto ANTES */}
                       <div>
-                        <input
-                          id={`photo-before-${item.id}`}
-                          type="file"
-                          accept="image/*"
-                          
-                          onChange={handlePhotoCapture(item.id, 'before')}
-                          className="hidden"
-                        />
+                        {/* Inputs via PhotoButtons */}
                         {loadingPhotos[`${item.id}-before`] ? (
                           <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1">
                             <Loader2 size={18} className="animate-spin text-blue-500" />
@@ -310,28 +304,16 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             <span className="text-[8px] text-blue-400">Toque para reemplazar</span>
                           </label>
                         ) : (
-                          <label
-                            htmlFor={`photo-before-${item.id}`}
-                            className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400 transition-all"
-                          >
-                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-blue-500">
-                              Antes
-                            </span>
-                            <Camera size={16} className="text-blue-400" />
-                          </label>
+                          <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 flex flex-col items-center justify-center gap-1">
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-blue-500">Antes</span>
+                            <PhotoButtons inputId={`photo-before-${item.id}`} onChange={handlePhotoCapture(item.id, 'before')} color="blue" />
+                          </div>
                         )}
                       </div>
 
                       {/* Foto DESPUÉS */}
                       <div>
-                        <input
-                          id={`photo-after-${item.id}`}
-                          type="file"
-                          accept="image/*"
-                          
-                          onChange={handlePhotoCapture(item.id, 'after')}
-                          className="hidden"
-                        />
+                        {/* Inputs via PhotoButtons */}
                         {loadingPhotos[`${item.id}-after`] ? (
                           <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-1">
                             <Loader2 size={18} className="animate-spin text-green-500" />
@@ -363,15 +345,10 @@ export default function InspectionChecklist({ step, checklistData = {}, photos =
                             <span className="text-[8px] text-green-400">Toque para reemplazar</span>
                           </label>
                         ) : (
-                          <label
-                            htmlFor={`photo-after-${item.id}`}
-                            className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-300 bg-green-50 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-green-400 transition-all"
-                          >
-                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-green-500">
-                              Después
-                            </span>
-                            <Camera size={16} className="text-green-400" />
-                          </label>
+                          <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-green-200 bg-green-50 flex flex-col items-center justify-center gap-1">
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-white bg-green-500">Después</span>
+                            <PhotoButtons inputId={`photo-after-${item.id}`} onChange={handlePhotoCapture(item.id, 'after')} color="green" />
+                          </div>
                         )}
                       </div>
                     </div>
