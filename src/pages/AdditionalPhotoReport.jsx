@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.83
+ * AdditionalPhotoReport.jsx  v2.5.84
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -314,6 +314,8 @@ function CategoryStep({ category, photos, photoMeta, siteId, startedAt, onPhotoC
 
 export default function AdditionalPhotoReport() {
   const navigate = useNavigate()
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const isFormCompleted          = useAppStore((s) => s.isFormCompleted)
   const additionalPhotoData      = useAppStore((s) => s.additionalPhotoData || {})
