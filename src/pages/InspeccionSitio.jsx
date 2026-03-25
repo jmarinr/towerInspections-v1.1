@@ -114,7 +114,6 @@ export default function InspeccionSitio() {
         )}
       </main>
       <BottomNav onPrev={goToPrev} onNext={goToNext} showPrev={currentStepIndex > 0} nextLabel={currentStepIndex === inspectionSections.length - 1 ? 'Finalizar' : 'Siguiente'} />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -128,5 +127,6 @@ export default function InspeccionSitio() {
         }}
         loading={loading}
       />
+    </div>
   )
 }

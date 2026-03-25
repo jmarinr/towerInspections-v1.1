@@ -280,7 +280,6 @@ export default function GroundingSystemTest() {
         showPrev={currentStep > 1}
         nextLabel={currentStep === totalSteps ? 'Finalizar' : 'Siguiente'}
       />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -294,5 +293,6 @@ export default function GroundingSystemTest() {
         }}
         loading={loading}
       />
+    </div>
   )
 }

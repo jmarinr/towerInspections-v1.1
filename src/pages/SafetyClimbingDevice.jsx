@@ -277,7 +277,6 @@ export default function SafetyClimbingDevice() {
         showPrev={currentStep > 1}
         nextLabel={currentStep === totalSteps ? 'Enviar' : 'Siguiente'}
       />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -291,5 +290,6 @@ export default function SafetyClimbingDevice() {
         }}
         loading={loading}
       />
+    </div>
   )
 }

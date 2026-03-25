@@ -282,5 +282,18 @@ case 'drawing-template':
 
       <BottomNav onBack={goPrev} onNext={goNext} nextLabel={currentStepIndex === equipmentInventorySteps.length - 1 ? 'Finalizar' : 'Siguiente'} />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Inventario de Equipos"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          await finalizeForm('inventario')
+          showToast('¡Inventario enviado!', 'success')
+          navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }
