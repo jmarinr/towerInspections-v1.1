@@ -291,7 +291,7 @@ case 'drawing-template':
           try {
             await finalizeForm('inventario')
             showToast('¡Inventario enviado!', 'success')
-            navigate('/')
+            setTimeout(() => navigate('/'), 3000)
           } catch (e) {
             showToast('Error al finalizar', 'error')
           }

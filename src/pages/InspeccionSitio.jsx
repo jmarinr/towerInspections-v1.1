@@ -124,7 +124,7 @@ export default function InspeccionSitio() {
           setShowConfirm(false)
           await finalizeForm('inspeccion')
         showToast('¡Inspección enviada!', 'success')
-        navigate('/')
+        setTimeout(() => navigate('/'), 3000)
         }}
         loading={loading}
       />

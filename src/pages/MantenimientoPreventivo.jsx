@@ -357,7 +357,7 @@ export default function MantenimientoPreventivo() {
           setShowConfirm(false)
           await finalizeForm('mantenimiento')
           showToast('¡Mantenimiento enviado!', 'success')
-          navigate('/')
+          setTimeout(() => navigate('/'), 3000)
         }}
         loading={loading}
       />

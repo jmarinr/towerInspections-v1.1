@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.81
+ * AdditionalPhotoReport.jsx  v2.5.82
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -486,7 +486,7 @@ export default function AdditionalPhotoReport() {
           try {
             await finalizeForm('additional-photo')
             showToast('¡Reporte de fotos completado!', 'success')
-            navigate('/')
+          setTimeout(() => navigate('/'), 3000)
           } catch (e) {
             showToast('Error al finalizar', 'error')
           }

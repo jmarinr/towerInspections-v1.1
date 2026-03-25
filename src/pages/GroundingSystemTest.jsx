@@ -291,7 +291,7 @@ export default function GroundingSystemTest() {
           setShowConfirm(false)
           await finalizeForm('puesta-tierra')
           showToast('¡Formulario enviado!', 'success')
-          navigate('/')
+          setTimeout(() => navigate('/'), 3000)
         }}
         loading={loading}
       />

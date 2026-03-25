@@ -288,7 +288,7 @@ export default function SafetyClimbingDevice() {
           setShowConfirm(false)
           await finalizeForm('safety-system')
     showToast('¡Formulario enviado!', 'success')
-    navigate('/')
+    setTimeout(() => navigate('/'), 3000)
         }}
         loading={loading}
       />

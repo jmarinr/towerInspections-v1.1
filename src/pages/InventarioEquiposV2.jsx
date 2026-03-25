@@ -154,7 +154,7 @@ export default function InventarioEquiposV2() {
           try {
             await finalizeForm('inventario-v2')
             showToast('¡Inventario v2 enviado!', 'success')
-            navigate('/')
+            setTimeout(() => navigate('/'), 3000)
           } catch (e) {
             showToast('Error al finalizar', 'error')
           }
