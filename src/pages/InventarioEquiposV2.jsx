@@ -35,6 +35,7 @@ export default function InventarioEquiposV2() {
   } = useAppStore()
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [completedSteps, setCompletedSteps] = useState([])
 
   const currentStepId = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import StepPills from '../components/layout/StepPills'
@@ -15,6 +15,8 @@ import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 const FORM_ID = 'inspeccion'
 
 export default function InspeccionSitio() {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
 

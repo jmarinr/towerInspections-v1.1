@@ -30,6 +30,7 @@ export default function MantenimientoPreventivo() {
     formMeta, resetFormDraft, finalizeForm } = useAppStore()
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [showDepartureModal, setShowDepartureModal] = useState(false)
 
   // Asegurar que tenemos datos válidos con valores por defecto

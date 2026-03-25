@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppHeader from '../components/layout/AppHeader'
 import FormMetaBar from '../components/layout/FormMetaBar'
@@ -62,6 +62,8 @@ const SHORT_LABELS = {
 const FORM_ID = 'sistema-ascenso'
 
 export default function SafetyClimbingDevice() {
+  const [loading, setLoading] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const navigate = useNavigate()
   const isFormCompleted = useAppStore((s) => s.isFormCompleted)
 

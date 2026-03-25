@@ -42,6 +42,7 @@ export default function PreventiveMaintenanceExecuted() {
 
   const groups = useMemo(() => groupActivities(), [])
   const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [openGroups, setOpenGroups] = useState(() => {
     const init = {}
     groups.forEach((g, idx) => { init[g.name] = idx === 0 }) // abre el primer grupo

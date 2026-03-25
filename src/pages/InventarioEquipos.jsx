@@ -43,6 +43,7 @@ export default function InventarioEquipos() {
   const currentStep = equipmentInventorySteps[currentStepIndex]
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [completedSteps, setCompletedSteps] = useState([])
   const [openCroquis, setOpenCroquis] = useState(false)
   const [openPlano, setOpenPlano] = useState(false)
