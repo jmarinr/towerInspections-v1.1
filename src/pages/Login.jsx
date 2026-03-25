@@ -101,10 +101,17 @@ export default function Login() {
       }
 
       // 4. Register this device
-      await supabase
+      const { error: updateErr } = await supabase
         .from('app_users')
         .update({ active_device_id: deviceId, active_device_at: new Date().toISOString() })
         .eq('id', profile.id)
+
+      if (updateErr) {
+        console.warn('[Login] active_device_id update failed:', updateErr.message)
+        // Proceed anyway — device lock not enforced if DB write fails
+      } else {
+        console.log('[Login] active_device_id registered:', deviceId.slice(0, 8))
+      }
 
       completeLogin(profile, authData)
     } catch (err) {
@@ -129,10 +136,17 @@ export default function Login() {
       })
 
       // Overwrite active device
-      await supabase
+      const { error: forceErr } = await supabase
         .from('app_users')
         .update({ active_device_id: deviceId, active_device_at: new Date().toISOString() })
         .eq('id', pendingProfile.id)
+
+      if (forceErr) {
+        console.warn('[Login] force update failed:', forceErr.message)
+        setError('Error al registrar dispositivo. Intente de nuevo.')
+        setForcing(false)
+        return
+      }
 
       completeLogin(pendingProfile, pendingAuth)
     } catch (err) {
@@ -270,7 +284,7 @@ export default function Login() {
         </form>
       )}
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.71</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.72</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a href="http://henkancx.com" target="_blank" rel="noopener noreferrer"

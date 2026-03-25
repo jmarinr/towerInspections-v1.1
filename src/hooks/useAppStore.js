@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.71'
+const APP_VERSION_DISPLAY = '2.5.72'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -1526,6 +1526,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
       // Photos are uploaded to Supabase Storage via queueAssetUpload and don't
       // need to survive a page reload from localStorage.
       partialize: (state) => {
+        // forceUpdate must never persist — always re-evaluated from Supabase on mount
         // Strip data URL photos from inspectionData
         const inspectionData = state.inspectionData ? {
           ...state.inspectionData,
@@ -1621,6 +1622,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
 
         return {
           ...state,
+          forceUpdate: false, // never persist — always reset on load
           inspectionData,
           maintenanceData,
           pmExecutedData,

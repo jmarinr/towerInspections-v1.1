@@ -17,7 +17,7 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 
-const APP_VERSION = '2.5.71'
+const APP_VERSION = '2.5.72'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
 import RequireAuth from './components/auth/RequireAuth'
@@ -54,26 +54,31 @@ function App() {
     const checkVersion = async () => {
       if (!navigator.onLine) return
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('app_config')
           .select('value')
           .eq('key', 'min_version')
           .single()
-        if (!data?.value) return
+        if (error || !data?.value) return
 
-        const parse = (v) => v.split('.').map(Number)
-        const [mMaj, mMin, mPatch] = parse(data.value)
-        const [cMaj, cMin, cPatch] = parse(APP_VERSION)
+        const parse = (v) => String(v).split('.').map((n) => parseInt(n, 10))
+        const min = parse(data.value)
+        const cur = parse(APP_VERSION)
 
-        const isOutdated =
-          cMaj < mMaj ||
-          (cMaj === mMaj && cMin < mMin) ||
-          (cMaj === mMaj && cMin === mMin && cPatch < mPatch)
+        // Compare major.minor.patch lexicographically
+        let isOutdated = false
+        for (let i = 0; i < 3; i++) {
+          if (cur[i] < min[i]) { isOutdated = true; break }
+          if (cur[i] > min[i]) { isOutdated = false; break }
+        }
 
+        console.log(`[VersionCheck] current=${APP_VERSION} min=${data.value} outdated=${isOutdated}`)
         if (isOutdated) {
           useAppStore.setState({ forceUpdate: true })
         }
-      } catch (_) {}
+      } catch (e) {
+        console.warn('[VersionCheck] failed:', e?.message)
+      }
     }
 
     checkVersion()
