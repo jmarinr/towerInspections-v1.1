@@ -360,7 +360,6 @@ export default function PreventiveMaintenanceExecuted() {
       {showAutosave && <AutosaveIndicator />}
 
       <div className="h-6" />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -378,5 +377,6 @@ export default function PreventiveMaintenanceExecuted() {
         }}
         loading={loading}
       />
+    </div>
   )
 }

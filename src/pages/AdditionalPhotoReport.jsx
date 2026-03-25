@@ -476,7 +476,6 @@ export default function AdditionalPhotoReport() {
         showPrev={currentStep > 1}
         nextLabel={currentStep === totalSteps ? 'Finalizar' : `Siguiente: ${PHOTO_CATEGORIES[currentStep]?.id || ''}`}
       />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -494,5 +493,6 @@ export default function AdditionalPhotoReport() {
         }}
         loading={loading}
       />
+    </div>
   )
 }

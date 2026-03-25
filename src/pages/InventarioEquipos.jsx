@@ -81,7 +81,6 @@ export default function InventarioEquipos() {
       try {
         setShowConfirm(true)
         return
-        navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
         return
@@ -281,7 +280,6 @@ case 'drawing-template':
       </div>
 
       <BottomNav onBack={goPrev} onNext={goNext} nextLabel={currentStepIndex === equipmentInventorySteps.length - 1 ? 'Finalizar' : 'Siguiente'} />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -289,11 +287,16 @@ case 'drawing-template':
         onCancel={() => setShowConfirm(false)}
         onConfirm={async () => {
           setShowConfirm(false)
-          await finalizeForm('inventario')
-          showToast('¡Inventario enviado!', 'success')
-          navigate('/')
+          try {
+            await finalizeForm('inventario')
+            showToast('¡Inventario enviado!', 'success')
+            navigate('/')
+          } catch (e) {
+            showToast('Error al finalizar', 'error')
+          }
         }}
         loading={loading}
       />
+    </div>
   )
 }

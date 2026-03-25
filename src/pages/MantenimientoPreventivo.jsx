@@ -347,7 +347,6 @@ export default function MantenimientoPreventivo() {
         onConfirm={handleDepartureConfirm}
         onCancel={() => setShowDepartureModal(false)}
       />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -355,11 +354,12 @@ export default function MantenimientoPreventivo() {
         onCancel={() => setShowConfirm(false)}
         onConfirm={async () => {
           setShowConfirm(false)
-                await finalizeForm('mantenimiento')
-      showToast('¡Mantenimiento enviado!', 'success')
-      navigate('/')
+          await finalizeForm('mantenimiento')
+          showToast('¡Mantenimiento enviado!', 'success')
+          navigate('/')
         }}
         loading={loading}
       />
+    </div>
   )
 }

@@ -66,7 +66,6 @@ export default function InventarioEquiposV2() {
       try {
         setShowConfirm(true)
         return
-        navigate('/')
       } catch (e) {
         console.error('[InventarioV2] finalize error:', e)
         showToast('Error al enviar. Intente de nuevo.', 'error')
@@ -144,7 +143,6 @@ export default function InventarioEquiposV2() {
         showPrev={stepIndex > 0}
         nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'}
       />
-    </div>
 
       <ConfirmFinalizeModal
         show={showConfirm}
@@ -152,11 +150,16 @@ export default function InventarioEquiposV2() {
         onCancel={() => setShowConfirm(false)}
         onConfirm={async () => {
           setShowConfirm(false)
-          await finalizeForm('inventario-v2')
-        showToast('¡Inventario v2 enviado!', 'success')
-        navigate('/')
+          try {
+            await finalizeForm('inventario-v2')
+            showToast('¡Inventario v2 enviado!', 'success')
+            navigate('/')
+          } catch (e) {
+            showToast('Error al finalizar', 'error')
+          }
         }}
         loading={loading}
       />
+    </div>
   )
 }

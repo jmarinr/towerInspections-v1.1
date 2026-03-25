@@ -71,7 +71,6 @@ export default function InspeccionSitio() {
       try {
         setShowConfirm(true)
         return
-        navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
         return
