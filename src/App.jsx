@@ -17,7 +17,7 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 
-const APP_VERSION = '2.5.74'
+const APP_VERSION = '2.5.75'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
 import RequireAuth from './components/auth/RequireAuth'
@@ -114,7 +114,7 @@ function App() {
         // If active device is set and doesn't match ours → we were displaced
         if (activeDevice && activeDevice !== deviceId) {
           console.warn('[SessionWatch] Session taken by another device — forcing logout')
-          logout()
+          logout({ clearDevice: false }) // do NOT clear active_device_id — it belongs to the new device
           // Show toast after logout clears state
           setTimeout(() => {
             useAppStore.getState().showToast(

@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.74'
+const APP_VERSION_DISPLAY = '2.5.75'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -235,14 +235,18 @@ export const useAppStore = create(
       session: null, // { username, name, role, roleLabel }
       forceUpdate: false,
       setSession: (user) => set({ session: user }),
-      logout: () => {
-        // Clear active_device_id in Supabase (non-blocking)
+      logout: ({ clearDevice = true } = {}) => {
+        // clearDevice=true  → voluntary logout by this user — wipe active_device_id
+        // clearDevice=false → forced logout by watchdog — leave active_device_id (belongs to other device)
         const userId = get().session?.userId
         if (userId) {
           import('../lib/supabaseClient').then(({ supabase }) => {
-            supabase.from('app_users')
-              .update({ active_device_id: null, active_device_at: null })
-              .eq('id', userId)
+            const chain = clearDevice
+              ? supabase.from('app_users')
+                  .update({ active_device_id: null, active_device_at: null })
+                  .eq('id', userId)
+              : Promise.resolve()
+            Promise.resolve(chain)
               .then(() => supabase.auth.signOut())
               .catch(() => supabase.auth.signOut().catch(() => {}))
           }).catch(() => {})

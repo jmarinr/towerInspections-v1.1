@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.74
+ * AdditionalPhotoReport.jsx  v2.5.75
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
