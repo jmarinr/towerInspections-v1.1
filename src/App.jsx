@@ -17,9 +17,10 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 
-const APP_VERSION = '2.5.77'
+const APP_VERSION = '2.5.78'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
+import { getDeviceId } from './lib/deviceId'
 import RequireAuth from './components/auth/RequireAuth'
 
 function NotFound() {
@@ -97,7 +98,6 @@ function App() {
       if (!navigator.onLine) return       // offline — skip silently
 
       try {
-        const { getDeviceId } = await import('./lib/deviceId')
         const deviceId = getDeviceId()
 
         const { data, error } = await supabase
