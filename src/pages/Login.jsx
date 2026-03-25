@@ -8,6 +8,7 @@ import { getDeviceId } from '../lib/deviceId'
 export default function Login() {
   const navigate   = useNavigate()
   const setSession = useAppStore((s) => s.setSession)
+  const displacedByDevice = useAppStore((s) => s.displacedByDevice)
 
   const [email, setEmail]             = useState('')
   const [password, setPassword]       = useState('')
@@ -42,7 +43,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setBlockedByDevice(false)
-    console.log('[Login] v2.5.76 — deviceId:', deviceId.slice(0, 8))
+    console.log('[Login] v2.5.77 — deviceId:', deviceId.slice(0, 8))
 
     if (!email.trim())    { setError('Ingrese su correo electrónico'); return }
     if (!password.trim()) { setError('Ingrese su contraseña'); return }
@@ -178,6 +179,18 @@ export default function Login() {
         <p className="text-sm text-gray-500 mt-1">Ingrese sus credenciales</p>
       </div>
 
+      {displacedByDevice && (
+        <div className="w-full max-w-sm mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-700">Sesión cerrada</p>
+            <p className="text-xs text-red-600 mt-0.5 leading-relaxed">
+              Tu sesión fue iniciada en otro dispositivo. Vuelve a ingresar.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Blocked by another device ── */}
       {blockedByDevice ? (
         <div className="w-full max-w-sm bg-white rounded-2xl border border-amber-200 shadow-sm p-6 space-y-4">
@@ -235,7 +248,7 @@ export default function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setError('') }}
+                onChange={(e) => { setEmail(e.target.value); setError(''); useAppStore.setState({ displacedByDevice: false }) }}
                 placeholder="inspector@ejemplo.com"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -286,7 +299,7 @@ export default function Login() {
         </form>
       )}
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.76</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.77</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a href="http://henkancx.com" target="_blank" rel="noopener noreferrer"

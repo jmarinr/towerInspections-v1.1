@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.76'
+const APP_VERSION_DISPLAY = '2.5.77'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -234,6 +234,7 @@ export const useAppStore = create(
       // ============ SESSION / AUTH ============
       session: null, // { username, name, role, roleLabel }
       forceUpdate: false,
+      displacedByDevice: false,
       setSession: (user) => set({ session: user }),
       logout: ({ clearDevice = true } = {}) => {
         // clearDevice=true  → voluntary logout by this user — wipe active_device_id
@@ -1626,7 +1627,8 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
 
         return {
           ...state,
-          forceUpdate: false, // never persist — always reset on load
+          forceUpdate: false,
+      displacedByDevice: false, // never persist — always reset on load
           inspectionData,
           maintenanceData,
           pmExecutedData,

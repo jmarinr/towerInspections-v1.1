@@ -17,7 +17,7 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 
-const APP_VERSION = '2.5.76'
+const APP_VERSION = '2.5.77'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
 import RequireAuth from './components/auth/RequireAuth'
@@ -114,15 +114,12 @@ function App() {
         // If active device is set and doesn't match ours → we were displaced
         if (activeDevice && activeDevice !== deviceId) {
           console.warn('[SessionWatch] Session taken by another device — forcing logout')
-          // Call logout directly from store to avoid stale closure
-          useAppStore.getState().logout({ clearDevice: false })
-          // Show toast after logout clears state
+          // Set displaced flag BEFORE logout so Login screen can show it
+          useAppStore.setState({ displacedByDevice: true })
+          // Small delay so state is set before navigation triggers
           setTimeout(() => {
-            useAppStore.getState().showToast(
-              'Tu sesión fue iniciada en otro dispositivo. Vuelve a ingresar.',
-              'error'
-            )
-          }, 500)
+            useAppStore.getState().logout({ clearDevice: false })
+          }, 100)
         }
       } catch (e) {
         console.warn('[SessionWatch] check failed:', e?.message)
@@ -137,7 +134,7 @@ function App() {
       clearTimeout(initialTimer)
       clearInterval(interval)
     }
-  }, [logout])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Session watchdog: if Supabase token expires/invalidates, force logout ──
   // Guard: only act if session still exists in store to avoid logout → signOut → SIGNED_OUT → logout loop
