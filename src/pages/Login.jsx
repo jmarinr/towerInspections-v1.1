@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Mail, Eye, EyeOff, AlertTriangle, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAppStore } from '../hooks/useAppStore'
@@ -9,6 +9,9 @@ export default function Login() {
   const navigate   = useNavigate()
   const setSession = useAppStore((s) => s.setSession)
   const displacedByDevice = useAppStore((s) => s.displacedByDevice)
+  // Also check location.state for displaced flag passed from RequireAuth redirect
+  const location = useLocation?.() || {}
+  const isDisplaced = displacedByDevice || location?.state?.displaced
 
   const [email, setEmail]             = useState('')
   const [password, setPassword]       = useState('')
@@ -43,7 +46,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setBlockedByDevice(false)
-    console.log('[Login] v2.5.84 — deviceId:', deviceId.slice(0, 8))
+    console.log('[Login] v2.5.85 — deviceId:', deviceId.slice(0, 8))
 
     if (!email.trim())    { setError('Ingrese su correo electrónico'); return }
     if (!password.trim()) { setError('Ingrese su contraseña'); return }
@@ -179,7 +182,7 @@ export default function Login() {
         <p className="text-sm text-gray-500 mt-1">Ingrese sus credenciales</p>
       </div>
 
-      {displacedByDevice && (
+      {isDisplaced && (
         <div className="w-full max-w-sm mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-3">
           <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
           <div>
@@ -299,7 +302,7 @@ export default function Login() {
         </form>
       )}
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.84</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.85</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a href="http://henkancx.com" target="_blank" rel="noopener noreferrer"

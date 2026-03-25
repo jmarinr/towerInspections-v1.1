@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.84'
+const APP_VERSION_DISPLAY = '2.5.85'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -237,23 +237,24 @@ export const useAppStore = create(
       displacedByDevice: false,
       setSession: (user) => set({ session: user }),
       logout: ({ clearDevice = true } = {}) => {
-        // clearDevice=true  → voluntary logout by this user — wipe active_device_id
-        // clearDevice=false → forced logout by watchdog — leave active_device_id (belongs to other device)
+        // clearDevice=true  → voluntary logout — wipe active_device_id + signOut Supabase
+        // clearDevice=false → watchdog displaced logout — only clear local state
+        //   DO NOT call supabase.auth.signOut() here — it would invalidate ALL sessions
+        //   for this user globally (including the new device that took over)
         const userId = get().session?.userId
-        if (userId) {
+        if (clearDevice && userId) {
           import('../lib/supabaseClient').then(({ supabase }) => {
-            const chain = clearDevice
-              ? supabase.from('app_users')
-                  .update({ active_device_id: null, active_device_at: null })
-                  .eq('id', userId)
-              : Promise.resolve()
-            Promise.resolve(chain)
+            supabase.from('app_users')
+              .update({ active_device_id: null, active_device_at: null })
+              .eq('id', userId)
               .then(() => supabase.auth.signOut())
               .catch(() => supabase.auth.signOut().catch(() => {}))
           }).catch(() => {})
-        } else {
+        } else if (clearDevice) {
+          // No userId but voluntary logout
           import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
         }
+        // clearDevice=false: just clear local state, do NOT touch Supabase Auth
         set({ session: null, activeVisit: null, completedForms: [], formDataOwnerId: null, selectedSite: null })
       },
 

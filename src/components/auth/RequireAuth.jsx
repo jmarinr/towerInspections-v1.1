@@ -87,7 +87,8 @@ export default function RequireAuth() {
   }, [session?.userId])
 
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    const displaced = useAppStore.getState().displacedByDevice
+    return <Navigate to="/login" replace state={{ from: location.pathname, displaced }} />
   }
 
   return <Outlet />
