@@ -42,6 +42,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setBlockedByDevice(false)
+    console.log('[Login] v2.5.73 — deviceId:', deviceId.slice(0, 8))
 
     if (!email.trim())    { setError('Ingrese su correo electrónico'); return }
     if (!password.trim()) { setError('Ingrese su contraseña'); return }
@@ -59,12 +60,12 @@ export default function Login() {
         return
       }
 
-      // 2. Load profile
+      // 2. Load profile — use maybeSingle + no-cache to always get fresh active_device_id
       const { data: profile, error: profileError } = await supabase
         .from('app_users')
         .select('id, full_name, role, company_id, supervisor_id, active, active_device_id, active_device_at, companies(org_code, name)')
         .eq('id', authData.session.user.id)
-        .single()
+        .maybeSingle()
 
       if (profileError || !profile) {
         setError('No se encontró un perfil de usuario. Contacte al administrador.')
@@ -89,6 +90,7 @@ export default function Login() {
 
       // 3. Single-session check
       const existingDevice = profile.active_device_id
+      console.log('[Login] device check — existing:', existingDevice?.slice(0, 8), 'current:', deviceId.slice(0, 8))
       const isBlocked = existingDevice && existingDevice !== deviceId
 
       if (isBlocked) {
@@ -284,7 +286,7 @@ export default function Login() {
         </form>
       )}
 
-      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.72</p>
+      <p className="text-xs text-gray-400 mt-6">PTI Inspect v2.5.73</p>
       <p className="text-xs text-gray-400 mt-1">
         by{' '}
         <a href="http://henkancx.com" target="_blank" rel="noopener noreferrer"
