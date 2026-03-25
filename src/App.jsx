@@ -17,10 +17,9 @@ import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
 
-const APP_VERSION = '2.5.78'
+const APP_VERSION = '2.5.79'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
-import { getDeviceId } from './lib/deviceId'
 import RequireAuth from './components/auth/RequireAuth'
 
 function NotFound() {
@@ -87,54 +86,8 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // ── Session watchdog: verify active_device_id every 5 minutes ─────────────
-  useEffect(() => {
-    const INTERVAL = 5 * 60 * 1000 // 5 minutes
 
-    const checkSession = async () => {
-      const state = useAppStore.getState()
-      const session = state.session
-      if (!session?.userId) return        // not logged in
-      if (!navigator.onLine) return       // offline — skip silently
-
-      try {
-        const deviceId = getDeviceId()
-
-        const { data, error } = await supabase
-          .from('app_users')
-          .select('active_device_id')
-          .eq('id', session.userId)
-          .maybeSingle()
-
-        if (error || !data) return        // DB error — skip silently
-
-        const activeDevice = data.active_device_id
-        console.log(`[SessionWatch] mine=${deviceId.slice(0,8)} active=${activeDevice?.slice(0,8)}`)
-
-        // If active device is set and doesn't match ours → we were displaced
-        if (activeDevice && activeDevice !== deviceId) {
-          console.warn('[SessionWatch] Session taken by another device — forcing logout')
-          // Set displaced flag BEFORE logout so Login screen can show it
-          useAppStore.setState({ displacedByDevice: true })
-          // Small delay so state is set before navigation triggers
-          setTimeout(() => {
-            useAppStore.getState().logout({ clearDevice: false })
-          }, 100)
-        }
-      } catch (e) {
-        console.warn('[SessionWatch] check failed:', e?.message)
-      }
-    }
-
-    // Start watchdog — first check after 10s, then every 5 min
-    const initialTimer = setTimeout(checkSession, 10_000)
-    const interval = setInterval(checkSession, INTERVAL)
-
-    return () => {
-      clearTimeout(initialTimer)
-      clearInterval(interval)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Session watchdog moved to RequireAuth.jsx — runs only when authenticated
 
   // ── Session watchdog: if Supabase token expires/invalidates, force logout ──
   // Guard: only act if session still exists in store to avoid logout → signOut → SIGNED_OUT → logout loop
