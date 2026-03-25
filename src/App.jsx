@@ -16,6 +16,8 @@ import SplashScreen from './components/ui/SplashScreen'
 import Toast from './components/ui/Toast'
 import ConnectivityBanner from './components/ui/ConnectivityBanner'
 import { useAppStore } from './hooks/useAppStore'
+
+const APP_VERSION = '2.5.71'
 import { startSupabaseBackgroundSync } from './lib/supabaseSync'
 import { supabase } from './lib/supabaseClient'
 import RequireAuth from './components/auth/RequireAuth'
@@ -40,10 +42,43 @@ function NotFound() {
 function App() {
   const [showSplash, setShowSplash] = useState(true)
   const { toast, hideToast, logout } = useAppStore()
+  const forceUpdate = useAppStore((s) => s.forceUpdate)
 
 
   useEffect(() => {
     startSupabaseBackgroundSync()
+  }, [])
+
+  // ── Version check every 60 minutes ──────────────────────────────────────
+  useEffect(() => {
+    const checkVersion = async () => {
+      if (!navigator.onLine) return
+      try {
+        const { data } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'min_version')
+          .single()
+        if (!data?.value) return
+
+        const parse = (v) => v.split('.').map(Number)
+        const [mMaj, mMin, mPatch] = parse(data.value)
+        const [cMaj, cMin, cPatch] = parse(APP_VERSION)
+
+        const isOutdated =
+          cMaj < mMaj ||
+          (cMaj === mMaj && cMin < mMin) ||
+          (cMaj === mMaj && cMin === mMin && cPatch < mPatch)
+
+        if (isOutdated) {
+          useAppStore.setState({ forceUpdate: true })
+        }
+      } catch (_) {}
+    }
+
+    checkVersion()
+    const interval = setInterval(checkVersion, 60 * 60 * 1000) // 60 min
+    return () => clearInterval(interval)
   }, [])
 
   // ── Session watchdog: if Supabase token expires/invalidates, force logout ──
@@ -68,6 +103,32 @@ function App() {
   return (
     <>
       {showSplash && <SplashScreen />}
+
+      {/* ── Force update modal ── */}
+      {forceUpdate && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center px-6">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+              <span className="text-3xl">🗼</span>
+            </div>
+            <div>
+              <p className="text-base font-extrabold text-gray-900">Nueva versión disponible</p>
+              <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                Hay una actualización requerida del sistema. Por favor actualiza para continuar.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                logout()
+                setTimeout(() => window.location.reload(true), 300)
+              }}
+              className="w-full py-3.5 rounded-xl font-bold text-white text-sm bg-primary active:scale-[0.98] transition-all"
+            >
+              Actualizar ahora
+            </button>
+          </div>
+        </div>
+      )}
       <ConnectivityBanner />
       <Routes>
         <Route path="/login" element={<Login />} />

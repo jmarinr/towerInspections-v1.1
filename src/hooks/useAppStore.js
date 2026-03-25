@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.70'
+const APP_VERSION_DISPLAY = '2.5.71'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -233,10 +233,22 @@ export const useAppStore = create(
     (set, get) => ({
       // ============ SESSION / AUTH ============
       session: null, // { username, name, role, roleLabel }
+      forceUpdate: false,
       setSession: (user) => set({ session: user }),
       logout: () => {
-        // Sign out from Supabase Auth (non-blocking)
-        import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
+        // Clear active_device_id in Supabase (non-blocking)
+        const userId = get().session?.userId
+        if (userId) {
+          import('../lib/supabaseClient').then(({ supabase }) => {
+            supabase.from('app_users')
+              .update({ active_device_id: null, active_device_at: null })
+              .eq('id', userId)
+              .then(() => supabase.auth.signOut())
+              .catch(() => supabase.auth.signOut().catch(() => {}))
+          }).catch(() => {})
+        } else {
+          import('../lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut()).catch(() => {})
+        }
         set({ session: null, activeVisit: null, completedForms: [], formDataOwnerId: null, selectedSite: null })
       },
 
