@@ -10,6 +10,7 @@ import InspectionItem from '../components/forms/InspectionItem'
 import { inspectionSections, getTotalInspectionItems } from '../data/inspectionItems'
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 const FORM_ID = 'inspeccion'
 
@@ -68,8 +69,8 @@ export default function InspeccionSitio() {
     if (currentStepIndex < inspectionSections.length - 1) goToStep(inspectionSections[currentStepIndex + 1].id)
     else {
       try {
-        await finalizeForm('inspeccion')
-        showToast('¡Inspección enviada!', 'success')
+        setShowConfirm(true)
+        return
         navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')
@@ -114,5 +115,18 @@ export default function InspeccionSitio() {
       </main>
       <BottomNav onPrev={goToPrev} onNext={goToNext} showPrev={currentStepIndex > 0} nextLabel={currentStepIndex === inspectionSections.length - 1 ? 'Finalizar' : 'Siguiente'} />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Inspección de Sitio"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          await finalizeForm('inspeccion')
+        showToast('¡Inspección enviada!', 'success')
+        navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }

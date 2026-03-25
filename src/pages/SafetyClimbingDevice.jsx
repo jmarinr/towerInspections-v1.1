@@ -8,6 +8,7 @@ import DynamicForm from '../components/forms/DynamicForm'
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { safetyClimbingSections, safetySectionFields } from '../data/safetyClimbingDeviceConfig'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 function isFilled(value) {
   if (value === null || value === undefined) return false
@@ -156,9 +157,8 @@ export default function SafetyClimbingDevice() {
       return
     }
 
-    await finalizeForm('safety-system')
-    showToast('¡Formulario enviado!', 'success')
-    navigate('/')
+    setShowConfirm(true)
+    return
   }
 
   if (!currentSection) {
@@ -278,5 +278,18 @@ export default function SafetyClimbingDevice() {
         nextLabel={currentStep === totalSteps ? 'Enviar' : 'Siguiente'}
       />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Sistema de Ascenso"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          await finalizeForm('safety-system')
+    showToast('¡Formulario enviado!', 'success')
+    navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }

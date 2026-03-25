@@ -8,6 +8,7 @@ import DynamicForm from '../components/forms/DynamicForm'
 import { groundingSystemTestConfig } from '../data/groundingSystemTestConfig'
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 function isFilled(value) {
   if (value === null || value === undefined) return false
@@ -150,8 +151,8 @@ export default function GroundingSystemTest() {
         setStep(currentStep + 1)
       } else {
         try {
-          await finalizeForm('puesta-tierra')
-          showToast('¡Formulario enviado!', 'success')
+          setShowConfirm(true)
+          return
           navigate('/')
         } catch (e) {
           console.error('[Grounding] finalize error:', e)
@@ -280,5 +281,18 @@ export default function GroundingSystemTest() {
         nextLabel={currentStep === totalSteps ? 'Finalizar' : 'Siguiente'}
       />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Prueba de Puesta a Tierra"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          await finalizeForm('puesta-tierra')
+          showToast('¡Formulario enviado!', 'success')
+          navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }

@@ -14,6 +14,7 @@ import EquipmentInventorySiteInfoForm from '../components/forms/EquipmentInvento
 import TowerInventoryTableV2 from '../components/forms/TowerInventoryTableV2'
 import FloorInventoryClientsV2 from '../components/forms/FloorInventoryClientsV2'
 import CarrierSection from '../components/forms/CarrierSection'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 const FORM_ID = 'equipment-v2'
 
@@ -33,6 +34,7 @@ export default function InventarioEquiposV2() {
     finalizeForm,
   } = useAppStore()
 
+  const [showConfirm, setShowConfirm] = useState(false)
   const [completedSteps, setCompletedSteps] = useState([])
 
   const currentStepId = useMemo(() => {
@@ -62,8 +64,8 @@ export default function InventarioEquiposV2() {
       navigateToStep(equipmentInventoryV2Steps[stepIndex + 1].id)
     } else {
       try {
-        await finalizeForm('inventario-v2')
-        showToast('¡Inventario v2 enviado!', 'success')
+        setShowConfirm(true)
+        return
         navigate('/')
       } catch (e) {
         console.error('[InventarioV2] finalize error:', e)
@@ -143,5 +145,18 @@ export default function InventarioEquiposV2() {
         nextLabel={stepIndex === totalSteps - 1 ? 'Finalizar' : 'Siguiente'}
       />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Inventario de Equipos v2"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          await finalizeForm('inventario-v2')
+        showToast('¡Inventario v2 enviado!', 'success')
+        navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }

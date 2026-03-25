@@ -1,5 +1,5 @@
 /**
- * AdditionalPhotoReport.jsx  v2.5.80
+ * AdditionalPhotoReport.jsx  v2.5.81
  * Reporte Adicional de Fotografías
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
@@ -20,6 +20,7 @@ import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../hooks
 import { processImageFile } from '../lib/photoUtils'
 import { PHOTO_CATEGORIES } from '../data/additionalPhotoConfig'
 import { queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 const FORM_CODE = 'additional-photo-report'
 const FORM_ID   = 'additional-photo-report'
@@ -52,6 +53,7 @@ function formatTs(ts) {
 // ─── Single photo slot ───────────────────────────────────────────────────────
 
 function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onChange, onRemove, required }) {
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
@@ -384,8 +386,8 @@ export default function AdditionalPhotoReport() {
           return
         }
         try {
-          await finalizeForm('additional-photo')
-          showToast('¡Reporte de fotos completado!', 'success')
+          setShowConfirm(true)
+          return
           navigate('/')
         } catch (e) {
           console.error('[AdditionalPhoto] finalize error:', e)
@@ -475,5 +477,22 @@ export default function AdditionalPhotoReport() {
         nextLabel={currentStep === totalSteps ? 'Finalizar' : `Siguiente: ${PHOTO_CATEGORIES[currentStep]?.id || ''}`}
       />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Reporte Adicional de Fotografías"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          try {
+            await finalizeForm('additional-photo')
+            showToast('¡Reporte de fotos completado!', 'success')
+            navigate('/')
+          } catch (e) {
+            showToast('Error al finalizar', 'error')
+          }
+        }}
+        loading={loading}
+      />
   )
 }

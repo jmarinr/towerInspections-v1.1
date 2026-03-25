@@ -18,6 +18,7 @@ import FullscreenDistributionModal from '../components/equipment/FullscreenDistr
 import Input from '../components/ui/Input'
 
 import templateCroquis from '../assets/equipment/template_croquis_esquematico.png'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 export default function InventarioEquipos() {
   const navigate = useNavigate()
@@ -41,6 +42,7 @@ export default function InventarioEquipos() {
   const currentStepIndex = Math.max(0, getEquipmentStepIndex(currentStepId))
   const currentStep = equipmentInventorySteps[currentStepIndex]
 
+  const [showConfirm, setShowConfirm] = useState(false)
   const [completedSteps, setCompletedSteps] = useState([])
   const [openCroquis, setOpenCroquis] = useState(false)
   const [openPlano, setOpenPlano] = useState(false)
@@ -77,8 +79,8 @@ export default function InventarioEquipos() {
     if (next) goToStep(next.id)
     else {
       try {
-        await finalizeForm('inventario')
-        showToast('¡Inventario enviado!', 'success')
+        setShowConfirm(true)
+        return
         navigate('/')
       } catch (e) {
         showToast('No se pudo enviar. Revisa tu conexión e intenta de nuevo.', 'error')

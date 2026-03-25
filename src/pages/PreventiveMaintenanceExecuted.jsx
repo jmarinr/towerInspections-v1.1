@@ -11,6 +11,7 @@ import AutosaveIndicator from '../components/ui/AutosaveIndicator'
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { PM_EXECUTED_SITE_TYPES, groupActivities } from '../data/preventiveMaintenanceExecutedConfig'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 function normalizeSiteType(value) {
   if (value === 'ROOFTOP' || value === 'Rooftop') return 'rooftop'
@@ -40,6 +41,7 @@ export default function PreventiveMaintenanceExecuted() {
   const siteType = normalizeSiteType(siteInfo.tipoSitio || '')
 
   const groups = useMemo(() => groupActivities(), [])
+  const [showConfirm, setShowConfirm] = useState(false)
   const [openGroups, setOpenGroups] = useState(() => {
     const init = {}
     groups.forEach((g, idx) => { init[g.name] = idx === 0 }) // abre el primer grupo
@@ -338,7 +340,8 @@ export default function PreventiveMaintenanceExecuted() {
           <button
             type="button"
             className="w-full sm:w-auto px-4 py-3 rounded-xl bg-primary text-white font-bold text-sm active:scale-95 shadow-sm"
-            onClick={async () => {
+            onClick={() => setShowConfirm(true)}
+            data-orig={async () => {
               try {
                 await finalizeForm('mantenimiento-ejecutado')
                 showToast('¡Mantenimiento ejecutado enviado!', 'success')
@@ -358,5 +361,22 @@ export default function PreventiveMaintenanceExecuted() {
 
       <div className="h-6" />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Mantenimiento Ejecutado"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+          try {
+            await finalizeForm('mantenimiento-ejecutado')
+            showToast('¡Mantenimiento ejecutado enviado!', 'success')
+            navigate('/')
+          } catch (e) {
+            showToast('Error al finalizar', 'error')
+          }
+        }}
+        loading={loading}
+      />
   )
 }

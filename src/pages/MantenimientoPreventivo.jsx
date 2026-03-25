@@ -12,6 +12,7 @@ import DepartureTimeModal from '../components/ui/DepartureTimeModal'
 import { useAppStore } from '../hooks/useAppStore'
 import FormLockedScreen from '../components/ui/FormLockedScreen'
 import { maintenanceFormConfig, getStepById } from '../data/maintenanceFormConfig'
+import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 const FORM_ID = 'mantenimiento'
 
@@ -28,6 +29,7 @@ export default function MantenimientoPreventivo() {
     showToast,
     formMeta, resetFormDraft, finalizeForm } = useAppStore()
 
+  const [showConfirm, setShowConfirm] = useState(false)
   const [showDepartureModal, setShowDepartureModal] = useState(false)
 
   // Asegurar que tenemos datos válidos con valores por defecto
@@ -192,7 +194,7 @@ export default function MantenimientoPreventivo() {
       if (currentStep < totalSteps) {
         setMaintenanceStep(currentStep + 1)
       } else {
-        handleFinish()
+        setShowConfirm(true)
       }
     } catch (e) {
       console.error('[MantenimientoPreventivo] handleNext error:', e)
@@ -346,5 +348,18 @@ export default function MantenimientoPreventivo() {
         onCancel={() => setShowDepartureModal(false)}
       />
     </div>
+
+      <ConfirmFinalizeModal
+        show={showConfirm}
+        formName="Mantenimiento Preventivo"
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={async () => {
+          setShowConfirm(false)
+                await finalizeForm('mantenimiento')
+      showToast('¡Mantenimiento enviado!', 'success')
+      navigate('/')
+        }}
+        loading={loading}
+      />
   )
 }
