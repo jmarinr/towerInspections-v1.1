@@ -340,12 +340,29 @@ export default function AdditionalPhotoReport() {
   const currentStep     = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
   const currentCategory = PHOTO_CATEGORIES[currentStep - 1]
 
+  // Convert flat photos map { filename: value } back to per-category arrays for rendering and validation.
+  // photos[filename] uses the PTI nomenclature filename as key — this makes injectUrls work on hydration.
+  const photosAsArrays = useMemo(() => {
+    const ph   = additionalPhotoData?.photos   || {}
+    const meta = additionalPhotoData?.photoMeta || {}
+    const extra = additionalPhotoData?.extraSlots || {}
+    const result = {}
+    for (const cat of PHOTO_CATEGORIES) {
+      const slotCount = cat.minPhotos + (extra[cat.id] || 0)
+      result[cat.id] = Array.from({ length: slotCount }, (_, i) => {
+        const m = meta[`${cat.id}:${i}`]
+        return m?.filename ? (ph[m.filename] ?? null) : null
+      })
+    }
+    return result
+  }, [additionalPhotoData])
+
   const completedSteps = useMemo(() => {
     return PHOTO_CATEGORIES.map((cat) => {
-      const photos = additionalPhotoData?.photos?.[cat.id] || []
+      const photos = photosAsArrays[cat.id] || []
       return photos.filter(Boolean).length >= cat.minPhotos
     })
-  }, [additionalPhotoData])
+  }, [photosAsArrays])
 
   const overallProgress = useMemo(() => {
     const done = completedSteps.filter(Boolean).length
@@ -367,7 +384,7 @@ export default function AdditionalPhotoReport() {
 
   const handleNext = async () => {
     try {
-      const photos   = additionalPhotoData?.photos?.[currentCategory.id] || []
+      const photos   = photosAsArrays[currentCategory.id] || []
       const captured = photos.filter(Boolean).length
       if (captured < currentCategory.minPhotos) {
         showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
@@ -380,7 +397,7 @@ export default function AdditionalPhotoReport() {
       } else {
         // Last step — finalize
         const missing = PHOTO_CATEGORIES.filter((cat) => {
-          const p = additionalPhotoData?.photos?.[cat.id] || []
+          const p = photosAsArrays[cat.id] || []
           return p.filter(Boolean).length < cat.minPhotos
         })
         if (missing.length > 0) {
@@ -411,7 +428,7 @@ export default function AdditionalPhotoReport() {
 
   if (locked) return <FormLockedScreen title="Reporte de Fotos" formId={FORM_ID} onReset={handleReset} />
 
-  const categoryPhotos = additionalPhotoData?.photos?.[currentCategory.id] || []
+  const categoryPhotos = photosAsArrays[currentCategory.id] || []
   const categoryMeta   = additionalPhotoData?.photoMeta || {}
 
   return (

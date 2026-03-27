@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.85'
+const APP_VERSION_DISPLAY = '2.5.86'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -519,6 +519,30 @@ export const useAppStore = create(
             return out
           }
           data = injectUrls(data)
+
+          // ── Fix: additional-photo-report stores photos as arrays ────────────
+          // injectUrls cannot resolve __photo_uploaded__ inside arrays because
+          // it has no key context to look up in urlMap. We handle it explicitly
+          // here using photoMeta[acronym:index].filename as the asset_type key.
+          if (formCode === 'additional-photo-report' && data.photos && typeof data.photos === 'object') {
+            const fixedPhotos = {}
+            for (const [acronym, arr] of Object.entries(data.photos)) {
+              if (!Array.isArray(arr)) { fixedPhotos[acronym] = arr; continue }
+              fixedPhotos[acronym] = arr.map((val, idx) => {
+                if (val !== '__photo_uploaded__' && val !== '__photo__') return val
+                // Resolve filename from photoMeta, then look up in urlMap
+                const metaEntry = data.photoMeta?.[`${acronym}:${idx}`]
+                const fname = metaEntry?.filename
+                if (fname && urlMap[fname]) return urlMap[fname]
+                // Secondary fallback: scan urlMap for any key containing the acronym+index pattern
+                const fallbackKey = Object.keys(urlMap).find(k =>
+                  k.includes(`_${acronym}_`) && k.endsWith(`_(${idx + 1})`)
+                )
+                return fallbackKey ? urlMap[fallbackKey] : val
+              })
+            }
+            data = { ...data, photos: fixedPhotos }
+          }
         }
 
         const stateMap = {
@@ -932,7 +956,7 @@ export const useAppStore = create(
       safetyClimbingData: {},
 
       // ============ ADDITIONAL PHOTO REPORT ============
-      additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' },
+      additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' },
       additionalPhotoStep: 1,
 
       // ============ EQUIPMENT INVENTORY V2 ============
@@ -1353,13 +1377,14 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           const prev = state.additionalPhotoData || {}
           const prevPhotos = prev.photos || {}
           const prevMeta = prev.photoMeta || {}
-          const arr = [...(prevPhotos[acronym] || [])]
-          arr[index] = dataUrl
           const metaKey = `${acronym}:${index}`
+          const filename = meta?.filename
+          // filename is required — it IS the lookup key for hydration (PTI nomenclature)
+          if (!filename) return {}
           return {
             additionalPhotoData: {
               ...prev,
-              photos: { ...prevPhotos, [acronym]: arr },
+              photos: { ...prevPhotos, [filename]: dataUrl },
               photoMeta: meta ? { ...prevMeta, [metaKey]: meta } : prevMeta,
             }
           }
@@ -1370,24 +1395,47 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
       addAdditionalPhotoSlot: (acronym) => {
         set((state) => {
           const prev = state.additionalPhotoData || {}
-          const prevPhotos = prev.photos || {}
-          const arr = [...(prevPhotos[acronym] || []), null]
-          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+          const extra = { ...(prev.extraSlots || {}) }
+          extra[acronym] = (extra[acronym] || 0) + 1
+          return { additionalPhotoData: { ...prev, extraSlots: extra } }
         })
       },
 
       removeAdditionalPhotoSlot: (acronym, index) => {
         set((state) => {
           const prev = state.additionalPhotoData || {}
-          const prevPhotos = prev.photos || {}
-          const arr = [...(prevPhotos[acronym] || [])]
-          arr.splice(index, 1)
-          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
+          const prevPhotos = { ...(prev.photos || {}) }
+          const prevMeta = { ...(prev.photoMeta || {}) }
+          const extra = { ...(prev.extraSlots || {}) }
+
+          // Remove photo from flat map using the stored filename
+          const filename = prevMeta[`${acronym}:${index}`]?.filename
+          if (filename) delete prevPhotos[filename]
+
+          // Shift down all photoMeta entries above the removed index
+          const allIdxs = Object.keys(prevMeta)
+            .filter(k => k.startsWith(`${acronym}:`))
+            .map(k => parseInt(k.split(':')[1]))
+          const maxIdx = allIdxs.length > 0 ? Math.max(...allIdxs) : index
+          for (let i = index; i < maxIdx; i++) {
+            const nextKey = `${acronym}:${i + 1}`
+            if (prevMeta[nextKey]) {
+              prevMeta[`${acronym}:${i}`] = prevMeta[nextKey]
+            } else {
+              delete prevMeta[`${acronym}:${i}`]
+            }
+          }
+          delete prevMeta[`${acronym}:${maxIdx}`]
+
+          // Decrement extra slot counter
+          if ((extra[acronym] || 0) > 0) extra[acronym]--
+
+          return { additionalPhotoData: { ...prev, photos: prevPhotos, photoMeta: prevMeta, extraSlots: extra } }
         })
         get().triggerAutosave(FORM_CODE_ADDITIONAL)
       },
 
-      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' }, additionalPhotoStep: 1 }),
+      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' }, additionalPhotoStep: 1 }),
 
 
 
@@ -1511,7 +1559,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 7, // v2.1: add formDataOwnerId, Supabase as source of truth
+      version: 8, // v2.5.86: additionalPhotoData.photos flat-keyed by filename for correct hydration
       // Safe localStorage wrapper: silently ignores QuotaExceededError so set() never throws
       storage: createJSONStorage(() => ({
         getItem: (name) => {
@@ -1626,6 +1674,16 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
             )
           : state.groundingSystemData
 
+        // Strip data URL photos from additionalPhotoData.photos (flat { filename: value } map)
+        const additionalPhotoData = state.additionalPhotoData
+          ? {
+              ...state.additionalPhotoData,
+              photos: Object.fromEntries(
+                Object.entries(state.additionalPhotoData.photos || {}).map(([k, v]) => [k, stripSingle(v)])
+              ),
+            }
+          : state.additionalPhotoData
+
         return {
           ...state,
           forceUpdate: false,
@@ -1637,6 +1695,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           equipmentInventoryV2Data,
           safetyClimbingData,
           groundingSystemData,
+          additionalPhotoData,
           // Never persist transient UI state
           toast: undefined,
           _toastTimer: undefined,
@@ -1679,6 +1738,16 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
 
         // v7: add formDataOwnerId — set from activeVisit if available
         state = { ...state, formDataOwnerId: state.formDataOwnerId || state.activeVisit?.id || null }
+
+        // v8: additionalPhotoData.photos changed from { acronym: array } to { filename: value }
+        // Reset to clean state — data will hydrate from Supabase on next "Continuar Orden"
+        if (version < 8) {
+          state = { ...state, additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' } }
+        } else {
+          // Ensure extraSlots exists for stores already at v8
+          const apd = state.additionalPhotoData || {}
+          state = { ...state, additionalPhotoData: { ...apd, extraSlots: apd.extraSlots || {} } }
+        }
 
         return state
       }
