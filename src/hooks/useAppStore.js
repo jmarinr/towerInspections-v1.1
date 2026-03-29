@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.5.86'
+const APP_VERSION_DISPLAY = '2.6.3'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -259,8 +259,13 @@ export const useAppStore = create(
       },
 
       // ============ ACTIVE VISIT (ORDER) ============
+      appVersion: APP_VERSION_DISPLAY,
       activeVisit: null,
-      selectedSite: null,  // { id, site_id, name, province, height_m, region_id } // site_visits row from Supabase
+      selectedSite: null,  // { id, site_id, name, province, height_m, region_id }
+      // v2.5.86 — collaborative inspection: tracks who has each form assigned
+      // keyed by canonical form_code e.g. 'mantenimiento', 'inventario-v2'
+      // { assignedTo, assignmentVersion, assignedAt, submissionId }
+      formAssignments: {}, // keyed by canonical form_code: { assignedTo, assignmentVersion, assignedAt, submissionId }
       completedForms: [], // form IDs completed in current visit (e.g. ['inspeccion', 'mantenimiento'])
       formDataOwnerId: null, // ID of the order that owns the current form data in localStorage
 
@@ -367,7 +372,7 @@ export const useAppStore = create(
           try { get().resetFormDraft(key) } catch (_) {}
         }
         // Also clear formMeta (start timestamps) and owner tracking
-        set({ formMeta: {}, formDataOwnerId: null })
+        set({ formMeta: {}, formDataOwnerId: null, formAssignments: {} })
       },
       markFormCompleted: (formId) => set((state) => {
         const list = state.completedForms || []
@@ -405,6 +410,40 @@ export const useAppStore = create(
       },
       hideToast: () => set({ toast: { show: false, message: '', type: 'info' } }),
 
+      // v2.5.86 — form assignment actions
+      /** Replace the entire assignments map (called after hydration/polling) */
+      setFormAssignments: (assignments) => set({ formAssignments: assignments }),
+
+      /** Update a single form's assignment (called after claim_form RPC succeeds) */
+      updateFormAssignment: (formCode, assignment) => set((state) => ({
+        formAssignments: { ...(state.formAssignments || {}), [formCode]: assignment }
+      })),
+
+      /**
+       * Returns true if the current user can write this form.
+       *
+       * Rules:
+       * - If explicitly assigned to me → writable
+       * - If explicitly assigned to someone else → read-only
+       * - If no explicit assignment (null):
+       *     - Order owner → writable (their own forms)
+       *     - Collaborator → NOT writable (must claim first)
+       */
+      isFormWritable: (formCode) => {
+        const state = get()
+        const a = state.formAssignments?.[formCode]
+        const myUsername = state.session?.username
+        const orderOwner = state.activeVisit?.inspector_username
+        const isOwner = !!myUsername && myUsername === orderOwner
+
+        if (a?.assignedTo) {
+          // Explicit assignment — only writable if it's mine
+          return a.assignedTo === myUsername
+        }
+        // No explicit assignment — owner can write, collaborator must claim
+        return isOwner
+      },
+
       // ============ AUTOSAVE ============
       showAutosave: false,
       triggerAutosave: (formCode) => {
@@ -426,11 +465,35 @@ export const useAppStore = create(
         const formId = formIdMap[formCode]
         if (formId && (get().completedForms || []).includes(formId)) return
 
+        // v2.5.86 — block autosave if form is assigned to someone else
+        try {
+          const canonCheck = get().getSupabasePayloadForForm(formCode)
+          const formCodeCanon = canonCheck?.form_code
+          if (formCodeCanon) {
+            const a = get().formAssignments?.[formCodeCanon]
+            if (a?.assignedTo && a.assignedTo !== get().session?.username) {
+              console.warn('[Autosave] blocked — form assigned to', a.assignedTo)
+              set({ showAutosave: false })
+              return
+            }
+          }
+        } catch (_) {}
+
         try {
           if (formCode) {
             const payload = get().getSupabasePayloadForForm(formCode)
             if (payload) {
-              queueSubmissionSync(formCode, payload, APP_VERSION_DISPLAY)
+              // Pass assigned_to and submissionId for cross-device collaboration
+              const canonCode = payload.form_code || formCode
+              const assignment = get().formAssignments?.[canonCode]
+              const myUsername = get().session?.username
+              // Only write assigned_to if explicitly claimed (has assignedAt timestamp)
+              // Not for inferred ownership of own forms (assignedAt would be null)
+              const assignedTo = (assignment?.assignedTo === myUsername && assignment?.assignedAt)
+                ? myUsername : null
+              // submissionId: use known DB row id to UPDATE directly (avoids duplicate rows)
+              const submissionId = assignment?.submissionId || null
+              queueSubmissionSync(formCode, payload, APP_VERSION_DISPLAY, assignedTo, submissionId)
               flushSupabaseQueues({ formCode })
             }
           }
@@ -494,24 +557,42 @@ export const useAppStore = create(
             if (parts.length === 2 && parts[0] === 'equipment') {
               // equipment:fotoTorre → fotoTorreDataUrl
               keyToUrl[`${parts[1]}DataUrl`] = url
-              // Also match pngDataUrl for nested objects
               keyToUrl[`${parts[1]}`] = url
+              keyToUrl[`${parts[1]}:pngDataUrl`] = url
+              keyToUrl[`${parts[1]}-pngDataUrl`] = url
+            }
+            if (parts.length === 2 && parts[0] === 'equipmentV2') {
+              // equipmentV2:fotoGPS → fotoGPS (direct field name in torre/piso sections)
+              keyToUrl[parts[1]] = url
+              keyToUrl[`${parts[1]}DataUrl`] = url
+            }
+            if (parts.length === 3 && parts[0] === 'carrier') {
+              // carrier:0:fotoAntena → used in equipment-v2 carrier sections
+              // Store as "carrierIdx-field" for context-aware lookup
+              keyToUrl[`${parts[0]}-${parts[1]}-${parts[2]}`] = url
+              keyToUrl[`${parts[1]}-${parts[2]}`] = url
+              keyToUrl[parts[2]] = url  // direct field fallback
             }
           }
 
           // Recursively walk data and replace placeholders
-          const injectUrls = (obj) => {
+          const injectUrls = (obj, parentKey = null) => {
             if (!obj || typeof obj !== 'object') return obj
-            if (Array.isArray(obj)) return obj.map(injectUrls)
+            if (Array.isArray(obj)) return obj.map(item => injectUrls(item, parentKey))
             const out = {}
             for (const [k, v] of Object.entries(obj)) {
-              if ((v === '__photo_uploaded__' || v === '__photo__') && keyToUrl[k]) {
-                out[k] = keyToUrl[k]
+              // Resolve URL: direct key first, then parent-child composite (both : and -)
+              const directUrl = keyToUrl[k]
+              const contextUrl = parentKey
+                ? (keyToUrl[`${parentKey}:${k}`] || keyToUrl[`${parentKey}-${k}`])
+                : null
+              const resolvedUrl = directUrl || contextUrl
+              if ((v === '__photo_uploaded__' || v === '__photo__') && resolvedUrl) {
+                out[k] = resolvedUrl
               } else if (typeof v === 'string' && (v === '__photo_uploaded__' || v === '__photo__')) {
-                // Try pngDataUrl match for equipment nested objects
-                out[k] = keyToUrl[k] || v
+                out[k] = resolvedUrl || v
               } else if (typeof v === 'object') {
-                out[k] = injectUrls(v)
+                out[k] = injectUrls(v, k)
               } else {
                 out[k] = v
               }
@@ -520,28 +601,22 @@ export const useAppStore = create(
           }
           data = injectUrls(data)
 
-          // ── Fix: additional-photo-report stores photos as arrays ────────────
-          // injectUrls cannot resolve __photo_uploaded__ inside arrays because
-          // it has no key context to look up in urlMap. We handle it explicitly
-          // here using photoMeta[acronym:index].filename as the asset_type key.
-          if (formCode === 'additional-photo-report' && data.photos && typeof data.photos === 'object') {
-            const fixedPhotos = {}
-            for (const [acronym, arr] of Object.entries(data.photos)) {
-              if (!Array.isArray(arr)) { fixedPhotos[acronym] = arr; continue }
-              fixedPhotos[acronym] = arr.map((val, idx) => {
-                if (val !== '__photo_uploaded__' && val !== '__photo__') return val
-                // Resolve filename from photoMeta, then look up in urlMap
-                const metaEntry = data.photoMeta?.[`${acronym}:${idx}`]
-                const fname = metaEntry?.filename
-                if (fname && urlMap[fname]) return urlMap[fname]
-                // Secondary fallback: scan urlMap for any key containing the acronym+index pattern
-                const fallbackKey = Object.keys(urlMap).find(k =>
-                  k.includes(`_${acronym}_`) && k.endsWith(`_(${idx + 1})`)
-                )
-                return fallbackKey ? urlMap[fallbackKey] : val
+          // Special restoration for additional-photo-report
+          // Photos stored as arrays; meta keyed by "${acronym}:${index}" (e.g. "ACC:0")
+          if (formCode === 'additional-photo-report' && data.photos && data.photoMeta) {
+            for (const [catId, photoArray] of Object.entries(data.photos)) {
+              if (!Array.isArray(photoArray)) continue
+              data.photos[catId] = photoArray.map((photoVal, idx) => {
+                if (photoVal !== '__photo_uploaded__' && photoVal !== '__photo__') return photoVal
+                // photoMeta key is "ACRONYM:INDEX" e.g. "ACC:0"
+                const metaKey = `${catId}:${idx}`
+                const meta = data.photoMeta[metaKey]
+                if (meta?.filename && keyToUrl[meta.filename]) {
+                  return keyToUrl[meta.filename]
+                }
+                return photoVal
               })
             }
-            data = { ...data, photos: fixedPhotos }
           }
         }
 
@@ -906,7 +981,7 @@ export const useAppStore = create(
             },
           },
         }))
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('executed-maintenance')
       },
 
       updatePMExecutedPhoto: (activityId, photoType, photoData) => {
@@ -956,7 +1031,7 @@ export const useAppStore = create(
       safetyClimbingData: {},
 
       // ============ ADDITIONAL PHOTO REPORT ============
-      additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' },
+      additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' },
       additionalPhotoStep: 1,
 
       // ============ EQUIPMENT INVENTORY V2 ============
@@ -1169,7 +1244,7 @@ export const useAppStore = create(
           const items = (current.torre?.items || []).map((it, i) => (i === index ? { ...it, [field]: value } : it))
           return { equipmentInventoryData: { ...current, torre: { ...(current.torre || {}), items } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       // --- PISO: clientes + gabinetes ---
@@ -1190,7 +1265,7 @@ export const useAppStore = create(
             },
           }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       removeFloorClient: (index) => {
@@ -1200,7 +1275,7 @@ export const useAppStore = create(
           clientes.splice(index, 1)
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes: clientes.length ? clientes : [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       updateFloorClientField: (index, field, value) => {
@@ -1209,7 +1284,7 @@ export const useAppStore = create(
           const clientes = (current.piso?.clientes || []).map((c, i) => (i === index ? { ...c, [field]: value } : c))
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       addCabinet: (clientIndex) => {
@@ -1222,7 +1297,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       removeCabinet: (clientIndex, cabinetIndex) => {
@@ -1236,7 +1311,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       updateCabinetField: (clientIndex, cabinetIndex, field, value) => {
@@ -1249,7 +1324,7 @@ export const useAppStore = create(
           })
           return { equipmentInventoryData: { ...current, piso: { ...(current.piso || {}), clientes } } }
         })
-        get().triggerAutosave('inspection-general')
+        get().triggerAutosave('equipment')
       },
 
       // --- DISTRIBUCIÓN / CROQUIS / PLANO ---
@@ -1377,14 +1452,13 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           const prev = state.additionalPhotoData || {}
           const prevPhotos = prev.photos || {}
           const prevMeta = prev.photoMeta || {}
+          const arr = [...(prevPhotos[acronym] || [])]
+          arr[index] = dataUrl
           const metaKey = `${acronym}:${index}`
-          const filename = meta?.filename
-          // filename is required — it IS the lookup key for hydration (PTI nomenclature)
-          if (!filename) return {}
           return {
             additionalPhotoData: {
               ...prev,
-              photos: { ...prevPhotos, [filename]: dataUrl },
+              photos: { ...prevPhotos, [acronym]: arr },
               photoMeta: meta ? { ...prevMeta, [metaKey]: meta } : prevMeta,
             }
           }
@@ -1395,47 +1469,24 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
       addAdditionalPhotoSlot: (acronym) => {
         set((state) => {
           const prev = state.additionalPhotoData || {}
-          const extra = { ...(prev.extraSlots || {}) }
-          extra[acronym] = (extra[acronym] || 0) + 1
-          return { additionalPhotoData: { ...prev, extraSlots: extra } }
+          const prevPhotos = prev.photos || {}
+          const arr = [...(prevPhotos[acronym] || []), null]
+          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
         })
       },
 
       removeAdditionalPhotoSlot: (acronym, index) => {
         set((state) => {
           const prev = state.additionalPhotoData || {}
-          const prevPhotos = { ...(prev.photos || {}) }
-          const prevMeta = { ...(prev.photoMeta || {}) }
-          const extra = { ...(prev.extraSlots || {}) }
-
-          // Remove photo from flat map using the stored filename
-          const filename = prevMeta[`${acronym}:${index}`]?.filename
-          if (filename) delete prevPhotos[filename]
-
-          // Shift down all photoMeta entries above the removed index
-          const allIdxs = Object.keys(prevMeta)
-            .filter(k => k.startsWith(`${acronym}:`))
-            .map(k => parseInt(k.split(':')[1]))
-          const maxIdx = allIdxs.length > 0 ? Math.max(...allIdxs) : index
-          for (let i = index; i < maxIdx; i++) {
-            const nextKey = `${acronym}:${i + 1}`
-            if (prevMeta[nextKey]) {
-              prevMeta[`${acronym}:${i}`] = prevMeta[nextKey]
-            } else {
-              delete prevMeta[`${acronym}:${i}`]
-            }
-          }
-          delete prevMeta[`${acronym}:${maxIdx}`]
-
-          // Decrement extra slot counter
-          if ((extra[acronym] || 0) > 0) extra[acronym]--
-
-          return { additionalPhotoData: { ...prev, photos: prevPhotos, photoMeta: prevMeta, extraSlots: extra } }
+          const prevPhotos = prev.photos || {}
+          const arr = [...(prevPhotos[acronym] || [])]
+          arr.splice(index, 1)
+          return { additionalPhotoData: { ...prev, photos: { ...prevPhotos, [acronym]: arr } } }
         })
         get().triggerAutosave(FORM_CODE_ADDITIONAL)
       },
 
-      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' }, additionalPhotoStep: 1 }),
+      resetAdditionalPhotoData: () => set({ additionalPhotoData: { photos: {}, photoMeta: {}, notes: '' }, additionalPhotoStep: 1 }),
 
 
 
@@ -1559,7 +1610,7 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
     }),
     { 
       name: 'pti-inspect-storage',
-      version: 8, // v2.5.86: additionalPhotoData.photos flat-keyed by filename for correct hydration
+      version: 7, // v2.1: add formDataOwnerId, Supabase as source of truth
       // Safe localStorage wrapper: silently ignores QuotaExceededError so set() never throws
       storage: createJSONStorage(() => ({
         getItem: (name) => {
@@ -1674,16 +1725,6 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
             )
           : state.groundingSystemData
 
-        // Strip data URL photos from additionalPhotoData.photos (flat { filename: value } map)
-        const additionalPhotoData = state.additionalPhotoData
-          ? {
-              ...state.additionalPhotoData,
-              photos: Object.fromEntries(
-                Object.entries(state.additionalPhotoData.photos || {}).map(([k, v]) => [k, stripSingle(v)])
-              ),
-            }
-          : state.additionalPhotoData
-
         return {
           ...state,
           forceUpdate: false,
@@ -1695,11 +1736,14 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
           equipmentInventoryV2Data,
           safetyClimbingData,
           groundingSystemData,
-          additionalPhotoData,
           // Never persist transient UI state
           toast: undefined,
           _toastTimer: undefined,
           showAutosave: undefined,
+          // Never persist appVersion — always comes from APP_VERSION_DISPLAY constant
+          appVersion: undefined,
+          // Never persist formAssignments — always comes from server on mount
+          formAssignments: undefined,
           // Never persist transient connectivity state
           isOnline: undefined,
           syncStatus: undefined,
@@ -1738,16 +1782,6 @@ resetSafetyClimbingData: () => set({ safetyClimbingData: {}, safetyClimbingStep:
 
         // v7: add formDataOwnerId — set from activeVisit if available
         state = { ...state, formDataOwnerId: state.formDataOwnerId || state.activeVisit?.id || null }
-
-        // v8: additionalPhotoData.photos changed from { acronym: array } to { filename: value }
-        // Reset to clean state — data will hydrate from Supabase on next "Continuar Orden"
-        if (version < 8) {
-          state = { ...state, additionalPhotoData: { photos: {}, photoMeta: {}, extraSlots: {}, notes: '' } }
-        } else {
-          // Ensure extraSlots exists for stores already at v8
-          const apd = state.additionalPhotoData || {}
-          state = { ...state, additionalPhotoData: { ...apd, extraSlots: apd.extraSlots || {} } }
-        }
 
         return state
       }

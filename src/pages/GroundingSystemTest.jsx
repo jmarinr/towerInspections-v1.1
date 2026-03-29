@@ -155,7 +155,6 @@ export default function GroundingSystemTest() {
         try {
           setShowConfirm(true)
           return
-          navigate('/')
         } catch (e) {
           console.error('[Grounding] finalize error:', e)
           showToast('Error al enviar. Intente de nuevo.', 'error')
@@ -230,7 +229,7 @@ export default function GroundingSystemTest() {
 
       <main className="flex-1 px-4 pb-44 pt-4 overflow-x-hidden overflow-y-auto">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <FormMetaBar meta={formMeta?.['grounding-system-test']} />
+          <FormMetaBar meta={formMeta?.['grounding-system-test']} formCode="puesta-tierra" formRoute="/intro/grounding-system-test" />
           <button
             className="px-3 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm active:scale-95 flex-shrink-0"
             onClick={() => {

@@ -45,7 +45,7 @@ function safeJsonParse(str, fallback) {
 
 function getAppVersion() {
   // Vite injects this at build time if you define it; fallback to package.json string shown in UI.
-  return import.meta.env.VITE_APP_VERSION || '2.5.86';
+  return import.meta.env.VITE_APP_VERSION || '2.6.3';
 }
 
 function loadMap(key) {
@@ -90,19 +90,9 @@ export function clearSupabaseLocalForForm(formCode) {
     }
   } catch (e) {}
 
-  // Clear uploaded photo URLs for this form
-  try {
-    const urlsRaw = localStorage.getItem('pti_uploaded_urls_v1')
-    if (urlsRaw) {
-      const urlsMap = JSON.parse(urlsRaw)
-      for (const key of Object.keys(urlsMap)) {
-        if (key.startsWith(formCode + '::')) {
-          delete urlsMap[key]
-        }
-      }
-      localStorage.setItem('pti_uploaded_urls_v1', JSON.stringify(urlsMap))
-    }
-  } catch (e) {}
+  // NOTE: pti_uploaded_urls_v1 is intentionally NOT cleared here.
+  // URLs are kept so photos can always be recovered after reload
+  // via recoverPhotoFromQueue, as a fallback to hydrateFormFromSupabase.
 }
 
 export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
@@ -159,7 +149,38 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
   const cacheKey = `${canonicalCode}::${siteVisitId}`;
   if (map[cacheKey]) return map[cacheKey];
 
-  // First try to find the existing submission row (created by autosave)
+  // Check formAssignments in Zustand store for known submission ID (cross-device)
+  try {
+    const storeRaw = localStorage.getItem('pti-inspect-storage');
+    if (storeRaw) {
+      const store = JSON.parse(storeRaw);
+      const assignments = store?.state?.formAssignments || {};
+      const assignment = assignments[canonicalCode];
+      if (assignment?.submissionId) {
+        map[cacheKey] = assignment.submissionId;
+        saveMap(SUBMISSION_IDS_KEY, map);
+        return assignment.submissionId;
+      }
+    }
+  } catch (_) {}
+
+  // First try to find the existing submission row by site_visit_id + form_code (any device)
+  const { data: existingAny } = await supabase
+    .from('submissions')
+    .select('id')
+    .eq('form_code', canonicalCode)
+    .eq('site_visit_id', siteVisitId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingAny) {
+    map[cacheKey] = existingAny.id;
+    saveMap(SUBMISSION_IDS_KEY, map);
+    return existingAny.id;
+  }
+
+  // Fall back: find by device_id (own submissions only)
   const { data: existing } = await supabase
     .from('submissions')
     .select('id')
@@ -200,12 +221,14 @@ export async function ensureSubmissionId(formCode, formVersion = '1.2.1') {
   return data.id;
 }
 
-export function queueSubmissionSync(formCode, payload, formVersion = '1.2.1') {
+export function queueSubmissionSync(formCode, payload, formVersion = '1.2.1', assignedTo = null, submissionId = null) {
   const map = loadMap(PENDING_SYNC_KEY);
   map[formCode] = {
     formCode,
     formVersion,
     payload,
+    assignedTo,
+    submissionId,  // known DB row id — use UPDATE by id instead of upsert by constraint
     ts: Date.now(),
   };
   saveMap(PENDING_SYNC_KEY, map);
@@ -313,6 +336,7 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           site_visit_id: siteVisitId,
           submitted_by_user_id: item.payload?.submitted_by_user_id || null,
           finalized: item.payload?.payload?.finalized === true,
+          ...(item.assignedTo ? { assigned_to: item.assignedTo } : {}),
           // Site catalog references — only include if columns exist in DB
           // Run migration first: ALTER TABLE submissions ADD COLUMN IF NOT EXISTS site_id uuid, region_id uuid
           // site_id: item.payload?.payload?.data?.siteInfo?.siteRef || null,
@@ -326,11 +350,58 @@ export async function flushSupabaseQueues({ formCode } = {}) {
           },
         };
 
-        // Constraint: (org_code, device_id, form_code, site_visit_id)
-        // Each order+form+device gets its own row
-        const { error } = await supabase
-          .from('submissions')
-          .upsert(row, { onConflict: 'org_code,device_id,form_code,site_visit_id' });
+        // If we know the submission ID (cross-device collaboration), UPDATE directly by ID
+        // Otherwise fall back to upsert by device-based constraint
+        let error
+        if (item.submissionId) {
+          // Direct update by ID — works for both own forms and cross-device collaboration
+          // Build update payload explicitly to avoid sending device_id/org_code
+          const updatePayload = {
+            form_version: row.form_version,
+            app_version: row.app_version,
+            submitted_by_user_id: row.submitted_by_user_id,
+            finalized: row.finalized,
+            payload: row.payload,
+            ...(item.assignedTo ? { assigned_to: item.assignedTo } : {}),
+          }
+          const { error: updErr } = await supabase
+            .from('submissions')
+            .update(updatePayload)
+            .eq('id', item.submissionId);
+          error = updErr
+          // Also cache this submission ID for ensureSubmissionId
+          try {
+            const idsMap = loadMap(SUBMISSION_IDS_KEY)
+            const cacheKey = `${canonicalFormCode}::${siteVisitId}`
+            idsMap[cacheKey] = item.submissionId
+            saveMap(SUBMISSION_IDS_KEY, idsMap)
+          } catch (_) {}
+        } else {
+          const { data: upserted, error: upsErr } = await supabase
+            .from('submissions')
+            .upsert(row, { onConflict: 'org_code,device_id,form_code,site_visit_id' })
+            .select('id')
+            .maybeSingle();
+          error = upsErr
+          // Cache the new submission ID so future saves use UPDATE by ID
+          if (!upsErr && upserted?.id) {
+            try {
+              const idsMap = loadMap(SUBMISSION_IDS_KEY)
+              const cacheKey = `${canonicalFormCode}::${siteVisitId}`
+              idsMap[cacheKey] = upserted.id
+              saveMap(SUBMISSION_IDS_KEY, idsMap)
+              // Also update formAssignments in localStorage so triggerAutosave picks it up
+              const storeRaw = localStorage.getItem('pti-inspect-storage')
+              if (storeRaw) {
+                const store = JSON.parse(storeRaw)
+                if (store?.state?.formAssignments?.[canonicalFormCode]) {
+                  store.state.formAssignments[canonicalFormCode].submissionId = upserted.id
+                  localStorage.setItem('pti-inspect-storage', JSON.stringify(store))
+                }
+              }
+            } catch (_) {}
+          }
+        }
 
         if (error) throw error;
 

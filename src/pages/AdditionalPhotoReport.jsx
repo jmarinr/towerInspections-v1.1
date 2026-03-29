@@ -4,7 +4,7 @@
  * Nomenclatura: {SITE_ID}_{ACRONIMO}_{DDMMAA}_(N)
  * Ejemplo: MJA0007_ACC_100817_(1)
  */
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Camera, Image, Check, Plus, X, Loader2, AlertCircle,
@@ -20,6 +20,7 @@ import { useAppStore, isDisplayablePhoto, recoverPhotoFromQueue } from '../hooks
 import { processImageFile } from '../lib/photoUtils'
 import { PHOTO_CATEGORIES } from '../data/additionalPhotoConfig'
 import { queueAssetUpload, flushSupabaseQueues } from '../lib/supabaseSync'
+import { onPhotoStatus, PhotoUploadStatus } from '../lib/photoEvents'
 import ConfirmFinalizeModal from '../components/ui/ConfirmFinalizeModal'
 
 const FORM_CODE = 'additional-photo-report'
@@ -61,13 +62,28 @@ function PhotoSlot({ label, acronym, index, value, meta, siteId, startedAt, onCh
   const filename = meta?.filename || buildFilename(siteId, acronym, index, startedAt)
   const assetKey = filename   // filename IS the asset key → Storage path matches nomenclatura
 
+  const [confirmedUrl, setConfirmedUrl] = useState(null)
+  const statusTimerRef = useRef(null)
+
+  // Subscribe to upload events — on DONE store public URL in local state
+  useEffect(() => {
+    const unsub = onPhotoStatus((evt) => {
+      if (evt.formCode === FORM_CODE && evt.assetType === assetKey) {
+        if (evt.status === PhotoUploadStatus.DONE && evt.publicUrl) {
+          setConfirmedUrl(evt.publicUrl)
+        }
+      }
+    })
+    return () => { unsub(); clearTimeout(statusTimerRef.current) }
+  }, [assetKey])
+
   const recovered   = useMemo(() => {
     if (isDisplayablePhoto(value)) return value
     if (value) return recoverPhotoFromQueue(FORM_CODE, assetKey)
     return null
   }, [value, assetKey])
 
-  const displayable = recovered || (isDisplayablePhoto(value) ? value : null)
+  const displayable = confirmedUrl || recovered || (isDisplayablePhoto(value) ? value : null)
   const isUploaded  = !!value && !displayable
 
   const handleFile = async (e) => {
@@ -340,29 +356,12 @@ export default function AdditionalPhotoReport() {
   const currentStep     = Math.max(1, Math.min(Number(currentStepRaw) || 1, totalSteps))
   const currentCategory = PHOTO_CATEGORIES[currentStep - 1]
 
-  // Convert flat photos map { filename: value } back to per-category arrays for rendering and validation.
-  // photos[filename] uses the PTI nomenclature filename as key — this makes injectUrls work on hydration.
-  const photosAsArrays = useMemo(() => {
-    const ph   = additionalPhotoData?.photos   || {}
-    const meta = additionalPhotoData?.photoMeta || {}
-    const extra = additionalPhotoData?.extraSlots || {}
-    const result = {}
-    for (const cat of PHOTO_CATEGORIES) {
-      const slotCount = cat.minPhotos + (extra[cat.id] || 0)
-      result[cat.id] = Array.from({ length: slotCount }, (_, i) => {
-        const m = meta[`${cat.id}:${i}`]
-        return m?.filename ? (ph[m.filename] ?? null) : null
-      })
-    }
-    return result
-  }, [additionalPhotoData])
-
   const completedSteps = useMemo(() => {
     return PHOTO_CATEGORIES.map((cat) => {
-      const photos = photosAsArrays[cat.id] || []
+      const photos = additionalPhotoData?.photos?.[cat.id] || []
       return photos.filter(Boolean).length >= cat.minPhotos
     })
-  }, [photosAsArrays])
+  }, [additionalPhotoData])
 
   const overallProgress = useMemo(() => {
     const done = completedSteps.filter(Boolean).length
@@ -384,7 +383,7 @@ export default function AdditionalPhotoReport() {
 
   const handleNext = async () => {
     try {
-      const photos   = photosAsArrays[currentCategory.id] || []
+      const photos   = additionalPhotoData?.photos?.[currentCategory.id] || []
       const captured = photos.filter(Boolean).length
       if (captured < currentCategory.minPhotos) {
         showToast(`Se requieren al menos ${currentCategory.minPhotos} foto(s) para "${currentCategory.title}"`, 'error')
@@ -397,7 +396,7 @@ export default function AdditionalPhotoReport() {
       } else {
         // Last step — finalize
         const missing = PHOTO_CATEGORIES.filter((cat) => {
-          const p = photosAsArrays[cat.id] || []
+          const p = additionalPhotoData?.photos?.[cat.id] || []
           return p.filter(Boolean).length < cat.minPhotos
         })
         if (missing.length > 0) {
@@ -428,13 +427,13 @@ export default function AdditionalPhotoReport() {
 
   if (locked) return <FormLockedScreen title="Reporte de Fotos" formId={FORM_ID} onReset={handleReset} />
 
-  const categoryPhotos = photosAsArrays[currentCategory.id] || []
+  const categoryPhotos = additionalPhotoData?.photos?.[currentCategory.id] || []
   const categoryMeta   = additionalPhotoData?.photoMeta || {}
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col pb-24">
       <AppHeader title="Reporte de Fotos" subtitle={`${currentCategory.emoji} ${currentCategory.title}`} />
-      <FormMetaBar formId={FORM_ID} formCode={FORM_CODE} />
+      <FormMetaBar formCode="additional-photo-report" formRoute="/intro/additional-photo-report" />
       <AutosaveIndicator />
 
       {/* Progress */}
