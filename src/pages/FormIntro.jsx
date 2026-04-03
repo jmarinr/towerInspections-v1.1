@@ -27,7 +27,7 @@ const FORM_MAP = {
     icon: ClipboardList,
   },
   mantenimiento: {
-    title: 'Mantenimiento preventivo',
+    title: '1 Preventive Maintenance Inspection',
     description: 'Registre actividades de mantenimiento preventivo con fotos antes/después.',
     summary: ['Datos del sitio', 'Checklist de actividades', 'Fotos antes / después'],
     // Ruta canónica (App.jsx mantiene también alias /mantenimiento)
@@ -42,35 +42,35 @@ const FORM_MAP = {
     icon: Package,
   },
   'equipment-v2': {
-    title: 'Inventario de Equipos v2',
+    title: '8 Equipment Inventory',
     description: 'Inventario con dimensiones desglosadas y evidencia fotográfica.',
     summary: ['Datos generales', 'Torre (dimensiones)', 'Piso (clientes)', 'Fotos de evidencia'],
     route: '/inventario-equipos-v2',
     icon: Package,
   },
   'sistema-ascenso': {
-    title: 'Sistema de ascenso',
+    title: '10 Safety Climbing Device',
     description: 'Inspección de dispositivos y condiciones de seguridad.',
     summary: ['Secciones por componente', 'Campos técnicos', 'Fotos de evidencia'],
     route: '/sistema-ascenso',
     icon: Shield,
   },
   'grounding-system-test': {
-    title: 'Grounding System Test',
+    title: '4 Grounding System Test',
     description: 'Registro de prueba de sistema de puesta a tierra.',
     summary: ['Datos generales', 'Mediciones', 'Cálculos automáticos'],
     route: '/grounding-system-test',
     icon: Activity,
   },
   'mantenimiento-ejecutado': {
-    title: 'Mantenimiento ejecutado',
+    title: '2 Preventive Maintenance Executed',
     description: 'Registro del mantenimiento preventivo ejecutado (según checklist).',
     summary: ['Datos de ejecución', 'Actividades', 'Fotos antes / después'],
     route: '/mantenimiento-ejecutado',
     icon: CheckCircle2,
   },
   'additional-photo-report': {
-    title: 'Reporte Adicional de Fotografías',
+    title: '9 Additional Photo Report',
     description: 'Capture las 16 categorías fotográficas requeridas para el expediente del sitio.',
     summary: ['16 categorías (ACC, CAM, EQTT…)', 'Acrónimos para nomenclatura de archivos', 'Fotos variables por categoría'],
     route: '/reporte-fotos',
@@ -78,7 +78,7 @@ const FORM_MAP = {
   },
   // compatibilidad
   'pm-executed': {
-    title: 'Mantenimiento ejecutado',
+    title: '2 Preventive Maintenance Executed',
     description: 'Registro del mantenimiento preventivo ejecutado (según checklist).',
     summary: ['Datos de ejecución', 'Actividades', 'Fotos antes / después'],
     route: '/mantenimiento-ejecutado',

@@ -7,7 +7,7 @@ const getDefaultDate = () => new Date().toISOString().split('T')[0]
 const getDefaultTime = () => new Date().toTimeString().slice(0, 5)
 
 // Versión mostrada en UI y enviada como metadata a Supabase
-const APP_VERSION_DISPLAY = '2.7.5'
+const APP_VERSION_DISPLAY = '2.7.10'
 const FORM_CODE_ADDITIONAL = 'additional-photo-report'
 
 const isDataUrlString = (value) =>
@@ -110,7 +110,7 @@ const getDefaultMaintenanceData = () => ({
   currentStep: 1,
   completedSteps: [],
   formData: {
-    proveedor: '',
+    proveedor: 'OFG PANAMA, S.A.',
     tipoVisita: 'mantenimiento',
     nombreSitio: '',
     idSitio: '',
@@ -164,7 +164,7 @@ const getDefaultMaintenanceData = () => ({
 // Datos por defecto para Inventario de Equipos (Formulario 3)
 const getDefaultEquipmentInventoryData = () => ({
   siteInfo: {
-    proveedor: '',
+    proveedor: 'OFG PANAMA, S.A.',
     tipoVisita: 'mantenimiento', // RoofTop | RawLand
     idSitio: '',
     nombreSitio: '',
@@ -215,7 +215,7 @@ const getDefaultEquipmentInventoryData = () => ({
 // Datos por defecto para Formulario 6: Reporte de Trabajos Ejecutados (Mantenimiento Preventivo)
 const getDefaultPMExecutedData = () => ({
   siteInfo: {
-    proveedor: '',
+    proveedor: 'OFG PANAMA, S.A.',
     idSitio: '',
     tipoVisita: 'mantenimiento',
     nombreSitio: '',
@@ -896,7 +896,7 @@ export const useAppStore = create(
 
 // ============ INSPECTION DATA (Original) ============
       inspectionData: {
-        siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
+        siteInfo: { proveedor: 'OFG PANAMA, S.A.', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
         items: {},
         photos: {},
       },
@@ -954,7 +954,7 @@ export const useAppStore = create(
 
       resetInspectionData: () => set({
         inspectionData: {
-          siteInfo: { proveedor: '', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
+          siteInfo: { proveedor: 'OFG PANAMA, S.A.', idSitio: '', nombreSitio: '', tipoSitio: '', coordenadas: '', direccion: '', fecha: '', hora: '', tipoTorre: '', alturaTorre: '' },
           items: {},
           photos: {},
         }
@@ -1036,7 +1036,7 @@ export const useAppStore = create(
 
       // ============ EQUIPMENT INVENTORY V2 ============
       equipmentInventoryV2Data: {
-        siteInfo: {},
+        siteInfo: { proveedor: 'OFG PANAMA, S.A.' },
         torre: { items: [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }] },
         piso: { clientes: [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] },
         fotos: {},
@@ -1434,7 +1434,7 @@ export const useAppStore = create(
 
       resetEquipmentInventoryV2Data: () => set({
         equipmentInventoryV2Data: {
-          siteInfo: {},
+          siteInfo: { proveedor: 'OFG PANAMA, S.A.' },
           torre: { items: [{ alturaMts: '', orientacion: '', tipoEquipo: '', cantidad: '', alto: '', ancho: '', profundidad: '', areaM2: '', carrier: '' }] },
           piso: { clientes: [{ tipoCliente: 'ancla', nombreCliente: '', areaArrendada: '', areaEnUso: '', placaEquipos: '', gabinetes: [{ gabinete: '', largo: '', ancho: '', alto: '', fotoRef: '' }] }] },
           fotos: {},
